@@ -78,19 +78,21 @@ export function Stepper(props: {
   return (
     <span className={`stepper ${props.small ? "small" : ""}`} title={props.title}>
       <button type="button" aria-label="Меньше" disabled={value <= min} onClick={() => props.onChange(clamp(value - step))}>−</button>
-      <input
-        inputMode="decimal"
-        value={shown}
-        size={Math.max(2, shown.length)}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={(e) => commit(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") commit((e.target as HTMLInputElement).value);
-          if (e.key === "ArrowUp") { e.preventDefault(); props.onChange(clamp(value + step)); }
-          if (e.key === "ArrowDown") { e.preventDefault(); props.onChange(clamp(value - step)); }
-        }}
-      />
-      {props.suffix && <span className="sfx">{props.suffix}</span>}
+      <span className="mid">
+        <input
+          inputMode="decimal"
+          value={shown}
+          style={{ width: `${Math.max(1, shown.length) + 0.6}ch` }}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={(e) => commit(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit((e.target as HTMLInputElement).value);
+            if (e.key === "ArrowUp") { e.preventDefault(); props.onChange(clamp(value + step)); }
+            if (e.key === "ArrowDown") { e.preventDefault(); props.onChange(clamp(value - step)); }
+          }}
+        />
+        {props.suffix && <span className="sfx">{props.suffix}</span>}
+      </span>
       <button type="button" aria-label="Больше" disabled={value >= max} onClick={() => props.onChange(clamp(value + step))}>+</button>
     </span>
   );

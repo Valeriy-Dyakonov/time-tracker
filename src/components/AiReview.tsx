@@ -23,7 +23,7 @@ export default function AiReview({ a }: { a: Analysis }) {
           <span className="spacer" />
           <CopyButton text={() => a.narrative} />
         </div>
-        <p className="narrative">{a.narrative}</p>
+        <p className="narrative wide">{a.narrative}</p>
       </section>
 
       <section className="card">

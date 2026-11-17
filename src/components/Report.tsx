@@ -9,6 +9,7 @@ import {
 import { runAnalysis } from "../lib/pipeline";
 import type { SetupState } from "../lib/setup";
 import AiReview from "./AiReview";
+import DateRange from "./DateRange";
 import Submit from "./Submit";
 import { Timesheet, Verdict } from "./Timesheet";
 import IssueLink from "./IssueLink";
@@ -117,11 +118,7 @@ export default function Report(props: {
                   return <button key={l} className={start === r.start && end === r.end ? "on" : ""} onClick={() => { setStart(r.start); setEnd(r.end); }}>{l}</button>;
                 })}
               </div>
-              <div className="daterange" title="Свой период">
-                <input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
-                <span>—</span>
-                <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
-              </div>
+              <DateRange start={start} end={end} onChange={(s, e) => { setStart(s); setEnd(e); }} />
             </div>
           </div>
           <div className="fg">

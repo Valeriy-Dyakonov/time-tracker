@@ -48,6 +48,24 @@ function CopyChip({ text, label, wide }: { text: string; label?: string; wide?: 
   );
 }
 
+/** Copy icon inside a text field. */
+function CopyIcon({ text }: { text: string }) {
+  const [ok, setOk] = useState(false);
+  return (
+    <button
+      className={`copyicon ${ok ? "ok" : ""}`}
+      title="Скопировать описание"
+      onClick={async () => {
+        try { await navigator.clipboard.writeText(text); setOk(true); setTimeout(() => setOk(false), 1200); } catch { /* clipboard blocked */ }
+      }}
+    >
+      {ok
+        ? <svg viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7" /></svg>
+        : <svg viewBox="0 0 16 16"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5" /><path d="M10.5 5V3.5A1.5 1.5 0 0 0 9 2H3.5A1.5 1.5 0 0 0 2 3.5V9a1.5 1.5 0 0 0 1.5 1.5H5" /></svg>}
+    </button>
+  );
+}
+
 type Group = "tasks" | "days";
 
 /** Marks a row from a day without own data: worth a glance before submitting. */
@@ -70,20 +88,23 @@ export default function Submit({ a, canAi }: { a: Analysis; canAi: boolean }) {
     const ro = done[rowId(r)];
     return (
       <div className={`wl-row ${ro ? "done" : ""}`} key={rowId(r)}>
-        <input type="checkbox" checked={!!ro} onChange={() => toggle(r)} title="Внёс в Tempo" />
+        <button className={`wl-check ${ro ? "on" : ""}`} aria-pressed={!!ro} onClick={() => toggle(r)} title={ro ? "Отмечено как внесённое — снять отметку" : "Отметить, что внёс в Tempo"}>
+          <svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-6.5" /></svg>
+        </button>
         {showKey ? (
           <span className="wl-what"><span className="dot" style={{ background: keyColor(r.key) }} /><IssueLink k={r.key} /><span className="muted wl-title">{a.issues[r.key]?.summary}</span>{r.inferred && <Est />}</span>
         ) : (
-          <span className="wl-what"><b>{weekdayName(r.date)} {formatRu(r.date).slice(0, 5)}</b><span className="muted">{formatRu(r.date)}</span>{r.inferred && <Est />}</span>
+          <span className="wl-what"><b className="nw">{weekdayName(r.date)}&nbsp;{formatRu(r.date).slice(0, 5)}</b>{r.inferred && <Est />}</span>
         )}
         <CopyChip text={fmtTempo(r.hours, fmt)} />
-        <input
-          className="wl-comment"
-          value={comment(r)}
-          onChange={(e) => setComments((p) => ({ ...p, [rowId(r)]: e.target.value }))}
-          title="Описание для поля Description — можно поправить"
-        />
-        <CopyChip text={comment(r)} label="описание" />
+        <span className="wl-desc">
+          <input
+            value={comment(r)}
+            onChange={(e) => setComments((p) => ({ ...p, [rowId(r)]: e.target.value }))}
+            title="Описание для поля Description — можно поправить"
+          />
+          <CopyIcon text={comment(r)} />
+        </span>
       </div>
     );
   };
@@ -115,17 +136,17 @@ export default function Submit({ a, canAi }: { a: Analysis; canAi: boolean }) {
           </div>
         </div>
         <div className="ts-bar">
-          <div className="seg">
+          <div className="seg small">
             <button className={group === "tasks" ? "on" : ""} onClick={() => setGroup("tasks")}>По задачам</button>
             <button className={group === "days" ? "on" : ""} onClick={() => setGroup("days")}>По дням</button>
           </div>
-          <div className="seg" title="В каком виде копировать часы">
+          <div className="seg small" title="В каком виде копировать часы">
             <button className={fmt === "hm" ? "on" : ""} onClick={() => setFmt("hm")}>2h 30m</button>
             <button className={fmt === "decimal" ? "on" : ""} onClick={() => setFmt("decimal")}>2.5</button>
           </div>
           <span className="progress">
-            <b>{doneRows.length}</b> из {rows.length} внесено · {fmtH(sumHours(doneRows))} из {fmtH(sumHours(rows))} ч
-            <span className="wk-meter wide"><i style={{ width: `${pct}%` }} /></span>
+            <span className="pg-bar"><i style={{ width: `${pct}%` }} /></span>
+            <span><b>{doneRows.length}</b> из {rows.length} строк · <b>{fmtH(sumHours(doneRows))}</b> из {fmtH(sumHours(rows))}&nbsp;ч</span>
           </span>
           <span className="spacer" />
           {doneRows.length > 0 && <button className="btn small ghost" onClick={() => setDone({})}>Сбросить отметки</button>}
@@ -142,7 +163,8 @@ export default function Submit({ a, canAi }: { a: Analysis; canAi: boolean }) {
                     <b className="wl-key"><IssueLink k={key} /></b>
                     <span className="wl-ttl" title={a.issues[key]?.summary}>{a.issues[key]?.summary}</span>
                     <span className="spacer" />
-                    <span className="wl-sum">{fmtH(sumHours(rs))} <small>ч · {d}/{rs.length}</small></span>
+                    <span className="wl-sum">{fmtH(sumHours(rs))}&nbsp;<small>ч</small></span>
+                    <span className={`wl-cnt ${d === rs.length ? "ok" : ""}`}>{d}/{rs.length}</span>
                   </header>
                   {rs.map((r) => line(r, false))}
                 </article>
@@ -154,9 +176,9 @@ export default function Submit({ a, canAi }: { a: Analysis; canAi: boolean }) {
             {days.map(([date, rs]) => (
               <article className="wl-card" key={date}>
                 <header>
-                  <b>{weekdayName(date)} {formatRu(date)}</b>
+                  <b className="nw">{weekdayName(date)}, {formatRu(date)}</b>
                   <span className="spacer" />
-                  <span className="wl-sum">{fmtH(sumHours(rs))} <small>ч</small></span>
+                  <span className="wl-sum">{fmtH(sumHours(rs))}&nbsp;<small>ч</small></span>
                 </header>
                 {rs.map((r) => line(r, true))}
               </article>
@@ -213,7 +235,7 @@ function WeeklyText({ a, id, canAi }: { a: Analysis; id: string; canAi: boolean 
             <article className="wk-card" key={w.monday}>
               <header>
                 <b>Неделя {weekTitle(w)}</b>
-                <span className="muted">{fmtH(weekHours(w))} ч</span>
+                <span className="wl-sum sm">{fmtH(weekHours(w))}&nbsp;<small>ч</small></span>
                 <span className="spacer" />
                 {texts[w.monday] !== undefined && texts[w.monday] !== base && (
                   <button className="linkbtn" onClick={() => setTexts((p) => { const n = { ...p }; delete n[w.monday]; return n; })}>вернуть исходный</button>

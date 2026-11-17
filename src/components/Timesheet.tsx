@@ -103,88 +103,89 @@ export function Timesheet(props: {
   }
 
   return (
-    <div className="ts-layout">
-      <div className="ts-main">
-        <div className="ts-bar">
-          <div className="seg small" role="tablist">
-            <button className={mode === "days" ? "on" : ""} onClick={() => setMode("days")}>По дням</button>
-            <button className={mode === "tasks" ? "on" : ""} onClick={() => setMode("tasks")}>По задачам</button>
-          </div>
-          {mode === "days" && (
-            <>
-              <span className="legend">
-                <span><i className="lg good" />по событиям</span>
-                <span><i className="lg warn" />без событий</span>
-                <span><i className="lg bad" />не заполнен</span>
-              </span>
-              <span className="spacer" />
-              <label className="switch">
-                <input type="checkbox" checked={onlyReview} onChange={(e) => setOnlyReview(e.target.checked)} />
-                <i />Только для проверки ({review.length})
-              </label>
-              <button className="btn small ghost" onClick={() => setOpen(allOpen ? new Set() : new Set(a.days.map((d) => d.date)))}>
-                {allOpen ? "Свернуть все" : "Развернуть все"}
-              </button>
-            </>
-          )}
-          {mode === "tasks" && <span className="muted">Для Jira: по каждой задаче — в какие дни и сколько часов списать.</span>}
+    <div className="ts-main">
+      <Overview a={a} review={review} onJump={jump} onAi={props.onAi} />
+      <div className="ts-bar">
+        <div className="seg small" role="tablist">
+          <button className={mode === "days" ? "on" : ""} onClick={() => setMode("days")}>По дням</button>
+          <button className={mode === "tasks" ? "on" : ""} onClick={() => setMode("tasks")}>По задачам</button>
         </div>
-        {mode === "days"
-          ? <Weeks a={a} updateDay={updateDay} onlyReview={onlyReview} open={open} toggle={toggle} />
-          : <ByTask a={a} />}
+        {mode === "days" && (
+          <>
+            <span className="legend">
+              <span><i className="lg good" />по событиям</span>
+              <span><i className="lg warn" />без событий</span>
+              <span><i className="lg bad" />не заполнен</span>
+            </span>
+            <span className="spacer" />
+            <label className="switch">
+              <input type="checkbox" checked={onlyReview} onChange={(e) => setOnlyReview(e.target.checked)} />
+              <i />Только для проверки ({review.length})
+            </label>
+            <button className="btn small ghost" onClick={() => setOpen(allOpen ? new Set() : new Set(a.days.map((d) => d.date)))}>
+              {allOpen ? "Свернуть все" : "Развернуть все"}
+            </button>
+          </>
+        )}
+        {mode === "tasks" && <span className="muted">Для Jira: по каждой задаче — в какие дни и сколько часов списать.</span>}
       </div>
+      {mode === "days"
+        ? <Weeks a={a} updateDay={updateDay} onlyReview={onlyReview} open={open} toggle={toggle} />
+        : <ByTask a={a} />}
+    </div>
+  );
+}
 
-      <aside className="ts-rail">
-        <section className="card rail-card">
-          <div className="rail-h"><h4>О чём период</h4><button className="linkbtn" onClick={props.onAi}>Подробнее →</button></div>
-          <p className="rail-text">{a.narrative}</p>
+/** Period story, days to check and where the time went — above the list, using the full width. */
+function Overview({ a, review, onJump, onAi }: { a: Analysis; review: DayPlan[]; onJump: (date: string) => void; onAi: () => void }) {
+  const [more, setMore] = useState(false);
+  const rows = totalsByTask(a);
+  const total = rows.reduce((s, r) => s + r.hours, 0) || 1;
+  const long = a.narrative.length > 360;
+  return (
+    <div className="overview">
+      <div className={`ov-top ${review.length ? "" : "single"}`}>
+        <section className="card ov-card">
+          <div className="ov-h"><h4>О чём период</h4><button className="linkbtn" onClick={onAi}>Разбор ИИ →</button></div>
+          <p className={`ov-text ${long && !more ? "clamp" : ""}`}>{a.narrative}</p>
+          {long && <button className="linkbtn small" onClick={() => setMore(!more)}>{more ? "Свернуть" : "Показать полностью"}</button>}
         </section>
-
         {review.length > 0 && (
-          <section className="card rail-card">
-            <div className="rail-h"><h4>Что проверить</h4><span className="muted">{review.length}</span></div>
-            <ul className="rail-review">
+          <section className="card ov-card ov-review">
+            <div className="ov-h"><h4>Что проверить</h4><span className="count warn">{review.length}</span></div>
+            <ul>
               {review.map((d) => (
                 <li key={d.date}>
-                  <button onClick={() => jump(d.date)}>
+                  <button onClick={() => onJump(d.date)}>
                     <i className={`lg ${d.basis === "inferred" ? "warn" : "bad"}`} />
                     <b>{weekdayName(d.date)} {formatRu(d.date).slice(0, 5)}</b>
                     <span>{reviewReason(d)}</span>
+                    <svg viewBox="0 0 16 16"><path d="M6 4l4 4-4 4" /></svg>
                   </button>
                 </li>
               ))}
             </ul>
           </section>
         )}
-
-        <section className="card rail-card">
-          <div className="rail-h"><h4>Куда ушло время</h4><span className="muted">за период</span></div>
-          <RailTasks a={a} />
-        </section>
-      </aside>
+      </div>
+      <section className="card ov-card">
+        <div className="ov-h"><h4>Куда ушло время</h4><span className="muted">{rows.length} {plural(rows.length, "задача", "задачи", "задач")} · {fmtH(total)} ч</span></div>
+        <div className="dist-bar">
+          {rows.map((r) => <i key={r.key} style={{ flex: r.hours, background: keyColor(r.key) }} title={`${r.key} ${r.summary}: ${fmtH(r.hours)} ч`} />)}
+        </div>
+        <ul className="dist-legend">
+          {rows.map((r) => (
+            <li key={r.key}>
+              <i className="dot" style={{ background: keyColor(r.key) }} />
+              <IssueLink k={r.key} />
+              <span className="dl-title" title={r.summary}>{r.summary}</span>
+              <span className="dl-h">{fmtH(r.hours)}&nbsp;ч</span>
+              <span className="dl-p">{Math.round((r.hours / total) * 100)}%</span>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
-  );
-}
-
-function RailTasks({ a }: { a: Analysis }) {
-  const rows = totalsByTask(a);
-  const total = rows.reduce((s, r) => s + r.hours, 0) || 1;
-  return (
-    <ul className="rail-tasks">
-      {rows.map((r) => (
-        <li key={r.key}>
-          <div className="rt-top">
-            <span className="dot" style={{ background: keyColor(r.key) }} />
-            <IssueLink k={r.key} />
-            <span className="spacer" />
-            <b>{fmtH(r.hours)} ч</b>
-            <span className="muted">{Math.round((r.hours / total) * 100)}%</span>
-          </div>
-          <div className="rt-title" title={r.summary}>{r.summary}</div>
-          <div className="meter"><i style={{ width: `${(r.hours / total) * 100}%`, background: keyColor(r.key) }} /></div>
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -340,6 +341,7 @@ const dayTextShort = (a: Analysis, d: DayPlan) =>
 
 function ByTask({ a }: { a: Analysis }) {
   const rows = totalsByTask(a);
+  const total = rows.reduce((s, r) => s + r.hours, 0) || 1;
   const perTask = useMemo(() => {
     const m = new Map<string, { date: string; hours: number; note?: string }[]>();
     for (const d of a.days) {
@@ -349,29 +351,27 @@ function ByTask({ a }: { a: Analysis }) {
     return m;
   }, [a]);
   return (
-    <div className="taskgrid">
+    <div className="tasklist">
       {rows.map((r) => {
         const days = perTask.get(r.key) ?? [];
         return (
-          <section className="card taskcard" key={r.key}>
-            <header>
-              <span className="dot" style={{ background: keyColor(r.key) }} />
-              <b><IssueLink k={r.key} /></b>
-              <span className="tc-title" title={r.summary}>{r.summary}</span>
-              <span className="spacer" />
-              <span className="tc-total">{fmtH(r.hours)}<small> ч</small></span>
-            </header>
-            <div className="tc-days">
+          <section className="tl-row" key={r.key}>
+            <div className="tl-head">
+              <i className="dot" style={{ background: keyColor(r.key) }} />
+              <IssueLink k={r.key} />
+              <span className="tl-title" title={r.summary}>{r.summary}</span>
+              <span className="tl-share"><i style={{ width: `${(r.hours / total) * 100}%`, background: keyColor(r.key) }} /></span>
+              <span className="tl-days">{days.length}&nbsp;{plural(days.length, "день", "дня", "дней")}</span>
+              <span className="tl-total">{fmtH(r.hours)}&nbsp;<small>ч</small></span>
+              <CopyButton label="Копировать" title="Даты и часы по этой задаче" text={() => days.map((x) => `${formatRu(x.date)}\t${fmtH(x.hours)}`).join("\n")} />
+            </div>
+            <div className="tl-chips">
               {days.map((x) => (
                 <span key={x.date} className="daychip" title={x.note ?? ""}>
-                  <i>{weekdayName(x.date)} {formatRu(x.date).slice(0, 5)}</i><b>{fmtH(x.hours)}</b>
+                  <i>{weekdayName(x.date)}&nbsp;{formatRu(x.date).slice(0, 5)}</i><b>{fmtH(x.hours)}</b>
                 </span>
               ))}
             </div>
-            <footer>
-              <span className="muted">{days.length} {plural(days.length, "день", "дня", "дней")}</span>
-              <CopyButton label="Копировать даты и часы" text={() => days.map((x) => `${formatRu(x.date)}\t${fmtH(x.hours)}`).join("\n")} />
-            </footer>
           </section>
         );
       })}
