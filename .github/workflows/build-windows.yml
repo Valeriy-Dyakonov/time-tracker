@@ -37,5 +37,5 @@ jobs:
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
           releaseName: ${{ github.ref_type == 'tag' && format('Worklog Tracker {0}', github.ref_name) || '' }}
           releaseDraft: false
-          uploadUpdaterJson: true
+          includeUpdaterJson: true
           args: --features updater --config src-tauri/tauri.release.conf.json
