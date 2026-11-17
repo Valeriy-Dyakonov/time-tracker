@@ -16,6 +16,10 @@ export interface Settings {
   gitRepos: string[];
   gitAuthors: string[];
   hoursPerDay: number;
+  /** Production calendar country (ru, by, kz, ua, uz, us); empty = weekdays only. */
+  holidayCountry: string;
+  /** Pre-holiday days are one hour shorter. */
+  shortDays: boolean;
   /** 1 = Monday ... 7 = Sunday */
   workdays: number[];
   acceptInvalidCerts: boolean;
@@ -39,6 +43,8 @@ export const defaultSettings: Settings = {
   gitRepos: [],
   gitAuthors: [],
   hoursPerDay: 8,
+  holidayCountry: "ru",
+  shortDays: true,
   workdays: [1, 2, 3, 4, 5],
   acceptInvalidCerts: false,
 };

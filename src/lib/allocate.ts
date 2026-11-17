@@ -53,7 +53,7 @@ export function findKeys(...texts: (string | null | undefined)[]): string[] {
 const NOT_PROJECTS = /^(UTF|ISO|RFC|SHA|MD|CVE|TLS|SSL|AES|RSA|HTTP|HTTPS|PDF|USB|IPV|GOST|ES|X)-/;
 export const isPlausibleKey = (k: string): boolean => !NOT_PROJECTS.test(k);
 
-/** Project prefix of a key: "PAY-12" -> "PAY". */
+/** Project prefix of a key: "RFS-12" -> "RFS". */
 export const projectOf = (key: string): string => key.split("-")[0].toUpperCase();
 
 /**
@@ -120,8 +120,12 @@ export function workDates(
   end: string,
   workdays: number[],
   today: string,
+  /** Production calendar: days off to skip (holidays) and extra working days (transferred weekends). */
+  calendar?: { off?: Set<string>; extra?: Set<string> },
 ): string[] {
-  return eachDate(start, end).filter((d) => workdays.includes(isoWeekday(d)) && d <= today);
+  return eachDate(start, end).filter(
+    (d) => d <= today && !calendar?.off?.has(d) && (workdays.includes(isoWeekday(d)) || !!calendar?.extra?.has(d)),
+  );
 }
 
 function toTasks(
@@ -227,6 +231,8 @@ export function buildPlan(
   hoursPerDay: number,
   fillMode: FillMode = "neighbors",
   meetings: Record<string, Meeting[]> = {},
+  /** Per-date norm that differs from `hoursPerDay` (shortened pre-holiday days). */
+  targets: Record<string, number> = {},
 ): DayPlan[] {
   const active = Object.keys(activity)
     .filter((d) => Object.keys(activity[d].weights).length > 0)
@@ -283,9 +289,11 @@ export function buildPlan(
   for (const d of active)
     for (const [k, v] of Object.entries(normalized(activity[d].weights)))
       periodWeights[k] = (periodWeights[k] ?? 0) + v;
+  const hoursPerDayDefault = hoursPerDay;
 
   return dates.map((date): DayPlan => {
     const own = activity[date];
+    const hoursPerDay = targets[date] ?? hoursPerDayDefault;
     const base = {
       date,
       target: hoursPerDay,

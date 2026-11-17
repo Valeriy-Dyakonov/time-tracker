@@ -35,6 +35,8 @@ export const api = {
   listMatrixRooms: () => invoke<Room[]>("list_matrix_rooms"),
   fetchGitlab: (start: string, end: string) =>
     invoke<{ me: string; events: Evt[]; scoped: string[]; fallback: boolean }>("fetch_gitlab", { start, end }),
+  fetchHolidays: (country: string, start: string, end: string) =>
+    invoke<{ source: string; complete: boolean; days: { date: string; kind: "off" | "short" | "work"; name?: string }[] }>("fetch_holidays", { country, start, end }),
   fetchIssuePages: (issues: { key: string; urls: string[] }[]) =>
     invoke<{ key: string; pages: PageCtx[] }[]>("fetch_issue_pages", { issues }),
   llmChat: (system: string, user: string) => invoke<string>("llm_chat", { system, user }),

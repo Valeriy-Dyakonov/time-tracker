@@ -4,12 +4,16 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
     pub jira_url: String,
-    /// Jira project keys (e.g. "OPS") used only as context for AI: no hours are assigned to them.
+    /// Jira project keys (e.g. "RFS") used only as context for AI: no hours are assigned to them.
     pub context_projects: Vec<String>,
     pub llm_base_url: String,
     pub llm_model: String,
     pub confluence_url: String,
     pub gitlab_url: String,
+    /// Production calendar country (ru, by, kz, ua, uz, us); empty = weekdays only.
+    pub holiday_country: String,
+    /// Shorten pre-holiday days by one hour.
+    pub short_days: bool,
     /// Read merge requests only from projects of the locally selected repositories (matched by `origin`).
     pub gitlab_local_only: bool,
     /// Exchange (OWA) address, e.g. https://mail.company.ru — EWS path is appended automatically.
@@ -42,6 +46,8 @@ impl Default for Settings {
             llm_model: String::new(),
             confluence_url: String::new(),
             gitlab_url: String::new(),
+            holiday_country: "ru".into(),
+            short_days: true,
             gitlab_local_only: true,
             exchange_url: String::new(),
             exchange_user: String::new(),

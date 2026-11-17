@@ -89,7 +89,28 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
   let events: Evt[] = [];
   let meetings: Meeting[] = [];
   const today = localDate(new Date());
-  const dates = workDates(o.start, o.end, settings.workdays, today);
+  // Production calendar: holidays are not worked, transferred Saturdays are, pre-holiday days are an hour shorter.
+  const calOff = new Set<string>();
+  const calExtra = new Set<string>();
+  const targets: Record<string, number> = {};
+  if (settings.holidayCountry) {
+    try {
+      const h = await api.fetchHolidays(settings.holidayCountry, o.start, o.end);
+      for (const d of h.days) {
+        const wd = isoWeekday(d.date);
+        if (d.kind === "off") calOff.add(d.date);
+        // A weekend marked as working (transferred Saturday) is worked, even if it is also a shortened day.
+        if (d.kind !== "off" && wd >= 6 && !settings.workdays.includes(wd)) calExtra.add(d.date);
+        if (d.kind === "short" && settings.shortDays) targets[d.date] = Math.max(0, o.hoursPerDay - 1);
+      }
+      const off = [...calOff].filter((d) => settings.workdays.includes(isoWeekday(d)));
+      log("info", `Производственный календарь (${settings.holidayCountry.toUpperCase()}, ${h.source}): праздничных и перенесённых выходных в будни ${off.length}${off.length ? " — " + off.map(sd).join(", ") : ""}; сокращённых дней ${Object.keys(targets).length}${Object.keys(targets).length ? " — " + Object.keys(targets).map(sd).join(", ") + ` (по ${fmtH(Math.max(0, o.hoursPerDay - 1))} ч)` : ""}; рабочих суббот ${calExtra.size}.`);
+    } catch (e) {
+      log("warn", `Производственный календарь не загружен (${e}) — праздники не учтены, считаю только по дням недели.`);
+      warnings.push(`Праздники не учтены: ${e}`);
+    }
+  }
+  const dates = workDates(o.start, o.end, settings.workdays, today, { off: calOff, extra: calExtra });
   const aiOn = o.useAi && !!settings.llmBaseUrl && !!settings.llmModel;
 
   log("info", `Период ${formatRu(o.start)} – ${formatRu(o.end)}, норма ${fmtH(o.hoursPerDay)} ч в день, рабочие дни: ${settings.workdays.map((d) => WEEKDAYS_SHORT[d - 1]).join(", ")}.`);
@@ -359,7 +380,7 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
         log("info", `${label}: → запрос к ИИ (кандидатов: ${candidates.length})…`);
         const t0 = performance.now();
         try {
-          const raw = await api.llmChat(SYSTEM_PROMPT, buildUserPrompt(date, evs, candidates, o.hoursPerDay, contextOnly, issues));
+          const raw = await api.llmChat(SYSTEM_PROMPT, buildUserPrompt(date, evs, candidates, targets[date] ?? o.hoursPerDay, contextOnly, issues));
           const sec = ((performance.now() - t0) / 1000).toFixed(1);
           const parsed = parseAiDay(raw, new Set(candidates.map((c) => c.key)));
           if (parsed && Object.keys(parsed.weights).length > 0) {
@@ -393,7 +414,7 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
     }
 
     activity[date] = act;
-    const hrs = distribute(act.weights, o.hoursPerDay);
+    const hrs = distribute(act.weights, targets[date] ?? o.hoursPerDay);
     patch(date, {
       status,
       note,
@@ -402,7 +423,7 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
   });
 
   // ---- 4. fill the period
-  const days = buildPlan(dates, activity, issues, o.hoursPerDay, o.fillMode, meetingsByDay);
+  const days = buildPlan(dates, activity, issues, o.hoursPerDay, o.fillMode, meetingsByDay, targets);
   const modeName = { neighbors: "по соседним дням", period: "по всему периоду", none: "оставить пустыми" }[o.fillMode];
   const gaps = days.filter((d) => d.basis !== "activity");
   if (gaps.length) {
@@ -440,7 +461,7 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
   if (!narrative) narrative = templateNarrative(o.start, o.end, days, issues);
 
   const total = days.reduce((s, d) => s + d.tasks.reduce((x, t) => x + t.hours, 0), 0);
-  log("ok", `Готово: ${fmtH(total)} ч из ${fmtH(days.length * o.hoursPerDay)} ч; задач ${totals.length}; ИИ использован в ${aiDays} из ${withEvents.length} дней с событиями.`);
+  log("ok", `Готово: ${fmtH(total)} ч из ${fmtH(days.reduce((s, d) => s + d.target, 0))} ч; задач ${totals.length}; ИИ использован в ${aiDays} из ${withEvents.length} дней с событиями.`);
 
   return {
     start: o.start, end: o.end, hoursPerDay: o.hoursPerDay, jiraUrl: settings.jiraUrl.trim().replace(/\/+$/, ""), days, issues, warnings,

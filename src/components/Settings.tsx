@@ -21,6 +21,20 @@ export default function Settings(props: { settings: S; onSaved: (s: S) => void }
   const [tok, setTok] = useState(EMPTY_TOK);
   const [stored, setStored] = useState<Record<string, boolean>>({});
   const [msg, setMsg] = useState<Record<string, string>>({});
+  const [hol, setHol] = useState<string | null>(null);
+  const loadHolidays = async () => {
+    const y = new Date().getFullYear();
+    setHol("Загружаю…");
+    try {
+      const h = await api.fetchHolidays(s.holidayCountry, `${y}-01-01`, `${y}-12-31`);
+      const off = h.days.filter((d) => d.kind === "off" && ![6, 7].includes(((new Date(d.date + "T12:00:00").getDay() + 6) % 7) + 1));
+      const short = h.days.filter((d) => d.kind === "short");
+      const f = (d: { date: string }) => d.date.slice(8) + "." + d.date.slice(5, 7);
+      setHol(`Источник: ${h.source}. ${y}: праздничных будней ${off.length}${off.length ? " (" + off.map(f).join(", ") + ")" : ""}; сокращённых дней ${short.length}${short.length ? " (" + short.map(f).join(", ") + ")" : ""}.`);
+    } catch (e) {
+      setHol(`Не удалось загрузить: ${e}`);
+    }
+  };
   const [rooms, setRooms] = useState<Room[] | null>(null);
   const [roomFilter, setRoomFilter] = useState("");
   const [repos, setRepos] = useState<RepoInfo[] | null>(null);
@@ -168,10 +182,10 @@ export default function Settings(props: { settings: S; onSaved: (s: S) => void }
           <input value={s.jiraUrl} placeholder="https://jira.company.ru" onChange={(e) => set("jiraUrl", e.target.value)} />
         </Field>
         {tokenField("jira_pat", "Personal Access Token")}
-        <Field label="Проекты только для контекста" hint="Ключи проектов через запятую, например OPS, LEGACY. События по ним (коммиты, чат, звонки) останутся подсказкой для ИИ, но часы на такие задачи не начисляются. Подходит для чужих проектов и задач без права списывать время.">
+        <Field label="Проекты только для контекста" hint="Ключи проектов через запятую, например RFS, BFR. События по ним (коммиты, чат, звонки) останутся подсказкой для ИИ, но часы на такие задачи не начисляются. Подходит для чужих проектов и задач без права списывать время.">
           <input
             value={ctxText}
-            placeholder="OPS, LEGACY"
+            placeholder="RFS, BFR"
             onChange={(e) => {
               setCtxText(e.target.value);
               set("contextProjects", [...new Set(e.target.value.split(/[\s,;]+/).map((x) => x.trim().toUpperCase()).filter(Boolean))]);
@@ -391,6 +405,25 @@ export default function Settings(props: { settings: S; onSaved: (s: S) => void }
         <Field label="Часов в день по умолчанию" hint="Именно столько будет списано в каждый рабочий день.">
           <input type="number" min={1} max={24} step={0.25} value={s.hoursPerDay} onChange={(e) => set("hoursPerDay", Number(e.target.value) || 8)} />
         </Field>
+        <Field label="Производственный календарь" hint="Праздники и перенесённые выходные не заполняются, перенесённые рабочие субботы — заполняются. Данные берутся с публичного сервиса isdayoff.ru (отправляются только даты и код страны); если сервис недоступен, используются встроенные данные (РФ и США на 2026–2027).">
+          <div className="row">
+            <select value={s.holidayCountry} onChange={(e) => { set("holidayCountry", e.target.value); setHol(null); }}>
+              <option value="">Не учитывать (только дни недели)</option>
+              <option value="ru">Россия</option>
+              <option value="by">Беларусь</option>
+              <option value="kz">Казахстан</option>
+              <option value="ua">Украина</option>
+              <option value="uz">Узбекистан</option>
+              <option value="us">США</option>
+            </select>
+            <button className="btn small" disabled={!s.holidayCountry} onClick={loadHolidays}>Загрузить за год</button>
+          </div>
+          {hol && <p className="hint">{hol}</p>}
+        </Field>
+        <label className="check">
+          <input type="checkbox" checked={s.shortDays} onChange={(e) => set("shortDays", e.target.checked)} />
+          Предпраздничные дни короче на 1 час
+        </label>
         <Field label="Рабочие дни">
           <div className="row wrap">
             {DAYS.map((d, i) => (

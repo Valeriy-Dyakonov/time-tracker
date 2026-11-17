@@ -65,13 +65,13 @@ describe("isWorkMessage", () => {
 describe("context projects", () => {
   it("excludes keys from heuristic weights", () => {
     const mk = (k: string): Evt => ({ source: "jira", ts: 0, issueKey: k, text: "", context: null, weight: 1 });
-    expect(heuristicWeights([mk("OPS-1"), mk("PAY-1")], (k) => projectOf(k) === "OPS")).toEqual({ "PAY-1": 2 });
+    expect(heuristicWeights([mk("RFS-1"), mk("PAY-1")], (k) => projectOf(k) === "RFS")).toEqual({ "PAY-1": 2 });
   });
 });
 
 describe("isPlausibleKey", () => {
   it("keeps real-looking project keys, drops well-known non-tasks", () => {
-    expect(["PROJ-25869", "PAY-1", "A1-5"].every(isPlausibleKey)).toBe(true);
+    expect(["BFR-25869", "PAY-1", "A1-5"].every(isPlausibleKey)).toBe(true);
     expect(["UTF-8", "SHA-256", "RFC-2616", "CVE-2024"].some(isPlausibleKey)).toBe(false);
   });
 });
@@ -230,5 +230,17 @@ describe("status history", () => {
     const act: DayActivity = { weights: { "A-1": 1 }, notes: {}, summary: "s", reasoning: "r", eventCount: 1, evidence: [{ ts: 0, source: "git", key: "A-1", text: "[r] x" }] };
     const plan = buildPlan(["2026-11-03", "2026-11-04", "2026-11-05"], { "2026-11-03": act, "2026-11-05": { ...act } }, { "A-1": issue }, 8, "neighbors");
     expect(plan[1].tasks[0].notes[0]).toMatch(/Тестирован|QA|окружения|стенд|релиз|инфраструктур|Проверка|проверка результата/); // 04.11: moved to Testing, although commits continue after
+  });
+});
+
+describe("production calendar", () => {
+  it("skips holidays and adds transferred working Saturdays", () => {
+    const d = workDates("2026-11-02", "2026-11-08", [1, 2, 3, 4, 5], "2026-12-01", { off: new Set(["2026-11-04"]), extra: new Set(["2026-11-07"]) });
+    expect(d).toEqual(["2026-11-02", "2026-11-03", "2026-11-05", "2026-11-06", "2026-11-07"]);
+  });
+  it("uses a shorter norm on pre-holiday days", () => {
+    const act = { "2026-11-03": { weights: { "A-1": 1 }, notes: {}, summary: "", reasoning: "", eventCount: 1, evidence: [] } } as never;
+    const plan = buildPlan(["2026-11-02", "2026-11-03"], act, {}, 8, "neighbors", {}, { "2026-11-03": 7 });
+    expect(plan.map((p) => [p.target, p.tasks.reduce((s, t) => s + t.hours, 0)])).toEqual([[8, 8], [7, 7]]);
   });
 });

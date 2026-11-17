@@ -1,6 +1,7 @@
 mod calendar;
 mod confluence;
 mod gitlab;
+mod holidays;
 mod gitlog;
 mod jira;
 mod llm;
@@ -207,6 +208,14 @@ async fn fetch_gitlab(app: tauri::AppHandle, start: String, end: String) -> Resu
     Ok(GitlabOut { me, events, scoped, fallback })
 }
 
+/// Public holidays, transferred days off and shortened days for the country (read-only, public API).
+#[tauri::command]
+async fn fetch_holidays(app: tauri::AppHandle, country: String, start: String, end: String) -> Result<holidays::HolidayOut, String> {
+    let s = load(&app)?;
+    let client = util::client(s.accept_invalid_certs)?;
+    holidays::fetch(&client, &country, &start, &end).await
+}
+
 #[tauri::command]
 async fn fetch_confluence(app: tauri::AppHandle, start: String, end: String) -> Result<Vec<Event>, String> {
     let s = load(&app)?;
@@ -307,6 +316,7 @@ pub fn run() {
             lookup_issues,
             fetch_git,
             fetch_confluence,
+            fetch_holidays,
             fetch_gitlab,
             fetch_issue_pages,
             fetch_calendar,
