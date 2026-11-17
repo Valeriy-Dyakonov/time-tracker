@@ -65,13 +65,13 @@ describe("isWorkMessage", () => {
 describe("context projects", () => {
   it("excludes keys from heuristic weights", () => {
     const mk = (k: string): Evt => ({ source: "jira", ts: 0, issueKey: k, text: "", context: null, weight: 1 });
-    expect(heuristicWeights([mk("RFS-1"), mk("PAY-1")], (k) => projectOf(k) === "RFS")).toEqual({ "PAY-1": 2 });
+    expect(heuristicWeights([mk("ABC-1"), mk("PAY-1")], (k) => projectOf(k) === "ABC")).toEqual({ "PAY-1": 2 });
   });
 });
 
 describe("isPlausibleKey", () => {
   it("keeps real-looking project keys, drops well-known non-tasks", () => {
-    expect(["BFR-25869", "PAY-1", "A1-5"].every(isPlausibleKey)).toBe(true);
+    expect(["XYZ-25869", "PAY-1", "A1-5"].every(isPlausibleKey)).toBe(true);
     expect(["UTF-8", "SHA-256", "RFC-2616", "CVE-2024"].some(isPlausibleKey)).toBe(false);
   });
 });

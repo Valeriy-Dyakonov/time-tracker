@@ -13,8 +13,8 @@ export function JiraSection({ f }: { f: SettingsForm }) {
         <input value={f.s.jiraUrl} placeholder="https://jira.company.ru" onChange={(e) => f.set("jiraUrl", e.target.value)} />
       </Field>
       <TokenField f={f} name="jira_pat" label="Personal Access Token" />
-      <Field label="Проекты только для контекста" hint="Ключи проектов через запятую, например RFS, BFR. События по ним (коммиты, чат, звонки) останутся подсказкой для ИИ, но часы на такие задачи не начисляются. Подходит для чужих проектов и задач без права списывать время.">
-        <input value={ctxText} placeholder="RFS, BFR" onChange={(e) => { setCtxText(e.target.value); f.set("contextProjects", parseKeys(e.target.value)); }} />
+      <Field label="Проекты только для контекста" hint="Ключи проектов через запятую, например ABC, XYZ. События по ним (коммиты, чат, звонки) останутся подсказкой для ИИ, но часы на такие задачи не начисляются. Подходит для чужих проектов и задач без права списывать время.">
+        <input value={ctxText} placeholder="ABC, XYZ" onChange={(e) => { setCtxText(e.target.value); f.set("contextProjects", parseKeys(e.target.value)); }} />
       </Field>
       <Help
         title="Где взять токен Jira"

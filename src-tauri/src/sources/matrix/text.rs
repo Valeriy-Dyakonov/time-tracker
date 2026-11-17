@@ -61,23 +61,23 @@ mod tests {
 
     fn name(id: &str) -> String {
         match id {
-            "@m.tols:matrix.company.ru" => "Михаил Толстов".into(),
+            "@p.petrov:matrix.company.ru" => "Пётр Петров".into(),
             _ => id.trim_start_matches('@').split(':').next().unwrap().into(),
         }
     }
 
     #[test]
     fn replaces_bracketed_and_bare_ids() {
-        assert_eq!(humanize_ids("<@m.tols:matrix.company.ru> глянь PR", name), "Михаил Толстов глянь PR");
+        assert_eq!(humanize_ids("<@p.petrov:matrix.company.ru> глянь PR", name), "Пётр Петров глянь PR");
         assert_eq!(humanize_ids("cc @ivan:matrix.company.ru, ок?", name), "cc ivan, ок?");
         assert_eq!(humanize_ids("почта a@b и @ без id", name), "почта a@b и @ без id");
     }
 
     #[test]
     fn strips_reply_fallback_and_keeps_its_author() {
-        let b = split_reply("> <@m.tols:matrix.company.ru> что с релизом?\n> вторая строка\n\nВыкатили вчера");
+        let b = split_reply("> <@p.petrov:matrix.company.ru> что с релизом?\n> вторая строка\n\nВыкатили вчера");
         assert_eq!(b.text, "Выкатили вчера");
-        assert_eq!(b.reply_to.as_deref(), Some("@m.tols:matrix.company.ru"));
+        assert_eq!(b.reply_to.as_deref(), Some("@p.petrov:matrix.company.ru"));
         assert_eq!(split_reply("обычное сообщение").text, "обычное сообщение");
     }
 }
