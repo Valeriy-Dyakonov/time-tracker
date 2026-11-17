@@ -284,7 +284,7 @@ a.ilink .ext { font-size: 10px; margin-left: 2px; opacity: .55; }
 .tb-btn { width: 46px; border: 0; background: transparent; color: var(--text); display: grid; place-items: center; cursor: default; }
 .tb-btn svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1; }
 .tb-btn:hover { background: var(--line); }
-.tb-gear { width: 40px; color: var(--muted); }
+.tb-gear { width: 40px; color: var(--muted); cursor: pointer; }
 .tb-gear svg { width: 16px; height: 16px; stroke-width: 1.6; }
 .tb-gear:hover, .tb-gear.on { color: var(--accent); }
 .tb-gear.on { background: var(--bg); }
