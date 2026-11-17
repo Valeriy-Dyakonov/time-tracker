@@ -45,19 +45,58 @@ pub async fn test(client: &reqwest::Client, base: &str, token: &str) -> Result<S
     Ok(format!("OK: {}", v["user_id"].as_str().unwrap_or("?")))
 }
 
-async fn room_name(client: &reqwest::Client, base: &str, token: &str, id: &str) -> String {
-    let path = format!(
-        "/_matrix/client/v3/rooms/{}/state/m.room.name",
-        urlencoding::encode(id)
-    );
-    match get(client, base, token, &path, &[]).await {
-        Ok(v) => v["name"].as_str().unwrap_or(id).to_string(),
-        Err(_) => format!("(без названия) {id}"),
+async fn state_str(client: &reqwest::Client, base: &str, token: &str, id: &str, ev: &str, field: &str) -> Option<String> {
+    let path = format!("/_matrix/client/v3/rooms/{}/state/{ev}", urlencoding::encode(id));
+    let v = get(client, base, token, &path, &[]).await.ok()?;
+    let s = v[field].as_str()?.trim();
+    (!s.is_empty()).then(|| s.to_string())
+}
+
+/// "Иван", "Иван и Мария", "Иван, Мария и ещё 3" — like Element names rooms by their members.
+fn members_label(mut names: Vec<String>) -> Option<String> {
+    names.sort_by_key(|n| n.to_lowercase());
+    match names.len() {
+        0 => None,
+        1 => Some(names.remove(0)),
+        2 => Some(format!("{} и {}", names[0], names[1])),
+        n => Some(format!("{}, {} и ещё {}", names[0], names[1], n - 2)),
     }
+}
+
+/// Room display name as the Matrix spec (and Element) computes it:
+/// m.room.name, then m.room.canonical_alias, then the other members' display names.
+async fn room_name(client: &reqwest::Client, base: &str, token: &str, id: &str, me: &str) -> String {
+    if let Some(n) = state_str(client, base, token, id, "m.room.name", "name").await {
+        return n;
+    }
+    if let Some(a) = state_str(client, base, token, id, "m.room.canonical_alias", "alias").await {
+        return a;
+    }
+    let path = format!("/_matrix/client/v3/rooms/{}/joined_members", urlencoding::encode(id));
+    if let Ok(v) = get(client, base, token, &path, &[]).await {
+        if let Some(joined) = v["joined"].as_object() {
+            let others: Vec<String> = joined
+                .iter()
+                .filter(|(uid, _)| uid.as_str() != me)
+                .map(|(uid, m)| match m["display_name"].as_str().map(str::trim) {
+                    Some(d) if !d.is_empty() => d.to_string(),
+                    // @ivan:server -> ivan
+                    _ => uid.trim_start_matches('@').split(':').next().unwrap_or(uid).to_string(),
+                })
+                .collect();
+            return members_label(others).unwrap_or_else(|| "Пустая комната".into());
+        }
+    }
+    format!("(без названия) {id}")
 }
 
 pub async fn list_rooms(client: &reqwest::Client, base: &str, token: &str) -> Result<Vec<Room>, String> {
     let base = trim_url(base);
+    let me = get(client, &base, token, "/_matrix/client/v3/account/whoami", &[]).await?["user_id"]
+        .as_str()
+        .unwrap_or("")
+        .to_string();
+    let me = me.as_str();
     let v = get(client, &base, token, "/_matrix/client/v3/joined_rooms", &[]).await?;
     let ids: Vec<String> = v["joined_rooms"]
         .as_array()
@@ -67,7 +106,7 @@ pub async fn list_rooms(client: &reqwest::Client, base: &str, token: &str) -> Re
         .map(|id| {
             let base = base.clone();
             async move {
-                let name = room_name(client, &base, token, &id).await;
+                let name = room_name(client, &base, token, &id, me).await;
                 Room { id, name }
             }
         })
@@ -87,7 +126,7 @@ async fn room_events(
     start_ms: i64,
     end_ms: i64,
 ) -> Result<Vec<Event>, String> {
-    let name = room_name(client, base, token, room_id).await;
+    let name = room_name(client, base, token, room_id, user_id).await;
     let filter = serde_json::json!({ "senders": [user_id], "types": ["m.room.message"] }).to_string();
     let path = format!("/_matrix/client/v3/rooms/{}/messages", urlencoding::encode(room_id));
 
@@ -174,4 +213,18 @@ pub async fn fetch(
         }
     }
     Ok(all)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::members_label;
+    fn v(a: &[&str]) -> Vec<String> { a.iter().map(|s| s.to_string()).collect() }
+
+    #[test]
+    fn labels_rooms_by_members() {
+        assert_eq!(members_label(v(&[])), None);
+        assert_eq!(members_label(v(&["Иван"])).as_deref(), Some("Иван"));
+        assert_eq!(members_label(v(&["Мария", "Иван"])).as_deref(), Some("Иван и Мария"));
+        assert_eq!(members_label(v(&["Пётр", "Мария", "Иван", "Анна"])).as_deref(), Some("Анна, Иван и ещё 2"));
+    }
 }
