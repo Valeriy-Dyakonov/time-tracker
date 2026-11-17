@@ -1,10 +1,13 @@
 use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::PathBuf;
+use tauri::Manager;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
     pub jira_url: String,
-    /// Jira project keys (e.g. "RFS") used only as context for AI: no hours are assigned to them.
+    /// Jira project keys used only as context for the AI: no hours are assigned to them.
     pub context_projects: Vec<String>,
     pub llm_base_url: String,
     pub llm_model: String,
@@ -14,19 +17,18 @@ pub struct Settings {
     pub holiday_country: String,
     /// Shorten pre-holiday days by one hour.
     pub short_days: bool,
-    /// Read merge requests only from projects of the locally selected repositories (matched by `origin`).
+    /// Read merge requests only from projects of the selected local repositories (matched by `origin`).
     pub gitlab_local_only: bool,
-    /// Exchange (OWA) address, e.g. https://mail.company.ru — EWS path is appended automatically.
+    /// Exchange (OWA) address; the EWS path is appended automatically.
     pub exchange_url: String,
     pub exchange_user: String,
     /// Keep only meetings that look like calls (Teams/Zoom/... or "созвон" in title/location).
     pub calendar_only_calls: bool,
     pub matrix_homeserver: String,
     pub matrix_user_id: String,
-    /// Room IDs to read. Empty = all joined rooms.
-    /// Room IDs that are never read (private chats, off-topic channels). All other joined rooms are analysed.
+    /// Room IDs that are never read; all other joined rooms are analysed.
     pub matrix_exclude_rooms: Vec<String>,
-    /// Folder that contains many repositories (used by the repo picker).
+    /// Folder with many repositories, used by the repo picker.
     pub git_root: String,
     pub git_repos: Vec<String>,
     /// Author name/email patterns. Empty = `git config user.email` of each repo.
@@ -65,62 +67,22 @@ impl Default for Settings {
     }
 }
 
-/// A single piece of evidence about what the user was doing.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Event {
-    /// "jira" | "git" | "matrix"
-    pub source: String,
-    /// Unix epoch milliseconds.
-    pub ts: i64,
-    pub issue_key: Option<String>,
-    pub text: String,
-    /// Extra context used for issue-key detection (e.g. git branch, matrix room).
-    pub context: Option<String>,
-    /// Rough size of the work: changed lines for git, 1 otherwise.
-    pub weight: f64,
-    /// Who a chat message was addressed to (mentions, reply target or the other person in a DM).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub to: Option<String>,
+fn path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir.join("settings.json"))
 }
 
-/// One status change from the issue history (by anyone: QA moving a task to "Testing" matters too).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct StatusChange {
-    pub ts: i64,
-    pub from: String,
-    pub to: String,
-    pub by_me: bool,
+pub fn load(app: &tauri::AppHandle) -> Result<Settings, String> {
+    let p = path(app)?;
+    if !p.exists() {
+        return Ok(Settings::default());
+    }
+    let s = fs::read_to_string(p).map_err(|e| e.to_string())?;
+    serde_json::from_str(&s).map_err(|e| e.to_string())
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct IssueInfo {
-    pub key: String,
-    pub summary: String,
-    pub status: String,
-    pub issue_type: String,
-    /// Start of the description (context for AI).
-    #[serde(default)]
-    pub description: String,
-    /// Parent issue (sub-task parent) and epic: read as context, never get hours by themselves.
-    #[serde(default)]
-    pub parent: Option<String>,
-    #[serde(default)]
-    pub epic: Option<String>,
-    /// Keys of linked issues.
-    #[serde(default)]
-    pub links: Vec<String>,
-    /// Links found in the description (used to find related Confluence pages).
-    #[serde(default)]
-    pub urls: Vec<String>,
-    /// Status history (all authors), oldest first. Only for tasks loaded by the period search.
-    #[serde(default)]
-    pub transitions: Vec<StatusChange>,
-    /// Creation / resolution time, ms since epoch: a task cannot be worked on before it exists or after it was resolved.
-    #[serde(default)]
-    pub created: Option<i64>,
-    #[serde(default)]
-    pub resolved: Option<i64>,
+pub fn save(app: &tauri::AppHandle, settings: &Settings) -> Result<(), String> {
+    let json = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
+    fs::write(path(app)?, json).map_err(|e| e.to_string())
 }

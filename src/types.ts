@@ -51,7 +51,6 @@ export const defaultSettings: Settings = {
 
 export type Source = "jira" | "git" | "gitlab" | "matrix" | "confluence" | "calendar";
 
-/** A meeting / call from the corporate calendar. */
 export interface Meeting {
   ts: number;
   endTs: number;

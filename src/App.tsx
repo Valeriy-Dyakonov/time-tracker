@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { api, inTauri } from "./api";
 import { JiraUrlContext } from "./components/IssueLink";
-import Report from "./components/Report";
+import Report from "./components/report/Report";
 import TitleBar from "./components/TitleBar";
-import Settings from "./components/Settings";
+import Settings from "./components/settings/Settings";
 import { setupState } from "./lib/setup";
 import { defaultSettings, type Analysis, type Settings as S } from "./types";
 

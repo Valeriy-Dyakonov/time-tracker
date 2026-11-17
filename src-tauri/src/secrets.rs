@@ -92,3 +92,26 @@ pub fn set(name: &str, value: &str) -> Result<(), String> {
 pub fn get(name: &str) -> Option<String> {
     get_in(&Keychain, name)
 }
+
+/// A keychain entry and the service name shown when it is missing.
+pub struct Secret {
+    pub name: &'static str,
+    pub label: &'static str,
+}
+
+pub const JIRA: Secret = Secret { name: "jira_pat", label: "Jira" };
+pub const LLM: Secret = Secret { name: "llm_key", label: "ИИ" };
+pub const MATRIX: Secret = Secret { name: "matrix_token", label: "Matrix" };
+pub const CONFLUENCE: Secret = Secret { name: "confluence_pat", label: "Confluence" };
+pub const EXCHANGE: Secret = Secret { name: "exchange_password", label: "Почта" };
+pub const GITLAB: Secret = Secret { name: "gitlab_pat", label: "GitLab" };
+
+pub const ALL: [&Secret; 6] = [&JIRA, &LLM, &MATRIX, &CONFLUENCE, &EXCHANGE, &GITLAB];
+
+pub fn is_known(name: &str) -> bool {
+    ALL.iter().any(|s| s.name == name)
+}
+
+pub fn require(secret: &Secret) -> Result<String, String> {
+    get(secret.name).ok_or_else(|| format!("{}: токен не задан в настройках", secret.label))
+}

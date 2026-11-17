@@ -616,3 +616,11 @@ a.ilink, .nw { white-space: nowrap; }
 .dl-bar { height: 4px; margin: 4px 0 0 17px; border-radius: 4px; background: var(--line); overflow: hidden; }
 .dl-bar i { display: block; height: 100%; border-radius: 4px; }
 @media (max-width: 1100px) { .overview { grid-template-columns: 1fr; } }
+
+/* section titles that carry a help tip */
+.row > .titled { margin: 0; }
+.titled { display: flex; align-items: center; }
+/* help tips must not be clipped by rounded containers */
+.stats, .daylist { overflow: visible; }
+.stat:first-child { border-radius: 12px 0 0 12px; } .stat:last-child { border-radius: 0 12px 12px 0; }
+.day:first-child, .day:first-child .day-sum { border-radius: 12px 12px 0 0; } .day:last-child, .day:last-child .day-sum { border-radius: 0 0 12px 12px; } .day:only-child, .day:only-child .day-sum { border-radius: 12px; }

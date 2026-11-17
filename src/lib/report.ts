@@ -147,7 +147,6 @@ export function markdown(a: Analysis): string {
   return L.join("\n");
 }
 
-/** Plain text for pasting a single day into the other system. */
 export function dayText(a: Analysis, d: DayPlan): string {
   return `${formatRu(d.date)} — ${fmtH(dayTotal(d))} ч\n` +
     d.tasks.map((t) => `${t.key} ${a.issues[t.key]?.summary ?? ""}: ${fmtH(t.hours)} ч${a.jiraUrl ? " " + a.jiraUrl + "/browse/" + t.key : ""}`).join("\n") +

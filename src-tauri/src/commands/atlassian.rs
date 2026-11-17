@@ -1,0 +1,94 @@
+//! Jira and Confluence.
+use super::Ctx;
+use crate::browser;
+use crate::model::{Event, IssueInfo};
+use crate::secrets::{self, require};
+use crate::sources::{confluence, jira};
+use crate::util::{range_ms, trim_url};
+use futures::StreamExt;
+
+#[tauri::command]
+pub async fn fetch_jira(app: tauri::AppHandle, start: String, end: String) -> Result<jira::JiraResult, String> {
+    let c = Ctx::load(&app)?;
+    let (a, b) = range_ms(&start, &end)?;
+    jira::fetch(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &start, a, b).await
+}
+
+#[tauri::command]
+pub async fn lookup_issues(app: tauri::AppHandle, keys: Vec<String>) -> Result<Vec<IssueInfo>, String> {
+    let c = Ctx::load(&app)?;
+    jira::lookup(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &keys).await
+}
+
+fn is_issue_key(key: &str) -> bool {
+    key.len() <= 40 && key.contains('-') && key.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
+/// Opens `<jira>/browse/<KEY>`. The key is validated and the host is always the configured Jira,
+/// so the frontend cannot make the app open an arbitrary URL.
+#[tauri::command]
+pub fn open_issue(app: tauri::AppHandle, key: String) -> Result<(), String> {
+    let s = crate::settings::load(&app)?;
+    if !is_issue_key(&key) || s.jira_url.trim().is_empty() {
+        return Err("Не удалось открыть задачу: неверный ключ или не задан адрес Jira".into());
+    }
+    browser::open(&format!("{}/browse/{}", trim_url(&s.jira_url), key))
+}
+
+#[tauri::command]
+pub async fn fetch_confluence(app: tauri::AppHandle, start: String, end: String) -> Result<Vec<Event>, String> {
+    let c = Ctx::load(&app)?;
+    let (a, b) = range_ms(&start, &end)?;
+    confluence::fetch(&c.client, &c.settings.confluence_url, &require(&secrets::CONFLUENCE)?, &start, a, b).await
+}
+
+#[derive(serde::Deserialize)]
+pub struct IssueUrls {
+    key: String,
+    urls: Vec<String>,
+}
+
+#[derive(serde::Serialize)]
+pub struct IssuePages {
+    key: String,
+    pages: Vec<confluence::PageCtx>,
+}
+
+/// Confluence pages related to tasks: links in the description plus the issue's web links. Context only.
+#[tauri::command]
+pub async fn fetch_issue_pages(app: tauri::AppHandle, issues: Vec<IssueUrls>) -> Result<Vec<IssuePages>, String> {
+    let c = Ctx::load(&app)?;
+    let jira_pat = require(&secrets::JIRA)?;
+    let wiki_pat = require(&secrets::CONFLUENCE)?;
+    let (jira_url, wiki_url) = (&c.settings.jira_url, &c.settings.confluence_url);
+    if wiki_url.trim().is_empty() {
+        return Err("Confluence: не задан адрес".into());
+    }
+    let out = futures::stream::iter(issues.into_iter().take(60))
+        .map(|i| {
+            let (c, jira_pat, wiki_pat) = (&c, &jira_pat, &wiki_pat);
+            async move {
+                let mut urls = i.urls;
+                urls.extend(jira::remote_links(&c.client, jira_url, jira_pat, &i.key).await);
+                let pages = confluence::pages(&c.client, wiki_url, wiki_pat, &urls, 3).await;
+                IssuePages { key: i.key, pages }
+            }
+        })
+        .buffer_unordered(4)
+        .collect::<Vec<_>>()
+        .await;
+    Ok(out.into_iter().filter(|p| !p.pages.is_empty()).collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_issue_key;
+
+    #[test]
+    fn accepts_only_issue_like_keys() {
+        assert!(is_issue_key("ABC-123"));
+        assert!(!is_issue_key("ABC"));
+        assert!(!is_issue_key("A-1/../../x"));
+        assert!(!is_issue_key("A-1?x=https://evil"));
+    }
+}
