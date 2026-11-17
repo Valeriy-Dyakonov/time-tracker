@@ -6,14 +6,15 @@ use std::path::Path;
 use std::process::Command;
 
 fn git(repo: &str, args: &[String]) -> Result<String, String> {
-    let out = Command::new("git")
-        .arg("-C")
-        .arg(repo)
-        .arg("-c")
-        .arg("core.quotepath=off")
-        .args(args)
-        .output()
-        .map_err(|e| format!("git не запустился: {e}"))?;
+    let mut cmd = Command::new("git");
+    cmd.arg("-C").arg(repo).arg("-c").arg("core.quotepath=off").args(args);
+    // A windowed app must not flash a console window for every git call.
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    }
+    let out = cmd.output().map_err(|e| format!("git не запустился: {e}"))?;
     if !out.status.success() {
         return Err(format!(
             "git ({repo}): {}",

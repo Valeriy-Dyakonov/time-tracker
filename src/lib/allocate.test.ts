@@ -180,3 +180,35 @@ describe("filling days without data", () => {
     expect([...notes].some((x) => x.includes("Платежи 2.0"))).toBe(true);
   });
 });
+
+describe("filler wording follows the task stage", () => {
+  const ev = (source: "git" | "jira", key: string, text: string) => ({ ts: 0, source, key, text });
+  const act = (key: string, evidence: ReturnType<typeof ev>[]): DayActivity => ({ weights: { [key]: 1 }, notes: {}, summary: "s", reasoning: "r", evidence, eventCount: evidence.length });
+  const issues = { "A-1": { key: "A-1", summary: "Задача", status: "In Progress", issueType: "Task" } };
+  const QA = /Тестирован|QA|окружения|стенд|релиз|инфраструктур|Проверка|проверка результата/;
+
+  it("after the last commit it is testing and QA support, before the first commit it is analysis", () => {
+    const plan = buildPlan(
+      ["2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06"],
+      { "2026-11-03": act("A-1", [ev("git", "A-1", "[r] fix")]) },
+      issues, 8, "neighbors",
+    );
+    expect(plan[0].tasks[0].notes[0]).toMatch(/Анализ|Проработка|Изучение|Обсуждение|Планирование/); // 02.11: before any commit
+    expect(plan[2].tasks[0].notes[0]).toMatch(QA); // 04.11: after the only commit
+    expect(plan[4].tasks[0].notes[0]).toMatch(QA);
+    expect(plan[2].reasoning).toContain("после разработки");
+  });
+
+  it("a status change to Testing switches the stage to QA", () => {
+    const plan = buildPlan(
+      ["2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05"],
+      {
+        "2026-11-02": act("A-1", [ev("git", "A-1", "[r] feat")]),
+        "2026-11-03": act("A-1", [ev("jira", "A-1", "status: In Progress → Testing")]),
+        "2026-11-05": act("A-1", [ev("git", "A-1", "[r] more")]),
+      },
+      issues, 8, "neighbors",
+    );
+    expect(plan[2].tasks[0].notes[0]).toMatch(QA); // 04.11: status was Testing on 03.11
+  });
+});

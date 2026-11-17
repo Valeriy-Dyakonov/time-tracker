@@ -139,26 +139,51 @@ export function autoSummary(tasks: TaskHours[], issues: Record<string, IssueInfo
 
 const short = (d: string) => formatRu(d).slice(0, 5);
 
-/**
- * Neutral wording for days that have no traces: what a person really does on a task without leaving commits
- * (reading, analysis, clarifying). Deliberately generic: no invented results, bugs or deliverables.
- */
-const FILLER = [
-  "Анализ задачи и изучение контекста",
-  "Проработка требований, уточнение деталей",
-  "Изучение связанных задач и документации",
-  "Анализ существующего решения, подготовка подхода",
-  "Обсуждение деталей реализации, проработка решения",
-  "Планирование работ по задаче",
-];
+/** Where a task is in its life, judged by the commits and status changes seen in the period. */
+export type Phase = "analysis" | "dev" | "qa";
 
-export function fillerNote(key: string, n: number, issues: Record<string, IssueInfo>): string {
+/**
+ * Neutral wording for days that have no traces: what a person really does on a task without leaving commits.
+ * Deliberately generic (no invented results, bugs or deliverables), but matched to the stage of the task:
+ * before the first commit it is analysis, between commits it is development, after the last commit it is
+ * testing, QA support and environment problems.
+ */
+const FILLER: Record<Phase, string[]> = {
+  analysis: [
+    "Анализ задачи и изучение контекста",
+    "Проработка требований, уточнение деталей",
+    "Изучение связанных задач и документации",
+    "Анализ существующего решения, подготовка подхода",
+    "Обсуждение деталей реализации, проработка решения",
+    "Планирование работ по задаче",
+  ],
+  dev: [
+    "Работа над реализацией, отладка",
+    "Доработка решения, проверка на локальном окружении",
+    "Рефакторинг и подготовка изменений по задаче",
+    "Отладка и проверка граничных случаев",
+    "Обсуждение деталей реализации с командой",
+  ],
+  qa: [
+    "Тестирование, проверка результата",
+    "Поддержка QA: разбор вопросов по задаче",
+    "Решение проблем окружения и стенда при тестировании",
+    "Проверка на тестовом стенде, разбор результатов тестирования",
+    "Подготовка к релизу, проверка результата",
+    "Анализ и устранение инфраструктурных проблем при тестировании",
+  ],
+};
+
+export const PHASE_LABEL: Record<Phase, string> = { analysis: "анализ", dev: "разработка", qa: "после разработки (тестирование, поддержка QA)" };
+
+export function fillerNote(key: string, n: number, issues: Record<string, IssueInfo>, phase: Phase = "analysis"): string {
   const i = issues[key];
   const parent = i?.epic ?? i?.parent;
-  const pt = parent ? issues[parent]?.summary : "";
+  const pt = phase !== "qa" && parent ? issues[parent]?.summary : "";
+  const list = FILLER[phase];
   const h = [...key].reduce((s, c) => s + c.charCodeAt(0), 0);
-  const idx = (h + n) % (FILLER.length + (pt ? 1 : 0));
-  return pt && idx === FILLER.length ? `Проработка задачи в рамках «${pt.slice(0, 80)}»` : FILLER[idx];
+  const idx = (h + n) % (list.length + (pt ? 1 : 0));
+  return pt && idx === list.length ? `Проработка задачи в рамках «${pt.slice(0, 80)}»` : list[idx];
 }
 
 export function toEvidence(events: Evt[], max = 200): Evidence[] {
@@ -207,9 +232,41 @@ export function buildPlan(
   };
   const aliveOnly = (w: Record<string, number>, date: string) =>
     Object.fromEntries(Object.entries(w).filter(([k]) => alive(k, date)));
+  // Timeline of each task from the evidence of the days that do have data: commits and status changes.
+  const gitDays: Record<string, string[]> = {};
+  const statusAt: Record<string, { d: string; to: string }[]> = {};
+  for (const d of Object.keys(activity).sort()) {
+    for (const e of activity[d].evidence) {
+      if (!e.key) continue;
+      if (e.source === "git") (gitDays[e.key] ??= []).push(d);
+      if (e.source === "jira") {
+        const m = /(?:status|статус)[^:;]*:\s*[^→;]*→\s*([^;]+)/i.exec(e.text);
+        if (m) (statusAt[e.key] ??= []).push({ d, to: m[1].trim() });
+      }
+    }
+  }
+  const QA_STATUS = /test|qa|review|verif|ready|done|closed|resolved|тест|ревью|провер|готов|закрыт|выполнен|решен|решён/i;
+  const phaseOf = (key: string, date: string): Phase => {
+    const before = (gitDays[key] ?? []).some((d) => d < date);
+    const after = (gitDays[key] ?? []).some((d) => d > date);
+    const st = [...(statusAt[key] ?? [])].reverse().find((x) => x.d <= date);
+    if (st && QA_STATUS.test(st.to)) return "qa";
+    if (before && !after) return "qa";
+    if (before && after) return "dev";
+    return "analysis";
+  };
   const fillN: Record<string, number> = {};
-  const withFiller = (tasks: TaskHours[]): TaskHours[] =>
-    tasks.map((t) => ({ ...t, notes: [fillerNote(t.key, (fillN[t.key] = (fillN[t.key] ?? -1) + 1), issues)] }));
+  let lastPhases = "";
+  const withFiller = (tasks: TaskHours[], date: string): TaskHours[] => {
+    const ph: string[] = [];
+    const out = tasks.map((t) => {
+      const phase = phaseOf(t.key, date);
+      ph.push(`${t.key}: ${PHASE_LABEL[phase]}`);
+      return { ...t, notes: [fillerNote(t.key, (fillN[t.key] = (fillN[t.key] ?? -1) + 1), issues, phase)] };
+    });
+    lastPhases = ph.join("; ");
+    return out;
+  };
 
   // Whole-period mix: each active day counts equally, so one huge day does not dominate.
   const periodWeights: Record<string, number> = {};
@@ -263,7 +320,7 @@ export function buildPlan(
     };
 
     if (fillMode === "period") {
-      const tasks = withFiller(toTasks(distribute(periodFor(), hoursPerDay), {}));
+      const tasks = withFiller(toTasks(distribute(periodFor(), hoursPerDay), {}), date);
       return {
         ...base,
         tasks,
@@ -282,7 +339,7 @@ export function buildPlan(
       if (Object.keys(w).length) { src = d; mix = w; break; }
     }
     if (!src) {
-      const tasks = withFiller(toTasks(distribute(periodFor(), hoursPerDay), {}));
+      const tasks = withFiller(toTasks(distribute(periodFor(), hoursPerDay), {}), date);
       return {
         ...base,
         tasks,
@@ -291,14 +348,14 @@ export function buildPlan(
         reasoning: `${noEvents} Подходящих соседних дней нет — часы распределены по задачам всего периода: ${listTasks(tasks)}.`,
       };
     }
-    const tasks = withFiller(toTasks(distribute(mix, hoursPerDay), {}));
+    const tasks = withFiller(toTasks(distribute(mix, hoursPerDay), {}), date);
     return {
       ...base,
       tasks,
       basis: "inferred",
       inferredFrom: src,
       summary: autoSummary(tasks, issues),
-      reasoning: `${noEvents} Взято по ${src < date ? "предыдущему" : "следующему"} дню с активностью — ${short(src)}: ${listTasks(tasks)}. Описание типовое: за этот день нет следов работы.`,
+      reasoning: `${noEvents} Взято по ${src < date ? "предыдущему" : "следующему"} дню с активностью — ${short(src)}: ${listTasks(tasks)}. Описание типовое, по этапу задачи (${lastPhases}): за этот день нет следов работы.`,
     };
   });
 }

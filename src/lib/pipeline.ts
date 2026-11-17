@@ -95,7 +95,92 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
   if (ctxProjects.size) log("info", `Проекты только для контекста (часы на них не начисляются): ${[...ctxProjects].join(", ")}.`);
   log("info", `К заполнению ${dates.length} рабочих дн.${o.end > today ? " (будущие дни не заполняются)" : ""}. Анализ ИИ: ${aiOn ? "включён" : "выключен — будет эвристика"}.`);
 
-  // ---- 1. collect (everything here is read-only)
+  // The flow follows how a person would work it out: git -> Jira -> parents/epics -> wiki -> calendar -> chat -> match by time.
+  const STEPS = 7;
+  const step = (n: number, title: string) => log("info", `━━ Шаг ${n} из ${STEPS}: ${title}`);
+  const contextParents = new Set<string>();
+  const pagesTried = new Set<string>();
+
+  /** Finds task keys in commit messages, branches and chat text, and reads those tasks from Jira. */
+  const matchAndLookup = async (what: string) => {
+    const needKey = events.filter((e) => !e.issueKey).length;
+    events = attachKeys(events);
+    const keyed = events.filter((e) => !e.issueKey).length;
+    log("info", `Привязка (${what}): ключ вида ABC-123 найден в тексте, ветке или названии у ${needKey - keyed} из ${needKey} событий; без ключа осталось ${keyed}${aiOn ? " — их смысл определит ИИ" : " — без ИИ они в расчёте не участвуют"}.`);
+    // Keys from commits/chat may belong to tasks you only touched via git (not assignee/reporter): check every plausible key.
+    const unknown = [...new Set(events.map((e) => e.issueKey).filter((k): k is string => !!k && !issues[k]))].filter(isPlausibleKey);
+    if (unknown.length === 0) return;
+    log("info", `Jira: проверяю ${unknown.length} задач из ${what} (${unknown.slice(0, 6).join(", ")}${unknown.length > 6 ? "…" : ""}).`);
+    try {
+      for (const i of await api.lookupIssues(unknown.slice(0, 200))) issues[i.key] = i;
+      const found = unknown.filter((k) => issues[k]).length;
+      log(found === unknown.length ? "ok" : "info", `Jira: найдено ${found} из ${unknown.length}.`);
+    } catch (e) {
+      log("warn", `Jira lookup: ${e}`);
+    }
+  };
+
+  /** Parents, epics and linked tasks: read for context only, they never get hours by themselves. */
+  const loadContext = async () => {
+    for (let pass = 0; pass < 2; pass++) {
+      const from = pass === 0 ? Object.values(issues) : [...contextParents].map((k) => issues[k]).filter(Boolean);
+      const want = [...new Set(
+        from.flatMap((i) => [i.parent, i.epic, ...(pass === 0 ? (i.links ?? []).slice(0, 5) : [])])
+          .filter((k): k is string => !!k && !issues[k] && isPlausibleKey(k)),
+      )].slice(0, 150);
+      if (want.length === 0) break;
+      log("info", `Jira: читаю родительские задачи, эпики и связанные тикеты (${want.length}): ${want.slice(0, 6).join(", ")}${want.length > 6 ? "…" : ""}.`);
+      try {
+        const got = await api.lookupIssues(want);
+        for (const i of got) { issues[i.key] = i; contextParents.add(i.key); }
+        log("ok", `Jira: контекст получен для ${got.length} из ${want.length}. Часы на них не начисляются.`);
+      } catch (e) {
+        log("warn", `Jira: контекст (родители/эпики): ${e}`);
+        break;
+      }
+    }
+  };
+
+  /** Confluence pages linked from the tasks (description, web links) and from their epics: context only. */
+  const loadPages = async () => {
+    if (!(o.useConfluence && settings.confluenceUrl)) return;
+    const hits = new Map<string, number>();
+    for (const e of events) if (e.issueKey && !isCtx(e.issueKey)) hits.set(e.issueKey, (hits.get(e.issueKey) ?? 0) + 1);
+    const keys = [...hits.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k).slice(0, 30);
+    const withUp = [...new Set(keys.flatMap((k) => [k, issues[k]?.epic, issues[k]?.parent]).filter((k): k is string => !!k && !!issues[k]))]
+      .filter((k) => !pagesTried.has(k)).slice(0, 45);
+    if (withUp.length === 0) return;
+    withUp.forEach((k) => pagesTried.add(k));
+    log("info", `Confluence: ищу страницы, связанные с ${withUp.length} задачами и их эпиками (ссылки в описании и веб-ссылки Jira)…`);
+    try {
+      const got = await api.fetchIssuePages(withUp.map((k) => ({ key: k, urls: issues[k].urls ?? [] })));
+      for (const g of got) issues[g.key] = { ...issues[g.key], pages: g.pages };
+      const n = got.reduce((s, g) => s + g.pages.length, 0);
+      log(n ? "ok" : "info", n ? `Confluence: найдено ${n} ${plural(n, "страница", "страницы", "страниц")} у ${got.length} задач — используются как контекст.` : "Confluence: связанных страниц у этих задач нет.");
+    } catch (e) {
+      log("warn", `Confluence: связанные страницы: ${e}`);
+    }
+  };
+
+  // ---- 1. git: where you are the author
+  step(1, "история git (только ваши коммиты)");
+  if (o.useGit && settings.gitRepos.length > 0) {
+    log("info", `Git: читаю ${settings.gitRepos.length} репозиториев, все ветки…`);
+    try {
+      const g = await api.fetchGit(o.start, o.end);
+      events = events.concat(g);
+      const perRepo = countBy(g, (e) => /^\[([^\]]+)\]/.exec(e.text)?.[1] ?? "?").map(([r, n]) => `${r} ${n}`).join(", ");
+      log("ok", `Git: ${g.length} ${plural(g.length, "коммит", "коммита", "коммитов")}${g.length ? ` (${perRepo})` : ""}.`);
+    } catch (e) {
+      warnings.push(`Git: ${e}`);
+      log("error", `Git: ${e}`);
+    }
+  } else {
+    log("info", "Git: пропущен (не выбран или нет репозиториев).");
+  }
+
+  // ---- 2. Jira for the period
+  step(2, "Jira за период");
   try {
     log("info", "Jira: загружаю задачи, где вы исполнитель/автор, и ваши действия за период…");
     const r = await api.fetchJira(o.start, o.end);
@@ -109,20 +194,18 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
     throw e;
   }
 
-  if (o.useGit && settings.gitRepos.length > 0) {
-    log("info", `Git: читаю историю ${settings.gitRepos.length} репозиториев (все ветки, только ваши коммиты)…`);
-    try {
-      const g = await api.fetchGit(o.start, o.end);
-      events = events.concat(g);
-      const perRepo = countBy(g, (e) => /^\[([^\]]+)\]/.exec(e.text)?.[1] ?? "?").map(([r, n]) => `${r} ${n}`).join(", ");
-      log("ok", `Git: ${g.length} ${plural(g.length, "коммит", "коммита", "коммитов")}${g.length ? ` (${perRepo})` : ""}.`);
-    } catch (e) {
-      warnings.push(`Git: ${e}`);
-      log("error", `Git: ${e}`);
-    }
-  }
+  // ---- 3. commits <-> Jira
+  step(3, "сопоставление коммитов с задачами Jira");
+  await matchAndLookup("коммитов и Jira");
 
+  // ---- 4. parents / epics / links
+  step(4, "родительские задачи, эпики и связанные тикеты — для контекста");
+  await loadContext();
+
+  // ---- 5. Confluence
+  step(5, "Confluence: страницы задач и ваши правки");
   if (o.useConfluence && settings.confluenceUrl) {
+    await loadPages();
     log("info", "Confluence: ищу страницы и комментарии, которые вы создали или правили…");
     try {
       const c = await api.fetchConfluence(o.start, o.end);
@@ -132,8 +215,12 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
       warnings.push(`Confluence: ${e}`);
       log("error", `Confluence: ${e}`);
     }
+  } else {
+    log("info", "Confluence: пропущен (не настроен или выключен).");
   }
 
+  // ---- 6. calendar
+  step(6, "календарь: встречи и звонки");
   if (o.useCalendar && settings.exchangeUrl) {
     log("info", `Календарь (Exchange): читаю встречи и звонки${settings.calendarOnlyCalls ? " (только звонки)" : ""}…`);
     try {
@@ -154,8 +241,12 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
       warnings.push(`Календарь: ${e}`);
       log("error", `Календарь: ${e}`);
     }
+  } else {
+    log("info", "Календарь: пропущен (не настроен или выключен).");
   }
 
+  // ---- 7. chat
+  step(7, "чаты Matrix: рабочие сообщения");
   if (o.useMatrix && settings.matrixHomeserver) {
     log("info", `Matrix: читаю ваши сообщения (${settings.matrixExcludeRooms.length ? `все комнаты, кроме ${settings.matrixExcludeRooms.length} исключённых` : "все комнаты — можно исключить лишние в настройках"})…`);
     try {
@@ -168,70 +259,22 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
       warnings.push(`Matrix: ${e}`);
       log("error", `Matrix: ${e}`);
     }
+  } else {
+    log("info", "Matrix: пропущен (не настроен или выключен).");
   }
 
-  // ---- 2. map git/chat/wiki events to Jira keys
-  const needKey = events.filter((e) => !e.issueKey).length;
-  events = attachKeys(events);
-  const keyed = events.filter((e) => !e.issueKey).length;
-  log("info", `Привязка к задачам: ключ вида ABC-123 найден в тексте, ветке или названии у ${needKey - keyed} из ${needKey} событий; без ключа осталось ${keyed}${aiOn ? " — их смысл определит ИИ" : " — без ИИ они в расчёте не участвуют"}.`);
-
-  // Keys mentioned in commits/chat may belong to tasks you only touched via git (not assignee/reporter),
-  // so every plausible key is checked in Jira, whatever its project prefix.
-  const mentioned = [...new Set(events.map((e) => e.issueKey).filter((k): k is string => !!k && !issues[k]))];
-  const unknown = mentioned.filter(isPlausibleKey);
-  if (unknown.length > 0) {
-    log("info", `Jira: проверяю ${unknown.length} задач, упомянутых в коммитах и чате (${unknown.slice(0, 6).join(", ")}${unknown.length > 6 ? "…" : ""}).`);
-    try {
-      for (const i of await api.lookupIssues(unknown.slice(0, 200))) issues[i.key] = i;
-      const found = unknown.filter((k) => issues[k]).length;
-      log(found === unknown.length ? "ok" : "info", `Jira: найдено ${found} из ${unknown.length}.`);
-    } catch (e) {
-      log("warn", `Jira lookup: ${e}`);
-    }
+  // Chat and calendar may mention tasks that git/Jira did not: second pass for the new keys, with their context.
+  const before = Object.keys(issues).length;
+  await matchAndLookup("чата и календаря");
+  if (Object.keys(issues).length > before) {
+    await loadContext();
+    await loadPages();
   }
   const dropped = [...new Set(events.map((e) => e.issueKey).filter((k): k is string => !!k && !issues[k]))];
   if (dropped.length)
     log("info", `Пропущены ключи, которых Jira не вернула (нет такой задачи или нет доступа): ${dropped.slice(0, 8).join(", ")}. Это нормально — в расчёт они не идут.`);
   events = events.map((e) => (e.issueKey && !issues[e.issueKey] ? { ...e, issueKey: null } : e));
-
-  // ---- 2b. parents, epics and linked tasks: read for context only, they never get hours by themselves
-  const contextParents = new Set<string>();
-  for (let pass = 0; pass < 2; pass++) {
-    const from = pass === 0 ? Object.values(issues) : [...contextParents].map((k) => issues[k]).filter(Boolean);
-    const want = [...new Set(
-      from.flatMap((i) => [i.parent, i.epic, ...(pass === 0 ? (i.links ?? []).slice(0, 5) : [])])
-        .filter((k): k is string => !!k && !issues[k] && isPlausibleKey(k)),
-    )].slice(0, 150);
-    if (want.length === 0) break;
-    log("info", `Jira: читаю родительские задачи, эпики и связанные тикеты для контекста (${want.length}): ${want.slice(0, 6).join(", ")}${want.length > 6 ? "…" : ""}.`);
-    try {
-      const got = await api.lookupIssues(want);
-      for (const i of got) { issues[i.key] = i; contextParents.add(i.key); }
-      log("ok", `Jira: контекст получен для ${got.length} из ${want.length}. Часы на них не начисляются.`);
-    } catch (e) {
-      log("warn", `Jira: контекст (родители/эпики): ${e}`);
-      break;
-    }
-  }
-  // ---- 2c. Confluence pages linked from the tasks (description, web links), incl. the epics' pages: context only
-  if (o.useConfluence && settings.confluenceUrl) {
-    const hits = new Map<string, number>();
-    for (const e of events) if (e.issueKey && !isCtx(e.issueKey)) hits.set(e.issueKey, (hits.get(e.issueKey) ?? 0) + 1);
-    const keys = [...hits.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k).slice(0, 30);
-    const withUp = [...new Set(keys.flatMap((k) => [k, issues[k]?.epic, issues[k]?.parent]).filter((k): k is string => !!k && !!issues[k]))].slice(0, 45);
-    if (withUp.length) {
-      log("info", `Confluence: ищу страницы, связанные с ${withUp.length} задачами и их эпиками (ссылки в описании и веб-ссылки Jira)…`);
-      try {
-        const got = await api.fetchIssuePages(withUp.map((k) => ({ key: k, urls: issues[k].urls ?? [] })));
-        for (const g of got) issues[g.key] = { ...issues[g.key], pages: g.pages };
-        const n = got.reduce((s, g) => s + g.pages.length, 0);
-        log(n ? "ok" : "info", n ? `Confluence: найдено ${n} ${plural(n, "страница", "страницы", "страниц")} у ${got.length} задач — используются как контекст.` : "Confluence: связанных страниц у этих задач нет.");
-      } catch (e) {
-        log("warn", `Confluence: связанные страницы: ${e}`);
-      }
-    }
-  }
+  log("info", "━━ Анализ по дням: события сопоставляются по времени (коммиты, Jira, звонки, чат), затем часы распределяются, дни без данных заполняются.");
 
   // ---- 3. per-day analysis, streamed
   const byDay = groupByDay(events);
