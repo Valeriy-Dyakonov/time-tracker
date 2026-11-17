@@ -1,6 +1,7 @@
 //! Matrix Client-Server API, read-only: the user's own messages in joined rooms.
 pub mod login;
 mod rooms;
+mod text;
 
 use crate::http::{Auth, JsonApi};
 use crate::model::Event;
@@ -72,8 +73,9 @@ pub async fn list_rooms(client: &reqwest::Client, base: &str, token: &str) -> Re
     Ok(rooms)
 }
 
-/// Mentioned users (Element also sets them for replies), else the DM peer; None for a message to the whole room.
-fn recipient(content: &Value, me: &str, members: &Members, dm_peer: &Option<String>) -> Option<String> {
+/// Mentioned users (Element also sets them for replies), else the quoted reply author, else the DM peer;
+/// None for a message to the whole room.
+fn recipient(content: &Value, reply_to: Option<&str>, me: &str, members: &Members, dm_peer: &Option<String>) -> Option<String> {
     let mentioned: Vec<String> = content["m.mentions"]["user_ids"]
         .as_array()
         .into_iter()
@@ -82,7 +84,13 @@ fn recipient(content: &Value, me: &str, members: &Members, dm_peer: &Option<Stri
         .filter(|u| *u != me)
         .map(|u| members.display(u))
         .collect();
-    if mentioned.is_empty() { dm_peer.clone() } else { Some(mentioned.join(", ")) }
+    if !mentioned.is_empty() {
+        return Some(mentioned.join(", "));
+    }
+    match reply_to {
+        Some(u) if u != me => Some(members.display(u)),
+        _ => dm_peer.clone(),
+    }
 }
 
 async fn room_events(mx: &Matrix<'_>, me: &str, room: &str, start_ms: i64, end_ms: i64) -> Result<Vec<Event>, String> {
@@ -114,10 +122,15 @@ async fn room_events(mx: &Matrix<'_>, me: &str, room: &str, start_ms: i64, end_m
             if ts < start_ms || ts >= end_ms || content["m.relates_to"]["rel_type"] == "m.replace" || body.trim().is_empty() {
                 continue;
             }
+            let parsed = text::split_reply(body);
+            let readable = text::humanize_ids(&parsed.text, |u| members.display(u));
+            if readable.trim().is_empty() {
+                continue;
+            }
             out.push(Event {
                 context: Some(name.clone()),
-                to: recipient(content, me, &members, &dm_peer),
-                ..Event::new("matrix", ts, truncate(body, 240))
+                to: recipient(content, parsed.reply_to.as_deref(), me, &members, &dm_peer),
+                ..Event::new("matrix", ts, truncate(readable.trim(), 240))
             });
         }
         match v["end"].as_str() {

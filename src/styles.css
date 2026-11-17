@@ -632,3 +632,6 @@ a.ilink, .nw { white-space: nowrap; }
 .mt-list li { color: var(--text); }
 .mt-title { font-weight: 500; }
 .wl-row.by-date .wl-what { overflow: visible; }
+.evidence { margin-top: 14px; }
+.mt-list li b { color: var(--text); font-weight: 600; }
+.mt-min { color: var(--text); opacity: .75; }
