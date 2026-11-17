@@ -1,6 +1,8 @@
 import type { CSSProperties } from "react";
 import { setTheme, SYSTEM_DARK_PREVIEW, THEMES, useTheme, type ThemeInfo } from "../../../theme";
 import { SectionCard } from "../parts";
+import { LOCALES, setLocale, useLocale } from "../../../i18n";
+import { Segmented } from "../../ui";
 
 const vars = (p: ThemeInfo["preview"]) => ({
   "--p-bg": p.bg, "--p-card": p.card, "--p-text": p.text, "--p-muted": p.muted, "--p-line": p.line, "--p-accent": p.accent,
@@ -27,9 +29,20 @@ function Preview({ t }: { t: ThemeInfo }) {
   );
 }
 
+function LanguagePicker() {
+  const locale = useLocale();
+  return (
+    <SectionCard title="Язык · Language" tip="Язык интерфейса, отчётов и текстов от ИИ. Interface, report and AI text language.">
+      <Segmented value={locale} onChange={setLocale} options={LOCALES.map((l) => ({ value: l.id, label: l.label }))} />
+    </SectionCard>
+  );
+}
+
 export function AppearanceSection() {
   const current = useTheme();
   return (
+    <>
+    <LanguagePicker />
     <SectionCard title="Оформление" tip="Цветовая тема приложения. Применяется сразу и запоминается на этом компьютере — кнопку «Сохранить» нажимать не нужно.">
       <div className="themes" role="radiogroup" aria-label="Тема оформления">
         {THEMES.map((t) => (
@@ -44,5 +57,6 @@ export function AppearanceSection() {
         ))}
       </div>
     </SectionCard>
+    </>
   );
 }
