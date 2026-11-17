@@ -21,12 +21,10 @@
 .wl-cnt { font-size: 12px; font-weight: 600; color: var(--muted); padding: 1px 8px; border-radius: var(--r-pill); background: var(--bg); }
 .wl-cnt.ok { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
 
-.wl-row { display: grid; gap: 10px; align-items: center; padding: 7px 14px; border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
-.wl-row.by-date { grid-template-columns: 24px 108px auto minmax(160px, 1fr); }
-.wl-row.by-key { grid-template-columns: 24px minmax(0, 260px) auto minmax(160px, 1fr); }
+.wl-row { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; padding: 8px 14px 10px; border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
 .wl-row:hover { background: color-mix(in srgb, var(--accent) 3%, transparent); }
 .wl-row.done { opacity: .55; }
-.wl-row.done .wl-desc input { text-decoration: line-through; }
+.wl-row.done .wl-desc textarea { text-decoration: line-through; }
 .wl-what { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; overflow: hidden; }
 .wl-row.by-date .wl-what { gap: 6px; overflow: visible; }
 .wl-what .muted { font-size: 12px; }
@@ -37,10 +35,10 @@
 .wl-check:hover svg { stroke: var(--good); }
 .wl-check.on { background: var(--good); border-color: var(--good); }
 .wl-check.on svg { stroke: var(--on-accent); }
-.wl-desc { position: relative; display: flex; min-width: 0; }
-.wl-desc input { flex: 1; min-width: 0; padding: 5px 34px 5px 9px; font-size: 13px; background: transparent; border-color: transparent; }
-.wl-desc input:hover { border-color: var(--line); }
-.wl-desc input:focus { background: var(--bg); }
+.wl-desc { grid-column: 2 / -1; position: relative; display: flex; min-width: 0; }
+.wl-desc textarea { flex: 1; min-width: 0; min-height: 30px; padding: 6px 34px 6px 10px; font: inherit; font-size: 13px; line-height: 1.5; resize: none; field-sizing: content; overflow-wrap: anywhere; color: var(--text); background: color-mix(in srgb, var(--bg) 60%, transparent); border-color: transparent; }
+.wl-desc textarea:hover { border-color: var(--line); }
+.wl-desc textarea:focus { background: var(--bg); }
 
 /* Weekly text */
 .wk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap: 14px; margin-top: 6px; }
@@ -50,6 +48,6 @@
 
 @media (max-width: 1250px) {
   .wl-grid, .wk-grid { grid-template-columns: 1fr; }
-  .wl-row.by-date, .wl-row.by-key { grid-template-columns: 24px minmax(0, 1fr) auto; }
-  .wl-desc { grid-column: 2 / 4; }
 }
+.wl-desc .copyicon { top: 2px; transform: none; }
+.wl-row .copychip { justify-self: end; }

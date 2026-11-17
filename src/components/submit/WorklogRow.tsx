@@ -38,7 +38,7 @@ export function WorklogRow(props: {
       )}
       <CopyChip text={fmtTempo(r.hours, props.fmt)} title="Скопировать часы для поля Time Spent" />
       <span className="wl-desc">
-        <input value={props.comment} onChange={(e) => props.onComment(e.target.value)} title="Описание для поля Description — можно поправить" />
+        <textarea rows={1} value={props.comment} onChange={(e) => props.onComment(e.target.value)} placeholder="Описание работы" title="Текст для поля Description в Tempo — можно поправить" />
         <CopyIcon text={props.comment} title="Скопировать описание" />
       </span>
     </div>
