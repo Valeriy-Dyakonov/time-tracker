@@ -7,10 +7,10 @@ export default function Meetings({ d }: { d: DayPlan }) {
   const calls = d.meetings.filter((m) => m.isCall).length;
   return (
     <div className="meetings">
-      <span className="mt-head">
-        Звонки и встречи: {d.meetings.length} · {fmtMinutes(meetingMinutes(d))}
-        {calls > 0 && calls !== d.meetings.length ? ` (звонков: ${calls})` : ""}
-      </span>
+      <h6 className="mt-head">
+        <i />Звонки и встречи
+        <span>{d.meetings.length} · {fmtMinutes(meetingMinutes(d))}{calls > 0 && calls !== d.meetings.length ? ` · звонков ${calls}` : ""}</span>
+      </h6>
       <ul className="mt-list">
         {d.meetings.map((m, i) => (
           <li key={i} className={`${m.isCall ? "call" : ""} ${m.tentative ? "tent" : ""}`} title={`${m.organizer ? "Организатор: " + m.organizer : ""}${m.location ? "\n" + m.location : ""}`}>

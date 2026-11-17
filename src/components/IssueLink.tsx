@@ -25,7 +25,7 @@ export default function IssueLink({ k, className }: { k: string; className?: str
         else window.open(url, "_blank");
       }}
     >
-      {k}<span className="ext">↗</span>
+      {k}
     </a>
   );
 }
