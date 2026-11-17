@@ -1,0 +1,182 @@
+import { describe, expect, it } from "vitest";
+import {
+  attachKeys,
+  buildPlan,
+  distribute,
+  fillerNote,
+  heuristicWeights,
+  isPlausibleKey,
+  isWorkMessage,
+  projectOf,
+  rebalance,
+  workDates,
+  type DayActivity,
+} from "./allocate";
+import type { Analysis, DayPlan, Evt } from "../types";
+import { weeksOf } from "./report";
+import { fmtTempo, weekText, worklogRows } from "./submit";
+
+const sum = (o: Record<string, number>) => Object.values(o).reduce((a, b) => a + b, 0);
+
+describe("distribute", () => {
+  it("always sums to the total, in 0.25 steps", () => {
+    for (const w of <Record<string, number>[]>[
+      { A: 1, B: 1, C: 1 },
+      { A: 0.7, B: 0.2, C: 0.1 },
+      { A: 5, B: 0.01 },
+      { A: 1, B: 1, C: 1, D: 1, E: 1, F: 1, G: 1 },
+    ]) {
+      const r = distribute(w, 8);
+      expect(sum(r)).toBeCloseTo(8, 10);
+      for (const h of Object.values(r)) expect(h % 0.25).toBe(0);
+    }
+  });
+  it("drops zero / negative / NaN weights and handles empty input", () => {
+    expect(distribute({ A: 0, B: -1, C: NaN }, 8)).toEqual({});
+    expect(distribute({ A: 1, B: 0 }, 8)).toEqual({ A: 8 });
+    expect(distribute({}, 8)).toEqual({});
+  });
+  it("splits evenly", () => {
+    expect(distribute({ A: 1, B: 1 }, 8)).toEqual({ A: 4, B: 4 });
+  });
+});
+
+describe("attachKeys", () => {
+  const e = (text: string, context: string | null = null): Evt => ({
+    source: "git", ts: 0, issueKey: null, text, context, weight: 1,
+  });
+  it("finds keys in text, then in branch/room", () => {
+    const r = attachKeys([e("PROJ-12 fix"), e("wip", "feature/ABC-7-x"), e("nothing")]);
+    expect(r.map((x) => x.issueKey)).toEqual(["PROJ-12", "ABC-7", null]);
+  });
+});
+
+describe("isWorkMessage", () => {
+  it("drops small talk, keeps work messages", () => {
+    expect(isWorkMessage("ок")).toBe(false);
+    expect(isWorkMessage("спасибо!")).toBe(false);
+    expect(isWorkMessage("👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍")).toBe(false);
+    expect(isWorkMessage("посмотри PAY-12")).toBe(true);
+    expect(isWorkMessage("надо поправить округление в модуле возвратов до релиза")).toBe(true);
+  });
+});
+
+describe("context projects", () => {
+  it("excludes keys from heuristic weights", () => {
+    const mk = (k: string): Evt => ({ source: "jira", ts: 0, issueKey: k, text: "", context: null, weight: 1 });
+    expect(heuristicWeights([mk("OPS-1"), mk("PAY-1")], (k) => projectOf(k) === "OPS")).toEqual({ "PAY-1": 2 });
+  });
+});
+
+describe("isPlausibleKey", () => {
+  it("keeps real-looking project keys, drops well-known non-tasks", () => {
+    expect(["PROJ-25869", "PAY-1", "A1-5"].every(isPlausibleKey)).toBe(true);
+    expect(["UTF-8", "SHA-256", "RFC-2616", "CVE-2024"].some(isPlausibleKey)).toBe(false);
+  });
+});
+
+describe("heuristicWeights", () => {
+  it("ignores events without key", () => {
+    const mk = (k: string | null): Evt => ({ source: "jira", ts: 0, issueKey: k, text: "", context: null, weight: 1 });
+    expect(heuristicWeights([mk("A-1"), mk("A-1"), mk(null)])).toEqual({ "A-1": 4 });
+  });
+});
+
+describe("buildPlan", () => {
+  const act = (w: Record<string, number>): DayActivity => ({ weights: w, notes: {}, summary: "", reasoning: "", evidence: [], eventCount: 1 });
+  it("fills every day to the target and infers empty days", () => {
+    const dates = ["2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05"];
+    const plan = buildPlan(dates, { "2026-11-03": act({ "A-1": 1, "B-2": 1 }) }, {}, 8);
+    expect(plan.map((d) => d.basis)).toEqual(["inferred", "activity", "inferred", "inferred"]);
+    expect(plan[0].inferredFrom).toBe("2026-11-03"); // only a later day exists
+    expect(plan[2].inferredFrom).toBe("2026-11-03"); // previous wins
+    for (const d of plan) expect(d.tasks.reduce((s, t) => s + t.hours, 0)).toBe(8);
+  });
+  it("leaves days empty when there is no activity anywhere", () => {
+    const plan = buildPlan(["2026-11-02"], {}, {}, 8);
+    expect(plan[0].basis).toBe("empty");
+    expect(plan[0].tasks).toEqual([]);
+  });
+});
+
+describe("buildPlan fill modes", () => {
+  const act = (w: Record<string, number>): DayActivity => ({ weights: w, notes: {}, summary: "", reasoning: "r", evidence: [], eventCount: 1 });
+  const dates = ["2026-11-02", "2026-11-03", "2026-11-04"];
+  const activity = { "2026-11-02": act({ A: 3, B: 1 }), "2026-11-04": act({ C: 1 }) };
+  it("period mode mixes all active days equally and explains itself", () => {
+    const d = buildPlan(dates, activity, {}, 8, "period")[1];
+    expect(d.basis).toBe("inferred");
+    expect(d.tasks.reduce((s, t) => s + t.hours, 0)).toBe(8);
+    expect(d.tasks.map((t) => t.key).sort()).toEqual(["A", "B", "C"]);
+    expect(d.reasoning).toContain("всего периода");
+  });
+  it("none mode leaves gaps empty", () => {
+    const d = buildPlan(dates, activity, {}, 8, "none")[1];
+    expect(d.basis).toBe("empty");
+    expect(d.tasks).toEqual([]);
+  });
+  it("neighbors mode names the source day in the reasoning", () => {
+    const d = buildPlan(dates, activity, {}, 8, "neighbors")[1];
+    expect(d.reasoning).toContain("02.11");
+  });
+});
+
+describe("rebalance", () => {
+  it("rescales edited hours back to target", () => {
+    const d = rebalance({
+      date: "2026-11-02", target: 8, off: false, basis: "activity", summary: "", reasoning: "", evidence: [], meetings: [], eventCount: 0,
+      tasks: [{ key: "A", hours: 2, notes: [] }, { key: "B", hours: 2, notes: [] }],
+    });
+    expect(d.tasks.map((t) => t.hours)).toEqual([4, 4]);
+  });
+});
+
+describe("workDates", () => {
+  it("skips weekends and future days", () => {
+    expect(workDates("2026-11-09", "2026-11-17", [1, 2, 3, 4, 5], "2026-11-12"))
+      .toEqual(["2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12"]);
+  });
+});
+
+describe("submit helpers", () => {
+  it("formats Tempo hours", () => {
+    expect(fmtTempo(2.5, "hm")).toBe("2h 30m");
+    expect(fmtTempo(8, "hm")).toBe("8h");
+    expect(fmtTempo(0.25, "hm")).toBe("15m");
+    expect(fmtTempo(2.25, "decimal")).toBe("2.25");
+  });
+  it("builds week text and rows", () => {
+    const day = (date: string, key: string, h: number, summary: string): DayPlan => ({
+      date, target: 8, tasks: [{ key, hours: h, notes: [] }], summary, basis: "activity", off: false, eventCount: 1, reasoning: "", evidence: [], meetings: [],
+    });
+    const a = { start: "2026-11-02", end: "2026-11-08", hoursPerDay: 8, jiraUrl: "", days: [day("2026-11-02", "PAY-1", 8, "Правки клиента"), day("2026-11-03", "PAY-1", 8, "Тесты")], issues: { "PAY-1": { key: "PAY-1", summary: "Шлюз", status: "", issueType: "" } }, warnings: [], usedAi: false, narrative: "", fillMode: "none", log: [] } as unknown as Analysis;
+    expect(worklogRows(a)).toHaveLength(2);
+    const w = weeksOf(a.days)[0];
+    expect(weekText(a, w)).toBe("• PAY-1 Шлюз — 16 ч: Правки клиента; Тесты");
+  });
+});
+
+describe("filling days without data", () => {
+  const act = (w: Record<string, number>): DayActivity => ({ weights: w, notes: {}, summary: "s", reasoning: "r", evidence: [], eventCount: 3 });
+  const issue = (key: string, extra: object = {}) => ({ key, summary: `Задача ${key}`, status: "In Progress", issueType: "Task", ...extra });
+
+  it("skips tasks that did not exist yet and writes neutral, varied descriptions", () => {
+    const created = new Date(2026, 10, 5).getTime();
+    const issues = { "A-1": issue("A-1"), "B-1": issue("B-1", { created }) };
+    const plan = buildPlan(["2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05"], { "2026-11-02": act({ "A-1": 1, "B-1": 1 }) }, issues, 8, "neighbors");
+    expect(plan[0].basis).toBe("activity");
+    // 03 and 04 Nov: B-1 is created only on 05 Nov
+    expect(plan[1].tasks.map((t) => t.key)).toEqual(["A-1"]);
+    expect(plan[1].tasks[0].hours).toBe(8);
+    expect(plan[2].tasks.map((t) => t.key)).toEqual(["A-1"]);
+    expect(plan[3].tasks.map((t) => t.key).sort()).toEqual(["A-1", "B-1"]);
+    for (const d of plan.slice(1)) expect(d.tasks.every((t) => t.notes[0]?.length > 10)).toBe(true);
+    expect(plan[1].tasks[0].notes[0]).not.toBe(plan[2].tasks[0].notes[0]); // consecutive days are worded differently
+  });
+
+  it("uses the epic title in the wording when known", () => {
+    const issues = { "A-1": issue("A-1", { epic: "E-1" }), "E-1": issue("E-1", { summary: "Платежи 2.0" }) };
+    const notes = new Set(Array.from({ length: 8 }, (_, n) => fillerNote("A-1", n, issues)));
+    expect([...notes].some((x) => x.includes("Платежи 2.0"))).toBe(true);
+  });
+});
