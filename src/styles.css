@@ -319,3 +319,24 @@ a.ilink .ext { font-size: 10px; margin-left: 2px; opacity: .55; }
 .side-note.secure { display: flex; gap: 8px; align-items: flex-start; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
 .side-note.secure svg { flex: none; width: 16px; height: 16px; margin-top: 1px; fill: none; stroke: var(--good); stroke-width: 1.5; }
 .side-note.secure b { color: var(--text); font-weight: 600; }
+
+/* interaction: every clickable thing gets a pointer and a visible hover */
+button:not(:disabled), summary, select, a, input[type=checkbox], input[type=radio], label.check { cursor: pointer; }
+input[type=date]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .7; }
+input[type=date]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+.tb-btn:not(.tb-gear) { cursor: default; } /* window controls keep the Windows arrow */
+.btn { transition: border-color .12s, background .12s, filter .12s; }
+.btn:not(:disabled):hover { background: color-mix(in srgb, var(--accent) 6%, var(--card)); }
+.btn.ghost:not(:disabled):hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.btn.primary:not(:disabled):hover { background: var(--accent); filter: brightness(1.1); }
+.btn:disabled:hover { border-color: var(--line); }
+.btn.primary:disabled:hover { border-color: var(--accent); }
+.tab { transition: color .12s, background .12s; }
+.tab:not(.active):hover { color: var(--text); background: color-mix(in srgb, var(--card) 60%, transparent); }
+label.check:hover { color: var(--accent); }
+summary:hover { color: var(--accent); }
+input:not([type=checkbox]):not([type=radio]):hover, select:hover, textarea:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.daterange:hover, .unit:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.daterange input:hover, .unit input:hover { border-color: transparent; }
+.srcbtn.locked:hover { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+a.ilink { cursor: pointer; }
