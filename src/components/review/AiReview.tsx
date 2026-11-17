@@ -54,18 +54,35 @@ function ReviewDay({ a, d }: { a: Analysis; d: DayPlan }) {
         <span className="rd-total">{fmtH(dayTotal(d))} ч</span>
         <Badge tone={tone}>{label}</Badge>
       </header>
-      {d.reasoning && <p className="reasoning">{d.reasoning}</p>}
-      {d.tasks.length > 0 && (
-        <ul className="rtasks">
-          {d.tasks.map((t) => (
-            <li key={t.key}>
-              <b><IssueLink k={t.key} /></b> {a.issues[t.key]?.summary} — {fmtH(t.hours)} ч
-              {t.notes.length > 0 && <span className="muted"> · {t.notes.join("; ")}</span>}
-            </li>
-          ))}
-        </ul>
+      {d.summary && d.basis === "activity" && (
+        <section className="rd-block">
+          <h6 className="rd-h">Кратко о дне</h6>
+          <p className="rd-summary">{d.summary}</p>
+        </section>
       )}
-      {d.summary && d.basis === "activity" && <p className="muted">Краткое описание дня: {d.summary}</p>}
+      {d.tasks.length > 0 && (
+        <section className="rd-block">
+          <h6 className="rd-h">Задачи <span>{d.tasks.length}</span></h6>
+          <ul className="rtasks">
+            {d.tasks.map((t) => (
+              <li key={t.key}>
+                <div className="rt-line">
+                  <IssueLink k={t.key} />
+                  <span className="rt-title">{a.issues[t.key]?.summary}</span>
+                  <b className="rt-h">{fmtH(t.hours)}&nbsp;ч</b>
+                </div>
+                {t.notes.length > 0 && <ul className="rt-notes">{t.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {d.reasoning && (
+        <section className="rd-block">
+          <h6 className="rd-h">Почему такие доли</h6>
+          <p className="reasoning">{d.reasoning}</p>
+        </section>
+      )}
       <Meetings d={d} />
       <Evidence d={d} />
     </article>
