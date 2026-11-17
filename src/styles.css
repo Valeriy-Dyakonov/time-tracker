@@ -337,6 +337,6 @@ label.check:hover { color: var(--accent); }
 summary:hover { color: var(--accent); }
 input:not([type=checkbox]):not([type=radio]):hover, select:hover, textarea:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
 .daterange:hover, .unit:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
-.daterange input:hover, .unit input:hover { border-color: transparent; }
+.daterange input:not([type=checkbox]):not([type=radio]):hover, .unit input:not([type=checkbox]):not([type=radio]):hover { border-color: transparent; }
 .srcbtn.locked:hover { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
 a.ilink { cursor: pointer; }
