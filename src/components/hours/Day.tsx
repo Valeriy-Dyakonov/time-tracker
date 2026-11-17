@@ -62,7 +62,7 @@ function DaySummary({ a, d, open, onToggle }: { a: Analysis; d: DayPlan; open: b
       </span>
       <span className="d-meet">{mm > 0 && <>{fmtMinutes(mm)}<small>{t.meetings}</small></>}</span>
       <span className={`d-total ${balanced ? "" : "bad"}`}>
-        {d.off ? "—" : fmtH(total)}{!d.off && <small> {all.common.h}</small>}
+        <span className="d-val">{d.off ? "—" : fmtH(total)}{!d.off && <small>&nbsp;{all.common.h}</small>}</span>
         {!balanced && <em>{t.norm(fmtH(d.target))}</em>}
       </span>
       <svg className="chev" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" /></svg>
