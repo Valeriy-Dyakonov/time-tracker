@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api, type Room } from "../../../api";
-import { Field, Help } from "../../ui";
+import { Button, Field, Help } from "../../ui";
 import { SectionCard, Status, TestButton, TokenField } from "../parts";
 import type { SettingsForm } from "../useSettingsForm";
 
@@ -58,11 +58,11 @@ function MatrixLogin({ f }: { f: SettingsForm }) {
     <details className="help" open={!!f.msg.matrix?.startsWith("✗") || !!status}>
       <summary>Токен не подходит или истёк? Получить новый здесь</summary>
       <p className="note">Приложение войдёт так же, как это делает Element, и само сохранит токен. Это отдельная сессия «Worklog Tracker»: она не зависит от вашего Element, и выход из него её не сломает. Сначала заполните Homeserver выше.</p>
-      <div className="row"><button className="btn small" disabled={noServer} onClick={() => login("sso")}>Войти через SSO (откроется браузер)</button></div>
+      <div className="row"><Button size="small" disabled={noServer} onClick={() => login("sso")}>Войти через SSO (откроется браузер)</Button></div>
       <div className="row wrap">
         <input style={{ width: 150 }} placeholder="логин" value={user} onChange={(e) => setUser(e.target.value)} />
         <input style={{ width: 150 }} type="password" placeholder="пароль" value={pw} onChange={(e) => setPw(e.target.value)} />
-        <button className="btn small" disabled={noServer || !user || !pw} onClick={() => login("pw")}>Войти по паролю</button>
+        <Button size="small" disabled={noServer || !user || !pw} onClick={() => login("pw")}>Войти по паролю</Button>
       </div>
       <p className="note">Пароль используется один раз и нигде не сохраняется. Если у вас вход только через корпоративный SSO — выбирайте первый вариант.</p>
       <Status text={status} />
@@ -92,7 +92,7 @@ function RoomExclusions({ f }: { f: SettingsForm }) {
   return (
     <>
       <Field label="Исключить комнаты из анализа" hint={excluded.length ? `Исключено комнат: ${excluded.length}. Остальные ваши комнаты читаются, а ИИ отбирает из них только рабочие сообщения.` : "Сейчас читаются все ваши комнаты. Загрузите список и отметьте те, что не нужны: личные чаты, общие и развлекательные каналы."}>
-        <div className="row"><button className="btn small" onClick={load}>Загрузить список комнат…</button><Status text={status} /></div>
+        <div className="row"><Button size="small" onClick={load}>Загрузить список комнат…</Button><Status text={status} /></div>
       </Field>
       {rooms && (
         <div className="rooms">

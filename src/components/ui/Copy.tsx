@@ -1,3 +1,4 @@
+import { Button } from "./kit";
 import { useState } from "react";
 
 /** Copies text to the clipboard and reports success for a moment, so the button can show a check mark. */
@@ -18,9 +19,9 @@ function useCopy(): [boolean, (text: string) => Promise<void>] {
 export function CopyButton(props: { text: () => string; label?: string; title?: string }) {
   const [ok, copy] = useCopy();
   return (
-    <button className="btn small ghost" title={props.title ?? "Скопировать"} onClick={() => copy(props.text())}>
+    <Button variant="ghost" size="small" title={props.title ?? "Скопировать"} onClick={() => copy(props.text())}>
       {ok ? "✓" : (props.label ?? "Копировать")}
-    </button>
+    </Button>
   );
 }
 

@@ -8,7 +8,7 @@ import { Stats } from "../hours/Stats";
 import { LivePanel, LogList, logText } from "../live";
 import AiReview from "../review/AiReview";
 import Submit from "../submit/Submit";
-import { CopyButton, Title } from "../ui";
+import { Button, Card, CopyButton, Title } from "../ui";
 import { allSourcesOn, sourceFlags } from "./analysisSources";
 import { Export } from "./Export";
 import { Filters, type FilterValues } from "./Filters";
@@ -94,14 +94,14 @@ export default function Report(props: {
           {view === "submit" && <Submit a={a} canAi={setup.llm} />}
           {view === "ai" && <AiReview a={a} />}
           {view === "log" && (
-            <section className="card">
+            <Card>
               <div className="row">
                 <Title tip="Пошаговый протокол анализа: какие источники опрошены, сколько событий пришло, где были ошибки. Пригодится, если результат выглядит странно.">Журнал анализа</Title>
                 <span className="spacer" />
                 <CopyButton label="Скопировать журнал" text={() => logText(a.log)} />
               </div>
               <LogList entries={a.log} />
-            </section>
+            </Card>
           )}
           {view === "export" && <Export a={a} />}
         </>
@@ -114,7 +114,7 @@ export default function Report(props: {
 
 function Welcome({ ready, onOpenSettings }: { ready: boolean; onOpenSettings: () => void }) {
   return (
-    <section className="card banner">
+    <Card className="banner">
       {ready ? (
         <>
           <h3>Всё готово</h3>
@@ -124,9 +124,9 @@ function Welcome({ ready, onOpenSettings }: { ready: boolean; onOpenSettings: ()
         <>
           <h3>Добро пожаловать 👋</h3>
           <p className="muted">Чтобы построить отчёт, нужно один раз подключить Jira (адрес и персональный токен). В настройках для каждого сервиса есть инструкция, где взять токен. Git, Confluence, календарь, Matrix и ИИ подключаются по желанию.</p>
-          <div className="row"><button className="btn primary" onClick={onOpenSettings}>Открыть настройки</button></div>
+          <div className="row"><Button variant="primary" onClick={onOpenSettings}>Открыть настройки</Button></div>
         </>
       )}
-    </section>
+    </Card>
   );
 }

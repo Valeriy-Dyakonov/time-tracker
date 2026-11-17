@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Analysis, DayPlan } from "../../types";
-import { InfoTip } from "../ui";
+import { Button, InfoTip, Segmented, Switch } from "../ui";
 import { ByTask } from "./ByTask";
 import { Overview } from "./Overview";
 import { needsReview } from "./review";
@@ -44,10 +44,8 @@ export function Hours(props: {
     <div className="ts-main">
       <Overview a={a} review={review} onJump={jump} onAi={props.onAi} />
       <div className="ts-bar">
-        <div className="seg small" role="tablist">
-          <button className={mode === "days" ? "on" : ""} onClick={() => setMode("days")}>По дням</button>
-          <button className={mode === "tasks" ? "on" : ""} onClick={() => setMode("tasks")}>По задачам</button>
-        </div>
+        <Segmented size="small" role="tablist" value={mode} onChange={setMode}
+          options={[{ value: "days", label: "По дням" }, { value: "tasks", label: "По задачам" }]} />
         <InfoTip>«По дням» — для системы учёта по дням и для проверки: что и сколько в каждый день. «По задачам» — для Jira: по каждой задаче видно, в какие дни и сколько списать.</InfoTip>
         {mode === "days" ? (
           <>
@@ -58,13 +56,12 @@ export function Hours(props: {
               <InfoTip wide>Цвет полосы слева у дня. Зелёный — часы построены по вашим событиям за этот день. Жёлтый — событий не было, часы взяты с соседнего дня или по периоду (см. «Дни без событий» в фильтрах). Красный — заполнить не из чего, распределите сами.</InfoTip>
             </span>
             <span className="spacer" />
-            <label className="switch" title="Скрыть дни, которые построены по событиям и сходятся с нормой">
-              <input type="checkbox" checked={onlyReview} onChange={(e) => setOnlyReview(e.target.checked)} />
-              <i />Только для проверки ({review.length})
-            </label>
-            <button className="btn small ghost" title="Раскрыть подробности всех дней: задачи, заметки, встречи" onClick={() => setOpen(allOpen ? new Set() : new Set(a.days.map((d) => d.date)))}>
+            <Switch checked={onlyReview} onChange={setOnlyReview} title="Скрыть дни, которые построены по событиям и сходятся с нормой">
+              Только для проверки ({review.length})
+            </Switch>
+            <Button variant="ghost" size="small" title="Раскрыть подробности всех дней: задачи, заметки, встречи" onClick={() => setOpen(allOpen ? new Set() : new Set(a.days.map((d) => d.date)))}>
               {allOpen ? "Свернуть все" : "Развернуть все"}
-            </button>
+            </Button>
           </>
         ) : (
           <span className="muted">Для Jira: по каждой задаче — в какие дни и сколько часов списать.</span>

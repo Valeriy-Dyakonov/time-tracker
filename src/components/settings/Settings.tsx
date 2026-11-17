@@ -3,10 +3,13 @@ import type { Settings as S } from "../../types";
 import { Status } from "./parts";
 import { SECTIONS } from "./registry";
 import { useSettingsForm } from "./useSettingsForm";
+import { Button } from "../ui";
+import { useTheme } from "../../theme";
 
 export default function Settings(props: { settings: S; onSaved: (s: S) => void }) {
   const f = useSettingsForm(props.settings, props.onSaved);
   const [active, setActive] = useState(SECTIONS[0].id);
+  useTheme();
 
   return (
     <div className="settings-layout">
@@ -33,7 +36,7 @@ export default function Settings(props: { settings: S; onSaved: (s: S) => void }
           <div key={id} hidden={active !== id}><Component f={f} /></div>
         ))}
         <div className="savebar">
-          <button className="btn primary" onClick={f.save} disabled={!f.dirty}>Сохранить</button>
+          <Button variant="primary" onClick={f.save} disabled={!f.dirty}>Сохранить</Button>
           {f.dirty && <span className="status">Есть несохранённые изменения</span>}
           <Status text={f.msg.save} />
         </div>

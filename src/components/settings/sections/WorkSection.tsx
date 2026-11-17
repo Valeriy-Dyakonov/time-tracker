@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api } from "../../../api";
 import { isoWeekday, WEEKDAYS_SHORT } from "../../../lib/dates";
-import { Field, InfoTip } from "../../ui";
+import { Button, Field, InfoTip } from "../../ui";
 import { SectionCard } from "../parts";
 import type { SettingsForm } from "../useSettingsForm";
 
@@ -40,7 +40,7 @@ export function WorkSection({ f }: { f: SettingsForm }) {
           <select value={s.holidayCountry} onChange={(e) => { set("holidayCountry", e.target.value); setHol(null); }}>
             {COUNTRIES.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
           </select>
-          <button className="btn small" disabled={!s.holidayCountry} title="Показать праздники и сокращённые дни текущего года — чтобы проверить, что календарь подхватился" onClick={loadHolidays}>Загрузить за год</button>
+          <Button size="small" disabled={!s.holidayCountry} title="Показать праздники и сокращённые дни текущего года — чтобы проверить, что календарь подхватился" onClick={loadHolidays}>Загрузить за год</Button>
         </div>
         {hol && <p className="hint">{hol}</p>}
       </Field>

@@ -2,7 +2,7 @@ import type { FillMode } from "../../types";
 import { monthRange } from "../../lib/dates";
 import type { SetupState } from "../../lib/setup";
 import DateRange from "../DateRange";
-import { InfoTip, Stepper } from "../ui";
+import { Card, InfoTip, Segmented, Stepper } from "../ui";
 import { ANALYSIS_SOURCES, type SourceToggles } from "./analysisSources";
 
 export interface FilterValues {
@@ -14,6 +14,8 @@ export interface FilterValues {
 }
 
 const PRESETS: [string, number][] = [["Этот месяц", 0], ["Прошлый месяц", -1]];
+const activePreset = (start: string, end: string) =>
+  PRESETS.map(([, offset]) => String(offset)).find((o) => { const r = monthRange(Number(o)); return r.start === start && r.end === end; }) ?? null;
 
 const FILLS: [FillMode, string, string][] = [
   ["neighbors", "Как соседние", "Взять задачи и доли ближайшего дня, по которому есть события"],
@@ -34,17 +36,13 @@ export function Filters(props: {
   const patch = (p: Partial<FilterValues>) => props.onChange({ ...v, ...p });
 
   return (
-    <section className="card filters">
+    <Card className="filters">
       <div className="f-grid">
         <div className="fg">
           <span className="f-label">Период<InfoTip>За какие дни собрать события и распределить часы. Обычно — месяц, за который сдаёте отчёт. Можно выбрать любой диапазон в календаре.</InfoTip></span>
           <div className="f-ctl">
-            <div className="seg">
-              {PRESETS.map(([label, offset]) => {
-                const r = monthRange(offset);
-                return <button key={label} className={v.start === r.start && v.end === r.end ? "on" : ""} onClick={() => patch(r)}>{label}</button>;
-              })}
-            </div>
+            <Segmented value={activePreset(v.start, v.end)} onChange={(offset) => patch(monthRange(Number(offset)))}
+              options={PRESETS.map(([label, offset]) => ({ value: String(offset), label }))} />
             <DateRange start={v.start} end={v.end} onChange={(start, end) => patch({ start, end })} />
           </div>
         </div>
@@ -63,9 +61,8 @@ export function Filters(props: {
             </InfoTip>
           </span>
           <div className="f-ctl">
-            <div className="seg">
-              {FILLS.map(([id, label, text]) => <button key={id} title={text} className={v.fillMode === id ? "on" : ""} onClick={() => patch({ fillMode: id })}>{label}</button>)}
-            </div>
+            <Segmented value={v.fillMode} onChange={(fillMode) => patch({ fillMode })}
+              options={FILLS.map(([value, label, title]) => ({ value, label, title }))} />
           </div>
         </div>
         <div className="fg run-wrap">
@@ -93,7 +90,7 @@ export function Filters(props: {
         </div>
       </div>
       {props.error && <div className="error">{props.error}</div>}
-    </section>
+    </Card>
   );
 }
 

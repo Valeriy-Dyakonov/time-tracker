@@ -3,7 +3,7 @@ import { dayTotal, rebalance, statusOnDate, STEP } from "../../lib/allocate";
 import { monthShort, weekdayName } from "../../lib/dates";
 import { fmtH, fmtMinutes, meetingMinutes, meetingRange } from "../../lib/report";
 import IssueLink from "../IssueLink";
-import { CopyButton, InfoTip, keyColor, Stepper } from "../ui";
+import { Button, CopyButton, InfoTip, keyColor, Stepper } from "../ui";
 import { dayCopyText, isBalanced, reviewReason, sourceCounts } from "./review";
 import { SourceChips } from "./SourceChips";
 
@@ -102,14 +102,14 @@ function DayDetails({ a, d, update }: { a: Analysis; d: DayPlan; update: DayUpda
       )}
       <div className="db-actions">
         {!balanced && (
-          <button className="btn small" onClick={() => update(rebalance)} title="Пропорционально изменить часы задач так, чтобы сумма дня стала равна норме">
+          <Button size="small" onClick={() => update(rebalance)} title="Пропорционально изменить часы задач так, чтобы сумма дня стала равна норме">
             Выровнять до {fmtH(d.target)} ч
-          </button>
+          </Button>
         )}
-        <button className="btn small ghost" onClick={() => update((x) => ({ ...x, off: !x.off }))}
+        <Button variant="ghost" size="small" onClick={() => update((x) => ({ ...x, off: !x.off }))}
           title={d.off ? "Снова считать день рабочим и списывать на него часы" : "Отпуск, больничный или отгул: день не попадёт в списание и норму"}>
           {d.off ? "Вернуть рабочий день" : "Сделать выходным"}
-        </button>
+        </Button>
         <span className="spacer" />
         {!d.off && <CopyButton label="Копировать день" title="Задачи и часы этого дня текстом — чтобы вставить в чат или заметку" text={() => dayCopyText(a, d)} />}
       </div>

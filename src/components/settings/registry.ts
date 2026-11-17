@@ -9,6 +9,8 @@ import { JiraSection } from "./sections/JiraSection";
 import { LlmSection } from "./sections/LlmSection";
 import { MatrixSection } from "./sections/MatrixSection";
 import { WorkSection } from "./sections/WorkSection";
+import { AppearanceSection } from "./sections/AppearanceSection";
+import { readTheme, THEMES } from "../../theme";
 import type { SettingsForm } from "./useSettingsForm";
 
 export interface SectionStatus { ok: boolean; sub: string; required?: boolean }
@@ -32,4 +34,5 @@ export const SECTIONS: SettingsSection[] = [
   { id: "confluence", label: "Confluence", status: (r) => optional(r.confluence, "подключён"), Component: ConfluenceSection },
   { id: "calendar", label: "Почта и календарь", status: (r, s) => optional(r.calendar, s.calendarOnlyCalls ? "только звонки" : "звонки и встречи"), Component: CalendarSection },
   { id: "work", label: "Рабочее время", status: (_, s) => ({ ok: true, sub: `${s.hoursPerDay} ч · ${s.workdays.length} дн./нед.` }), Component: WorkSection },
+  { id: "appearance", label: "Оформление", status: () => ({ ok: true, sub: THEMES.find((t) => t.id === readTheme())?.label ?? "" }), Component: AppearanceSection },
 ];

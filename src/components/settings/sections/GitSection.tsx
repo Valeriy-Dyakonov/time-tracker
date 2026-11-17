@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api, type RepoInfo } from "../../../api";
-import { Field, Help } from "../../ui";
+import { Button, Field, Help } from "../../ui";
 import { lines, SectionCard, Status } from "../parts";
 import type { SettingsForm } from "../useSettingsForm";
 
@@ -30,7 +30,7 @@ export function GitSection({ f }: { f: SettingsForm }) {
         tip="Ваши коммиты показывают, над чем и когда вы работали: ключ задачи обычно есть в ветке или сообщении коммита. Читается только локальная история, ничего не отправляется.">
         <div className="row">
           <input value={s.gitRoot} placeholder="C:\Work" onChange={(e) => set("gitRoot", e.target.value)} />
-          <button className="btn small" onClick={scan}>Найти</button>
+          <Button size="small" onClick={scan}>Найти</Button>
         </div>
         <Status text={status} />
       </Field>
@@ -38,8 +38,8 @@ export function GitSection({ f }: { f: SettingsForm }) {
         <div className="rooms">
           <div className="row">
             <input placeholder="Фильтр по имени" value={filter} onChange={(e) => setFilter(e.target.value)} />
-            <button className="btn small ghost" onClick={() => set("gitRepos", [...new Set([...s.gitRepos, ...shown.map((r) => r.path)])])}>Выбрать все</button>
-            <button className="btn small ghost" onClick={() => set("gitRepos", s.gitRepos.filter((p) => !shown.some((r) => r.path === p)))}>Снять</button>
+            <Button variant="ghost" size="small" onClick={() => set("gitRepos", [...new Set([...s.gitRepos, ...shown.map((r) => r.path)])])}>Выбрать все</Button>
+            <Button variant="ghost" size="small" onClick={() => set("gitRepos", s.gitRepos.filter((p) => !shown.some((r) => r.path === p)))}>Снять</Button>
           </div>
           <div className="room-list">
             {shown.map((r) => (

@@ -1,0 +1,26 @@
+:root {
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r: 8px;
+  --r-md: 10px;
+  --r-lg: 12px;
+  --r-xl: 14px;
+  --r-pill: 99px;
+
+  --tb: 32px;
+  --ease: .12s;
+
+  --src-git: #8e63d8;
+  --src-gitlab: #e24329;
+  --src-jira: #2f6fed;
+  --src-matrix: #1f9d55;
+  --src-calendar: #c27c0e;
+  --src-confluence: #12a0a8;
+
+  --grad-from: #7c3aed;
+  --grad-to: #06b6d4;
+  --win-close: #e81123;
+}

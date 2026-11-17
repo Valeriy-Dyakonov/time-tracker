@@ -7,7 +7,7 @@ import { parseNarrative } from "../../lib/prompt";
 import { fmtH, weeksOf, type Week } from "../../lib/report";
 import { WEEK_SYSTEM, weekHours, weekPrompt, weekText, weekTitle } from "../../lib/submit";
 import { useStored } from "../hooks/useStored";
-import { CopyChip, InfoTip } from "../ui";
+import { Button, Card, CopyChip, InfoTip } from "../ui";
 import { StepHeader } from "./StepHeader";
 
 /** Step 2: a ready text per week for a time system that wants a weekly description. */
@@ -34,7 +34,7 @@ export function WeeklyText({ a, storeId, canAi }: { a: Analysis; storeId: string
   const reset = (monday: string) => setTexts((p) => { const n = { ...p }; delete n[monday]; return n; });
 
   return (
-    <section className="card step">
+    <Card className="step">
       <StepHeader n={2} title="Своя система — текст за неделю"
         tip="Для систем учёта, где за неделю пишут общий текст «что сделано» и часы. Текст собран из задач недели; правки сохраняются.">
         Для каждой недели готов текст. Поправьте при необходимости, нажмите «Копировать» и вставьте в поле недели.
@@ -52,7 +52,7 @@ export function WeeklyText({ a, storeId, canAi }: { a: Analysis; storeId: string
                 <b>Неделя {weekTitle(w)}</b>
                 <span className="wl-sum sm">{fmtH(weekHours(w))}&nbsp;<small>ч</small></span>
                 <span className="spacer" />
-                {edited && <button className="linkbtn" title="Отменить правки и вернуть автоматически собранный текст" onClick={() => reset(w.monday)}>вернуть исходный</button>}
+                {edited && <Button variant="link" title="Отменить правки и вернуть автоматически собранный текст" onClick={() => reset(w.monday)}>вернуть исходный</Button>}
               </header>
               <textarea rows={Math.min(12, Math.max(4, text.split("\n").length + 1))} value={text} onChange={(e) => setTexts((p) => ({ ...p, [w.monday]: e.target.value }))} />
               <div className="row wrap">
@@ -65,9 +65,9 @@ export function WeeklyText({ a, storeId, canAi }: { a: Analysis; storeId: string
                 />
                 {canAi && (
                   <>
-                    <button className="btn small" disabled={busy !== null} onClick={() => rewrite(w)}>
+                    <Button size="small" disabled={busy !== null} onClick={() => rewrite(w)}>
                       {busy === w.monday ? "ИИ пишет текст…" : "Переписать связным текстом через ИИ"}
-                    </button>
+                    </Button>
                     <InfoTip>ИИ превратит список задач недели в связный абзац для отчёта: что делали и зачем. Текст в поле заменится; исходный можно вернуть кнопкой «вернуть исходный».</InfoTip>
                   </>
                 )}
@@ -76,6 +76,6 @@ export function WeeklyText({ a, storeId, canAi }: { a: Analysis; storeId: string
           );
         })}
       </div>
-    </section>
+    </Card>
   );
 }

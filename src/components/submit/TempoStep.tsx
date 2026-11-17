@@ -5,7 +5,7 @@ import { fmtH } from "../../lib/report";
 import { rowId, worklogRows, type HoursFormat, type WorklogRow as Row } from "../../lib/submit";
 import { useStored } from "../hooks/useStored";
 import IssueLink from "../IssueLink";
-import { InfoTip, keyColor } from "../ui";
+import { Button, Card, InfoTip, keyColor, Segmented } from "../ui";
 import { StepHeader } from "./StepHeader";
 import { WorklogRow, type RowLabel } from "./WorklogRow";
 
@@ -47,28 +47,24 @@ export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
   );
 
   return (
-    <section className="card step">
+    <Card className="step">
       <StepHeader n={1} title="Tempo в Jira — часы по задачам"
         tip="Tempo — плагин Jira для учёта времени. Каждая строка ниже — одна запись «Log work»: задача, дата, часы и описание. Отметки и правки описаний сохраняются, можно вернуться позже.">
         Нажмите на ключ задачи — она откроется в браузере. В Tempo нажмите «Log work» и для каждой строки скопируйте <b>часы</b> и <b>описание</b>
         (клик по значку ⧉), выберите дату и сохраните. Потом поставьте галочку — так не потеряете, где остановились.
       </StepHeader>
       <div className="ts-bar">
-        <div className="seg small">
-          <button className={group === "tasks" ? "on" : ""} onClick={() => setGroup("tasks")}>По задачам</button>
-          <button className={group === "days" ? "on" : ""} onClick={() => setGroup("days")}>По дням</button>
-        </div>
-        <div className="seg small">
-          <button className={fmt === "hm" ? "on" : ""} onClick={() => setFmt("hm")}>2h 30m</button>
-          <button className={fmt === "decimal" ? "on" : ""} onClick={() => setFmt("decimal")}>2.5</button>
-        </div>
+        <Segmented size="small" value={group} onChange={setGroup}
+          options={[{ value: "tasks", label: "По задачам" }, { value: "days", label: "По дням" }]} />
+        <Segmented size="small" value={fmt} onChange={setFmt}
+          options={[{ value: "hm", label: "2h 30m" }, { value: "decimal", label: "2.5" }]} />
         <InfoTip>В каком виде копировать часы. Tempo принимает оба, но в некоторых настройках понимает только один — выберите тот, что у вас срабатывает.</InfoTip>
         <span className="progress" title="Сколько строк вы уже отметили как внесённые">
           <span className="pg-bar"><i style={{ width: `${pct}%` }} /></span>
           <span><b>{doneRows.length}</b> из {rows.length} строк · <b>{fmtH(sumHours(doneRows))}</b> из {fmtH(sumHours(rows))}&nbsp;ч</span>
         </span>
         <span className="spacer" />
-        {doneRows.length > 0 && <button className="btn small ghost" title="Снять все галочки «внесено» за этот период" onClick={() => setDone({})}>Сбросить отметки</button>}
+        {doneRows.length > 0 && <Button variant="ghost" size="small" title="Снять все галочки «внесено» за этот период" onClick={() => setDone({})}>Сбросить отметки</Button>}
       </div>
 
       <div className="wl-grid">
@@ -100,6 +96,6 @@ export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
               </article>
             ))}
       </div>
-    </section>
+    </Card>
   );
 }

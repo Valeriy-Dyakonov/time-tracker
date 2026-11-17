@@ -3,7 +3,7 @@ import type { Analysis, DayPlan } from "../../types";
 import { formatRu, plural, weekdayName } from "../../lib/dates";
 import { fmtH, totalsByTask } from "../../lib/report";
 import IssueLink from "../IssueLink";
-import { InfoTip, keyColor } from "../ui";
+import { Button, Card, InfoTip, keyColor } from "../ui";
 import { percent, reviewReason } from "./review";
 
 const LONG_STORY = 360;
@@ -24,20 +24,20 @@ function Story({ text, usedAi, onAi }: { text: string; usedAi: boolean; onAi: ()
   const [more, setMore] = useState(false);
   const long = text.length > LONG_STORY;
   return (
-    <section className="card ov-card">
+    <Card className="ov-card">
       <div className="ov-h">
         <h4>О чём период<InfoTip>{usedAi ? "Краткий пересказ периода, который написал ИИ по задачам и событиям." : "Пересказ периода по шаблону: ИИ не использовался."} Подходит как основа для отчёта руководителю.</InfoTip></h4>
-        <button className="linkbtn" onClick={onAi}>Разбор ИИ →</button>
+        <Button variant="link" onClick={onAi}>Разбор ИИ →</Button>
       </div>
       <p className={`ov-text ${long && !more ? "clamp" : ""}`}>{text}</p>
-      {long && <button className="linkbtn small" onClick={() => setMore(!more)}>{more ? "Свернуть" : "Показать полностью"}</button>}
-    </section>
+      {long && <Button variant="link" className="small" onClick={() => setMore(!more)}>{more ? "Свернуть" : "Показать полностью"}</Button>}
+    </Card>
   );
 }
 
 function ReviewList({ days, onJump }: { days: DayPlan[]; onJump: (date: string) => void }) {
   return (
-    <section className="card ov-card ov-review">
+    <Card className="ov-card ov-review">
       <div className="ov-h">
         <h4>Что проверить<InfoTip>Дни, где часы получены не из ваших событий (взяты с соседнего дня или по периоду) или сумма не равна норме. Нажмите на день — он раскроется в списке ниже.</InfoTip></h4>
         <span className="count warn">{days.length}</span>
@@ -54,7 +54,7 @@ function ReviewList({ days, onJump }: { days: DayPlan[]; onJump: (date: string) 
           </li>
         ))}
       </ul>
-    </section>
+    </Card>
   );
 }
 
@@ -62,7 +62,7 @@ function Distribution({ a }: { a: Analysis }) {
   const rows = totalsByTask(a);
   const total = rows.reduce((s, r) => s + r.hours, 0) || 1;
   return (
-    <section className="card ov-card ov-dist">
+    <Card className="ov-card ov-dist">
       <div className="ov-h">
         <h4>Куда ушло время<InfoTip>Сколько часов за период пришлось на каждую задачу и какая это доля от всех часов.</InfoTip></h4>
         <span className="muted">{rows.length} {plural(rows.length, "задача", "задачи", "задач")} · {fmtH(total)}&nbsp;ч</span>
@@ -81,6 +81,6 @@ function Distribution({ a }: { a: Analysis }) {
           </li>
         ))}
       </ul>
-    </section>
+    </Card>
   );
 }

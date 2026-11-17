@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type { DayProgress, LogEntry } from "../types";
 import { formatRu, plural, weekdayName } from "../lib/dates";
 import { fmtH } from "../lib/report";
+import { Card } from "./ui";
 
 const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 export const clock = (t: number) => {
@@ -47,7 +48,7 @@ export function LivePanel(props: { days: DayProgress[]; log: LogEntry[]; running
   const empty = props.days.length - work.length;
   const pct = work.length ? (finished / work.length) * 100 : props.days.length ? 100 : 0;
   return (
-    <section className="card live">
+    <Card className="live">
       <div className="live-head">
         <h3>{props.running ? "Идёт анализ…" : "Анализ остановлен"}</h3>
         <span className="muted">Проанализировано дней с событиями: {finished} из {work.length}{empty > 0 ? ` · без событий: ${empty}` : ""}</span>
@@ -71,6 +72,6 @@ export function LivePanel(props: { days: DayProgress[]; log: LogEntry[]; running
       )}
       <h4>Журнал</h4>
       <LogList entries={props.log} follow={props.running} />
-    </section>
+    </Card>
   );
 }

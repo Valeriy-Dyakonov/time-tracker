@@ -1,0 +1,55 @@
+.step { padding: 20px 22px; }
+.step-h { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 14px; }
+.step-h h3 { margin: 2px 0 4px; font-size: 16px; }
+.step-h p { margin: 0; max-width: 980px; line-height: 1.55; font-size: 13.5px; }
+.step-n { flex: none; width: 28px; height: 28px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+.submit .ts-bar { padding: 10px 12px; background: var(--bg); border-radius: var(--r-md); margin-bottom: 14px; }
+.progress { display: inline-flex; align-items: center; gap: 12px; font-size: 13.5px; color: var(--muted); }
+.progress b { color: var(--text); }
+.pg-bar { width: 160px; height: 6px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.pg-bar i { display: block; height: 100%; background: var(--good); border-radius: 4px; transition: width .2s; }
+
+/* Tempo rows */
+.wl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(560px, 1fr)); gap: 12px; margin-top: 6px; }
+.wl-card { border: 1px solid var(--line); border-radius: var(--r-lg); display: flex; flex-direction: column; background: var(--card); overflow: hidden; }
+.wl-card header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 50%, var(--card)); }
+.wl-key { font-size: 15px; white-space: nowrap; }
+.wl-ttl { color: var(--muted); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.wl-sum { font-size: 17px; font-weight: 700; color: var(--text); white-space: nowrap; }
+.wl-sum small { font-size: 12px; color: var(--muted); font-weight: 500; }
+.wl-sum.sm { font-size: 14px; }
+.wl-cnt { font-size: 12px; font-weight: 600; color: var(--muted); padding: 1px 8px; border-radius: var(--r-pill); background: var(--bg); }
+.wl-cnt.ok { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+
+.wl-row { display: grid; gap: 10px; align-items: center; padding: 7px 14px; border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.wl-row.by-date { grid-template-columns: 24px 108px auto minmax(160px, 1fr); }
+.wl-row.by-key { grid-template-columns: 24px minmax(0, 260px) auto minmax(160px, 1fr); }
+.wl-row:hover { background: color-mix(in srgb, var(--accent) 3%, transparent); }
+.wl-row.done { opacity: .55; }
+.wl-row.done .wl-desc input { text-decoration: line-through; }
+.wl-what { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; overflow: hidden; }
+.wl-row.by-date .wl-what { gap: 6px; overflow: visible; }
+.wl-what .muted { font-size: 12px; }
+.wl-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wl-check { width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 1.5px solid var(--line); background: transparent; display: grid; place-items: center; transition: background var(--ease), border-color var(--ease); }
+.wl-check svg { width: 13px; height: 13px; fill: none; stroke: transparent; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.wl-check:hover { border-color: var(--good); }
+.wl-check:hover svg { stroke: var(--good); }
+.wl-check.on { background: var(--good); border-color: var(--good); }
+.wl-check.on svg { stroke: var(--on-accent); }
+.wl-desc { position: relative; display: flex; min-width: 0; }
+.wl-desc input { flex: 1; min-width: 0; padding: 5px 34px 5px 9px; font-size: 13px; background: transparent; border-color: transparent; }
+.wl-desc input:hover { border-color: var(--line); }
+.wl-desc input:focus { background: var(--bg); }
+
+/* Weekly text */
+.wk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap: 14px; margin-top: 6px; }
+.wk-card { border: 1px solid var(--line); border-radius: var(--r-lg); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; background: var(--card); }
+.wk-card header { display: flex; align-items: center; gap: 10px; }
+.wk-card textarea { width: 100%; resize: vertical; line-height: 1.55; font-size: 13.5px; }
+
+@media (max-width: 1250px) {
+  .wl-grid, .wk-grid { grid-template-columns: 1fr; }
+  .wl-row.by-date, .wl-row.by-key { grid-template-columns: 24px minmax(0, 1fr) auto; }
+  .wl-desc { grid-column: 2 / 4; }
+}

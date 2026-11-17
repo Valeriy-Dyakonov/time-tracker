@@ -5,10 +5,10 @@ import { formatRu, weekdayName } from "../../lib/dates";
 import { fmtH } from "../../lib/report";
 import IssueLink from "../IssueLink";
 import Meetings from "../Meetings";
-import { CopyButton, InfoTip, Title } from "../ui";
+import { Badge, Card, CopyButton, InfoTip, Title } from "../ui";
 import { Evidence } from "./Evidence";
 
-const BASIS_BADGE: Record<DayPlan["basis"], [string, string]> = {
+const BASIS_BADGE: Record<DayPlan["basis"], ["good" | "warn" | "bad", string]> = {
   activity: ["good", "по данным дня"],
   inferred: ["warn", "без данных"],
   empty: ["bad", "пусто"],
@@ -20,17 +20,17 @@ export default function AiReview({ a }: { a: Analysis }) {
   const days = a.days.filter((d) => !onlyData || d.basis === "activity");
   return (
     <div>
-      <section className="card">
+      <Card>
         <div className="row">
           <Title tip="Связный пересказ периода по задачам и событиям. Можно скопировать и отправить руководителю или вставить в отчёт.">Итог периода</Title>
-          <span className={`badge ${a.usedAi ? "good" : ""}`}>{a.usedAi ? "написано ИИ" : "шаблон, без ИИ"}</span>
+          <Badge tone={a.usedAi ? "good" : undefined}>{a.usedAi ? "написано ИИ" : "шаблон, без ИИ"}</Badge>
           <span className="spacer" />
           <CopyButton text={() => a.narrative} />
         </div>
         <p className="narrative full">{a.narrative}</p>
-      </section>
+      </Card>
 
-      <section className="card">
+      <Card>
         <div className="row">
           <Title wide tip="Для каждого дня: почему часы разделились именно так, какие задачи и заметки получились, какие были встречи и какие события нашлись в источниках. Помогает проверить, что ИИ понял день правильно.">Как считался каждый день</Title>
           <span className="spacer" />
@@ -40,19 +40,19 @@ export default function AiReview({ a }: { a: Analysis }) {
           <InfoTip>Оставить только дни, где были ваши события (коммиты, задачи, сообщения, встречи). Дни, заполненные по соседним или по периоду, скроются.</InfoTip>
         </div>
         {days.map((d) => <ReviewDay key={d.date} a={a} d={d} />)}
-      </section>
+      </Card>
     </div>
   );
 }
 
 function ReviewDay({ a, d }: { a: Analysis; d: DayPlan }) {
-  const [cls, label] = BASIS_BADGE[d.basis];
+  const [tone, label] = BASIS_BADGE[d.basis];
   return (
     <article className="review-day">
       <header>
         <b>{weekdayName(d.date)} {formatRu(d.date)}</b>
         <span className="rd-total">{fmtH(dayTotal(d))} ч</span>
-        <span className={`badge ${cls}`}>{label}</span>
+        <Badge tone={tone}>{label}</Badge>
       </header>
       {d.reasoning && <p className="reasoning">{d.reasoning}</p>}
       {d.tasks.length > 0 && (

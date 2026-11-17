@@ -1,0 +1,21 @@
+.titlebar { flex: none; height: var(--tb); display: flex; align-items: stretch; background: var(--card); border-bottom: 1px solid var(--line); user-select: none; font-size: 12.5px; }
+.tb-title { display: flex; align-items: center; gap: 8px; padding: 0 12px; font-weight: 600; white-space: nowrap; }
+.tb-ver { font-weight: 400; color: var(--muted); }
+.tb-update { display: flex; align-items: center; }
+.tb-upd-btn { font: inherit; font-weight: 600; color: var(--on-accent); background: var(--accent); border: 0; border-radius: var(--r-sm); padding: 3px 10px; }
+.tb-upd-btn:hover { filter: brightness(1.1); }
+.tb-msg { color: var(--muted); }
+.tb-fill { flex: 1; }
+.tb-controls { display: flex; }
+.tb-sep { width: 1px; margin: 8px 4px; background: var(--line); }
+
+/* Window controls keep the Windows arrow cursor. */
+.tb-btn { width: 46px; border: 0; background: transparent; color: var(--text); display: grid; place-items: center; }
+.tb-btn:not(.tb-gear) { cursor: default; }
+.tb-btn svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1; }
+.tb-btn:hover { background: var(--line); }
+.tb-close:hover { background: var(--win-close); color: #fff; }
+.tb-gear { width: 40px; color: var(--muted); }
+.tb-gear svg { width: 16px; height: 16px; stroke-width: 1.6; }
+.tb-gear:hover, .tb-gear.on { color: var(--accent); }
+.tb-gear.on { background: var(--bg); }

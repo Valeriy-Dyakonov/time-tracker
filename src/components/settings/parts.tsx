@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Field } from "../ui";
+import { Badge, Button, Card, Field, InfoTip } from "../ui";
 import type { Service, SettingsForm, TokenName } from "./useSettingsForm";
 
 export function Status({ text }: { text?: string }) {
@@ -15,7 +15,7 @@ export function TokenField({ f, name, label, hint, noun = "Токен" }: { f: S
       <div className="row">
         <input type="password" autoComplete="off" value={f.tok[name]} placeholder={saved ? "••••••••••" : `Вставьте ${noun.toLowerCase()}`}
           onChange={(e) => f.setTok({ ...f.tok, [name]: e.target.value })} />
-        {saved && <button className="btn small ghost" title="Удалить из системного хранилища" onClick={() => f.removeToken(name)}>Удалить</button>}
+        {saved && <Button variant="ghost" size="small" title="Удалить из системного хранилища" onClick={() => f.removeToken(name)}>Удалить</Button>}
       </div>
     </Field>
   );
@@ -24,19 +24,19 @@ export function TokenField({ f, name, label, hint, noun = "Токен" }: { f: S
 export function TestButton({ f, svc }: { f: SettingsForm; svc: Service }) {
   return (
     <div className="row">
-      <button className="btn small" title="Сохранить настройки и сделать пробный запрос к сервису" onClick={() => f.test(svc)}>Проверить подключение</button>
+      <Button size="small" title="Сохранить настройки и сделать пробный запрос к сервису" onClick={() => f.test(svc)}>Проверить подключение</Button>
       <Status text={f.msg[svc]} />
     </div>
   );
 }
 
-export function SectionCard({ title, badge, children }: { title: string; badge?: "req" | "opt" | "rec"; children: ReactNode }) {
+export function SectionCard({ title, badge, tip, children }: { title: string; badge?: "req" | "opt" | "rec"; tip?: ReactNode; children: ReactNode }) {
   const label = badge === "req" ? "обязательно" : badge === "rec" ? "рекомендуется" : badge === "opt" ? "необязательно" : "";
   return (
-    <section className="card">
-      <h3>{title} {badge && <span className={`badge ${badge === "req" ? "req" : "opt"}`}>{label}</span>}</h3>
+    <Card>
+      <h3>{title}{tip && <InfoTip>{tip}</InfoTip>} {badge && <Badge tone={badge === "req" ? "req" : "opt"}>{label}</Badge>}</h3>
       {children}
-    </section>
+    </Card>
   );
 }
 
