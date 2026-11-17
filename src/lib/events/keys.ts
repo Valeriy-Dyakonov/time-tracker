@@ -26,7 +26,7 @@ export function isWorkMessage(text: string): boolean {
   if (findKeys(t).length > 0) return true;
   if (t.length < 25) return false;
   if (!/[A-Za-zА-Яа-яЁё]{3,}/.test(t)) return false;
-  return !/^(привет|добрый (день|вечер|утро)|доброе утро|хорошего|спасибо|благодарю|с днём|с днем)/i.test(t) || t.length > 80;
+  return !/^(привет|добрый (день|вечер|утро)|доброе утро|хорошего|спасибо|благодарю|с днём|с днем|hi\b|hello|hey\b|good (morning|afternoon|evening)|thanks|thank you)/i.test(t) || t.length > 80;
 }
 
 /** Commits and chat messages carry the key in their text, branch or room name rather than in a field. */

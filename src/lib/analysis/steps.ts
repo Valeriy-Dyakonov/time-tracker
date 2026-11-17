@@ -5,17 +5,18 @@ import { gitlabSource } from "../sources/gitlab";
 import { jiraSource } from "../sources/jira";
 import { matrixSource } from "../sources/matrix";
 import type { SourceCollector } from "../sources/types";
+import { msg } from "./format";
 import type { RunContext } from "./types";
 
 export interface Step {
-  title: string;
+  readonly title: string;
   run(ctx: RunContext): Promise<void>;
 }
 
 /** Runs a source with the common skip / error policy. */
 function sourceStep(s: SourceCollector): Step {
   return {
-    title: s.step,
+    get title() { return s.step; },
     async run(ctx) {
       if (!s.enabled(ctx)) {
         ctx.log("info", s.skipped);
@@ -37,8 +38,8 @@ export const COLLECT_STEPS: Step[] = [
   sourceStep(gitSource),
   sourceStep(gitlabSource),
   sourceStep(jiraSource),
-  { title: "сопоставление коммитов с задачами Jira", run: (ctx) => ctx.enrich.matchAndLookup(ctx, "коммитов и Jira") },
-  { title: "родительские задачи, эпики и связанные тикеты — для контекста", run: (ctx) => ctx.enrich.loadContext(ctx) },
+  { get title() { return msg().steps.matchCommits; }, run: (ctx) => ctx.enrich.matchAndLookup(ctx, msg().steps.matchCommitsWhat) },
+  { get title() { return msg().steps.context; }, run: (ctx) => ctx.enrich.loadContext(ctx) },
   sourceStep(confluenceSource),
   sourceStep(calendarSource),
   sourceStep(matrixSource),

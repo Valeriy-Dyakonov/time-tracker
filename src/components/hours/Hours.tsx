@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useT } from "../../i18n";
 import type { Analysis, DayPlan } from "../../types";
 import { Button, InfoTip, Segmented, Switch } from "../ui";
 import { ByTask } from "./ByTask";
@@ -32,6 +33,7 @@ export function Hours(props: {
   setOnlyReview: (v: boolean) => void;
   onAi: () => void;
 }) {
+  const t = useT().hours;
   const { a, onlyReview, setOnlyReview } = props;
   const [mode, setMode] = useState<Mode>("days");
   const [open, setOpen] = useState<Set<string>>(() => new Set());
@@ -45,26 +47,26 @@ export function Hours(props: {
       <Overview a={a} review={review} onJump={jump} onAi={props.onAi} />
       <div className="ts-bar">
         <Segmented size="small" role="tablist" value={mode} onChange={setMode}
-          options={[{ value: "days", label: "По дням" }, { value: "tasks", label: "По задачам" }]} />
-        <InfoTip>«По дням» — для системы учёта по дням и для проверки: что и сколько в каждый день. «По задачам» — для Jira: по каждой задаче видно, в какие дни и сколько списать.</InfoTip>
+          options={[{ value: "days", label: t.modes.days }, { value: "tasks", label: t.modes.tasks }]} />
+        <InfoTip>{t.modes.tip}</InfoTip>
         {mode === "days" ? (
           <>
             <span className="legend">
-              <span><i className="lg good" />по событиям</span>
-              <span><i className="lg warn" />без событий</span>
-              <span><i className="lg bad" />не заполнен</span>
-              <InfoTip wide>Цвет полосы слева у дня. Зелёный — часы построены по вашим событиям за этот день. Жёлтый — событий не было, часы взяты с соседнего дня или по периоду (см. «Дни без событий» в фильтрах). Красный — заполнить не из чего, распределите сами.</InfoTip>
+              <span><i className="lg good" />{t.legend.activity}</span>
+              <span><i className="lg warn" />{t.legend.inferred}</span>
+              <span><i className="lg bad" />{t.legend.empty}</span>
+              <InfoTip wide>{t.legend.tip}</InfoTip>
             </span>
             <span className="spacer" />
-            <Switch checked={onlyReview} onChange={setOnlyReview} title="Скрыть дни, которые построены по событиям и сходятся с нормой">
-              Только для проверки ({review.length})
+            <Switch checked={onlyReview} onChange={setOnlyReview} title={t.onlyReviewHint}>
+              {t.onlyReview(review.length)}
             </Switch>
-            <Button variant="ghost" size="small" title="Раскрыть подробности всех дней: задачи, заметки, встречи" onClick={() => setOpen(allOpen ? new Set() : new Set(a.days.map((d) => d.date)))}>
-              {allOpen ? "Свернуть все" : "Развернуть все"}
+            <Button variant="ghost" size="small" title={t.expandAllHint} onClick={() => setOpen(allOpen ? new Set() : new Set(a.days.map((d) => d.date)))}>
+              {allOpen ? t.collapseAll : t.expandAll}
             </Button>
           </>
         ) : (
-          <span className="muted">Для Jira: по каждой задаче — в какие дни и сколько часов списать.</span>
+          <span className="muted">{t.modes.tasksIntro}</span>
         )}
       </div>
       {mode === "days"

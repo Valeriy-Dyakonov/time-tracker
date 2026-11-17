@@ -1,5 +1,7 @@
 mod browser;
 mod commands;
+mod error;
+mod texts;
 mod http;
 mod model;
 mod secrets;

@@ -10,6 +10,8 @@ use futures::stream::{self, StreamExt};
 use rooms::{room_name, Members};
 use serde::Serialize;
 use serde_json::Value;
+use crate::texts::Lang;
+use crate::error::AppResult;
 
 #[derive(Debug, Serialize)]
 pub struct Room {
@@ -17,46 +19,39 @@ pub struct Room {
     pub name: String,
 }
 
-fn unauthorized(body: &str) -> String {
-    format!(
-        "Matrix: сервер не принимает токен (401: {}). Он истёк, отозван или сессия, из которой его скопировали, закрыта. \
-         Получите новый: Настройки → Matrix → раскройте «Токен не подходит или истёк? Получить новый здесь».",
-        truncate(body, 120)
-    )
-}
-
 struct Matrix<'a> {
     api: JsonApi<'a>,
     base: String,
+    lang: Lang,
 }
 
 impl<'a> Matrix<'a> {
-    fn new(client: &'a reqwest::Client, base: &str, token: &'a str) -> Self {
-        let api = JsonApi::new(client, "Matrix", Auth::Bearer(token)).on_unauthorized(unauthorized);
-        Self { api, base: trim_url(base) }
+    fn new(client: &'a reqwest::Client, base: &str, token: &'a str, lang: Lang) -> Self {
+        let api = JsonApi::new(client, "Matrix", Auth::Bearer(token)).on_unauthorized("matrixUnauthorized");
+        Self { api, base: trim_url(base), lang }
     }
 
-    async fn get(&self, path: &str, query: &[(&str, String)]) -> Result<Value, String> {
+    async fn get(&self, path: &str, query: &[(&str, String)]) -> AppResult<Value> {
         self.api.get(&format!("{}{path}", self.base), query).await
     }
 
-    async fn whoami(&self) -> Result<String, String> {
+    async fn whoami(&self) -> AppResult<String> {
         Ok(self.get("/_matrix/client/v3/account/whoami", &[]).await?["user_id"].as_str().unwrap_or("").to_string())
     }
 
-    async fn joined_rooms(&self) -> Result<Vec<String>, String> {
+    async fn joined_rooms(&self) -> AppResult<Vec<String>> {
         let v = self.get("/_matrix/client/v3/joined_rooms", &[]).await?;
         Ok(v["joined_rooms"].as_array().into_iter().flatten().filter_map(|x| x.as_str().map(String::from)).collect())
     }
 }
 
-pub async fn test(client: &reqwest::Client, base: &str, token: &str) -> Result<String, String> {
-    let me = Matrix::new(client, base, token).whoami().await?;
-    Ok(format!("OK: {}", if me.is_empty() { "?" } else { &me }))
+/// The user id the token belongs to.
+pub async fn test(client: &reqwest::Client, base: &str, token: &str) -> AppResult<String> {
+    Matrix::new(client, base, token, Lang::default()).whoami().await
 }
 
-pub async fn list_rooms(client: &reqwest::Client, base: &str, token: &str) -> Result<Vec<Room>, String> {
-    let mx = Matrix::new(client, base, token);
+pub async fn list_rooms(client: &reqwest::Client, base: &str, token: &str, lang: Lang) -> AppResult<Vec<Room>> {
+    let mx = Matrix::new(client, base, token, lang);
     let me = mx.whoami().await?;
     let mut rooms: Vec<Room> = stream::iter(mx.joined_rooms().await?)
         .map(|id| {
@@ -93,7 +88,7 @@ fn recipient(content: &Value, reply_to: Option<&str>, me: &str, members: &Member
     }
 }
 
-async fn room_events(mx: &Matrix<'_>, me: &str, room: &str, start_ms: i64, end_ms: i64) -> Result<Vec<Event>, String> {
+async fn room_events(mx: &Matrix<'_>, me: &str, room: &str, start_ms: i64, end_ms: i64) -> AppResult<Vec<Event>> {
     let members = Members::load(mx, room).await;
     let name = room_name(mx, room, me, Some(&members)).await;
     let dm_peer = members.dm_peer(me);
@@ -147,12 +142,12 @@ pub async fn fetch(
     token: &str,
     user_id: &str,
     exclude: &[String],
-    start_ms: i64,
-    end_ms: i64,
-) -> Result<Vec<Event>, String> {
-    let mx = Matrix::new(client, base, token);
+    (start_ms, end_ms): (i64, i64),
+    lang: Lang,
+) -> AppResult<Vec<Event>> {
+    let mx = Matrix::new(client, base, token, lang);
     let rooms: Vec<String> = mx.joined_rooms().await?.into_iter().filter(|id| !exclude.contains(id)).collect();
-    let results: Vec<Result<Vec<Event>, String>> = stream::iter(rooms)
+    let results: Vec<AppResult<Vec<Event>>> = stream::iter(rooms)
         .map(|id| {
             let mx = &mx;
             async move { room_events(mx, user_id, &id, start_ms, end_ms).await }

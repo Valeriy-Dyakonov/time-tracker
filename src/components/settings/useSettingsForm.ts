@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../../api";
 import type { Settings } from "../../types";
 import { setupState, type SetupState } from "../../lib/setup";
+import { t } from "../../i18n";
 
 export const EMPTY_TOKENS = { jira_pat: "", llm_key: "", matrix_token: "", confluence_pat: "", exchange_password: "", gitlab_pat: "" };
 export type TokenName = keyof typeof EMPTY_TOKENS;
@@ -42,18 +43,19 @@ export function useSettingsForm(initial: Settings, onSaved: (s: Settings) => voi
   }
 
   async function save() {
-    say("save", "Сохраняю…");
+    const m = t().settings.saveBar;
+    say("save", m.saving);
     try {
       const saved = await persist();
-      say("save", `✓ Сохранено${saved.length ? `, токены обновлены: ${saved.length}` : ""}`);
+      say("save", m.saved(saved.length));
       setTimeout(() => say("save", ""), 3500);
     } catch (e) {
-      say("save", "✗ Не сохранилось: " + e);
+      say("save", m.failed(String(e)));
     }
   }
 
   async function test(svc: Service) {
-    say(svc, "Проверяю…");
+    say(svc, t().settings.test.running);
     try {
       await persist();
       say(svc, "✓ " + (await api.testConnection(svc)));

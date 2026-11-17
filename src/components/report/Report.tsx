@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useT } from "../../i18n";
 import type { Analysis, DayPlan, DayProgress, LogEntry, Settings } from "../../types";
 import { monthRange } from "../../lib/dates";
 import { runAnalysis } from "../../lib/pipeline";
@@ -23,6 +24,7 @@ export default function Report(props: {
   analysis: Analysis | null;
   onChange: (a: Analysis | null) => void;
 }) {
+  const t = useT().report;
   const { settings, setup, analysis: a } = props;
   const [filters, setFilters] = useState<FilterValues>(() => ({
     ...monthRange(0),
@@ -84,9 +86,9 @@ export default function Report(props: {
           <Stats a={a} onReview={() => { setView("weeks"); setOnlyReview(true); }} />
           {a.warnings.length > 0 && (
             <details className="warnings" open={a.warnings.length < 4}>
-              <summary>Замечания ({a.warnings.length})</summary>
+              <summary>{t.warnings(a.warnings.length)}</summary>
               <ul>{a.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
-              <p className="hint">Подробности — на вкладке «Журнал».</p>
+              <p className="hint">{t.warningsHint}</p>
             </details>
           )}
           <ViewTabs view={view} onChange={setView} />
@@ -96,9 +98,9 @@ export default function Report(props: {
           {view === "log" && (
             <Card>
               <div className="row">
-                <Title tip="Пошаговый протокол анализа: какие источники опрошены, сколько событий пришло, где были ошибки. Пригодится, если результат выглядит странно.">Журнал анализа</Title>
+                <Title tip={t.log.tip}>{t.log.title}</Title>
                 <span className="spacer" />
-                <CopyButton label="Скопировать журнал" text={() => logText(a.log)} />
+                <CopyButton label={t.log.copy} text={() => logText(a.log)} />
               </div>
               <LogList entries={a.log} />
             </Card>
@@ -113,18 +115,19 @@ export default function Report(props: {
 }
 
 function Welcome({ ready, onOpenSettings }: { ready: boolean; onOpenSettings: () => void }) {
+  const t = useT().report.welcome;
   return (
     <Card className="banner">
       {ready ? (
         <>
-          <h3>Всё готово</h3>
-          <p className="muted">Выберите период и нажмите «Проанализировать». Вы увидите, как день за днём идёт анализ, а затем получите часы по дням и неделям, готовые значения для списания и человеческий разбор от ИИ.</p>
+          <h3>{t.readyTitle}</h3>
+          <p className="muted">{t.readyText}</p>
         </>
       ) : (
         <>
-          <h3>Добро пожаловать 👋</h3>
-          <p className="muted">Чтобы построить отчёт, нужно один раз подключить Jira (адрес и персональный токен). В настройках для каждого сервиса есть инструкция, где взять токен. Git, Confluence, календарь, Matrix и ИИ подключаются по желанию.</p>
-          <div className="row"><Button variant="primary" onClick={onOpenSettings}>Открыть настройки</Button></div>
+          <h3>{t.title}</h3>
+          <p className="muted">{t.text}</p>
+          <div className="row"><Button variant="primary" onClick={onOpenSettings}>{t.openSettings}</Button></div>
         </>
       )}
     </Card>

@@ -4,8 +4,8 @@ import { addDays } from "../dates";
 import { toEvidence } from "../events/days";
 import { heuristicWeights } from "../plan/heuristic";
 import type { DayActivity } from "../plan/types";
-import { buildUserPrompt, parseAiDay, SYSTEM_PROMPT } from "../prompt";
-import { countBy, percents, sd } from "./format";
+import { buildUserPrompt, dayPrompt, parseAiDay } from "../prompt";
+import { countBy, joinCounts, msg, percents, sd } from "./format";
 import { normFor, type RunContext } from "./types";
 
 export interface DayInput {
@@ -30,14 +30,10 @@ export interface DayAllocator {
 /** Plain-language explanation for days analysed without AI. */
 function heuristicReasoning(evs: Evt[], weights: Record<string, number>, why: string): string {
   const parts = Object.keys(weights).map((k) => {
-    const c = countBy(evs.filter((e) => e.issueKey === k), (e) => e.source).map(([s, n]) => `${s}: ${n}`).join(", ");
+    const c = joinCounts(countBy(evs.filter((e) => e.issueKey === k), (e) => e.source), ": ");
     return `${k} (${c})`;
   });
-  const unkeyed = evs.filter((e) => !e.issueKey).length;
-  return (
-    `${why} Доли посчитаны по числу и размеру действий с ключом задачи: ${parts.join("; ")}.` +
-    (unkeyed ? ` Ещё ${unkeyed} событий без ключа задачи в расчёте не участвуют.` : "")
-  );
+  return msg().alloc.heuristicReasoning(why, parts.join("; "), evs.filter((e) => !e.issueKey).length);
 }
 
 function heuristicActivity(ctx: RunContext, evs: Evt[], why: string): DayActivity {
@@ -50,8 +46,8 @@ export class HeuristicAllocator implements DayAllocator {
   constructor(private ctx: RunContext) {}
 
   async allocate({ label, events }: DayInput): Promise<DayResult> {
-    const act = heuristicActivity(this.ctx, events, "Анализ ИИ выключен.");
-    this.ctx.log("info", `${label}: эвристика → ${percents(act.weights) || "нет событий с ключом задачи"}.`);
+    const act = heuristicActivity(this.ctx, events, msg().alloc.aiOff);
+    this.ctx.log("info", msg().alloc.heuristic(label, percents(act.weights)));
     return { act, status: "done", usedAi: false };
   }
 }
@@ -78,32 +74,33 @@ export class AiAllocator implements DayAllocator {
 
   async allocate({ date, label, events: evs, byDay }: DayInput): Promise<DayResult> {
     const { ctx } = this;
+    const m = msg().alloc;
     const { candidates, contextOnly } = this.candidates(date, byDay);
     if (candidates.length === 0) {
-      ctx.log("warn", `${label}: нет задач-кандидатов — ИИ не вызывался.`);
-      return this.fallback(evs, "ИИ не использовался для этого дня.", "нет задач-кандидатов");
+      ctx.log("warn", m.noCandidates(label));
+      return this.fallback(evs, m.noCandidatesWhy, m.noCandidatesNote);
     }
 
-    ctx.log("info", `${label}: → запрос к ИИ (кандидатов: ${candidates.length})…`);
+    ctx.log("info", m.asking(label, candidates.length));
     const t0 = performance.now();
     let raw: string;
     try {
-      raw = await api.llmChat(SYSTEM_PROMPT, buildUserPrompt(date, evs, candidates, normFor(ctx, date), contextOnly, ctx.issues));
+      raw = await api.llmChat(dayPrompt(), buildUserPrompt(date, evs, candidates, normFor(ctx, date), contextOnly, ctx.issues));
     } catch (e) {
-      ctx.log("error", `${label}: ошибка ИИ — ${e}. Использована эвристика.`);
-      ctx.warnings.push(`${sd(date)}: ошибка ИИ (${e}), использована эвристика.`);
-      return this.fallback(evs, "ИИ не ответил.", "ошибка ИИ");
+      ctx.log("error", m.aiError(label, String(e)));
+      ctx.warnings.push(m.aiErrorWarning(sd(date), String(e)));
+      return this.fallback(evs, m.aiErrorWhy, m.aiErrorNote);
     }
     const sec = ((performance.now() - t0) / 1000).toFixed(1);
     const parsed = parseAiDay(raw, new Set(candidates.map((c) => c.key)));
 
     if (!parsed) {
-      ctx.log("warn", `${label}: ответ ИИ не удалось разобрать — использована эвристика. Начало ответа: ${raw.slice(0, 120).replace(/\s+/g, " ")}`);
-      ctx.warnings.push(`${sd(date)}: непонятный ответ ИИ, использована эвристика.`);
-      return this.fallback(evs, "Ответ ИИ не удалось разобрать.", "непонятный ответ ИИ");
+      ctx.log("warn", m.unparsed(label, raw.slice(0, 120).replace(/\s+/g, " ")));
+      ctx.warnings.push(m.unparsedWarning(sd(date)));
+      return this.fallback(evs, m.unparsedWhy, m.unparsedNote);
     }
     if (Object.keys(parsed.weights).length > 0) {
-      ctx.log("ok", `${label}: ИИ за ${sec} с → ${percents(parsed.weights)}${parsed.summary ? ` — «${parsed.summary}»` : ""}`);
+      ctx.log("ok", m.aiDone(label, sec, percents(parsed.weights), parsed.summary));
       return { act: { ...parsed, eventCount: evs.length, evidence: toEvidence(evs) }, status: "done", usedAi: true };
     }
 
@@ -111,11 +108,11 @@ export class AiAllocator implements DayAllocator {
     const heur = heuristicWeights(evs, ctx.isCtx);
     const hasKeys = Object.keys(heur).length > 0;
     const said = parsed.reasoning || parsed.summary;
-    ctx.log("info", `${label}: ИИ за ${sec} с не нашёл подходящей задачи${said ? ` — «${said.slice(0, 160)}»` : ""}.${hasKeys ? " Использованы доли по ключам задач." : " День будет заполнен по режиму «дни без данных»."}`);
+    ctx.log("info", m.aiNoTask(label, sec, said.slice(0, 160), hasKeys));
     return {
-      act: { weights: heur, notes: {}, summary: parsed.summary, reasoning: said || "ИИ не нашёл подходящей задачи.", eventCount: evs.length, evidence: toEvidence(evs) },
+      act: { weights: heur, notes: {}, summary: parsed.summary, reasoning: said || m.aiNoTaskReason, eventCount: evs.length, evidence: toEvidence(evs) },
       status: hasKeys ? "fallback" : "done",
-      note: "ИИ: нет подходящей задачи",
+      note: m.aiNoTaskNote,
       usedAi: false,
     };
   }

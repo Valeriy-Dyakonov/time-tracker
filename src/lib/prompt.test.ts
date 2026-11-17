@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { setLocale } from "../i18n";
 import { parseAiDay } from "./prompt";
 
 const allowed = new Set(["A-1", "B-2"]);
@@ -41,5 +42,18 @@ describe("parseAiDay reasoning / parseNarrative", () => {
     expect(parseNarrative('{"text":" Итог "}')).toBe("Итог");
     expect(parseNarrative("Просто текст")).toBe("Просто текст");
     expect(parseNarrative("{}")).toBeNull();
+  });
+});
+
+import { dayPrompt, narrativeSystemPrompt } from "./prompt";
+describe("system prompts follow the interface language", () => {
+  it("asks for Russian or English output", () => {
+    setLocale("ru");
+    expect(dayPrompt()).toContain("Пиши по-русски");
+    expect(narrativeSystemPrompt()).toContain("русским языком");
+    setLocale("en");
+    expect(dayPrompt()).toContain("Write in English");
+    expect(narrativeSystemPrompt()).toContain("English");
+    setLocale("ru");
   });
 });

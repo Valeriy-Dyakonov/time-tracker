@@ -1,17 +1,19 @@
 import { api } from "../../api";
-import { nEv } from "../analysis/format";
+import { msg, nEv } from "../analysis/format";
 import type { SourceCollector } from "./types";
 
+const m = () => msg().sources.confluence;
+
 export const confluenceSource: SourceCollector = {
-  name: "Confluence",
-  step: "Confluence: страницы задач и ваши правки",
-  skipped: "Confluence: пропущен (не настроен или выключен).",
+  get name() { return m().name; },
+  get step() { return m().step; },
+  get skipped() { return m().skipped; },
   enabled: ({ o, settings }) => o.useConfluence && !!settings.confluenceUrl,
   async collect(ctx) {
     await ctx.enrich.loadPages(ctx);
-    ctx.log("info", "Confluence: ищу страницы и комментарии, которые вы создали или правили…");
+    ctx.log("info", m().reading);
     const c = await api.fetchConfluence(ctx.o.start, ctx.o.end);
     ctx.events = ctx.events.concat(c);
-    ctx.log("ok", `Confluence: ${nEv(c.length)}.`);
+    ctx.log("ok", m().done(nEv(c.length)));
   },
 };

@@ -4,6 +4,7 @@ import { JiraUrlContext } from "./components/IssueLink";
 import Report from "./components/report/Report";
 import TitleBar from "./components/TitleBar";
 import Settings from "./components/settings/Settings";
+import { useLocale, useT } from "./i18n";
 import { setupState } from "./lib/setup";
 import { defaultSettings, type Analysis, type Settings as S } from "./types";
 
@@ -19,6 +20,9 @@ function loadSaved(): Analysis | null {
 }
 
 export default function App() {
+  // Subscribing here re-renders the whole tree on a language switch, including code that formats via getLocale().
+  useLocale();
+  const t = useT().shell.app;
   const [tab, setTab] = useState<"report" | "settings">("report");
   const [settings, setSettings] = useState<S>(defaultSettings);
   const [analysis, setAnalysis] = useState<Analysis | null>(loadSaved);
@@ -54,16 +58,16 @@ export default function App() {
     <div className="app">
       {tab === "settings" ? (
         <header className="pagehead">
-          <button className="back" onClick={() => setTab("report")} title="Вернуться к отчёту">
-            <svg viewBox="0 0 16 16"><path d="M10 3L5 8l5 5" /></svg>Отчёт
+          <button className="back" onClick={() => setTab("report")} title={t.backToReport}>
+            <svg viewBox="0 0 16 16"><path d="M10 3L5 8l5 5" /></svg>{t.report}
           </button>
-          <h2>Настройки</h2>
+          <h2>{t.settings}</h2>
         </header>
       ) : <div className="pagegap" />}
       <JiraUrlContext.Provider value={settings.jiraUrl}>
       <main>
         {tab === "settings" ? (
-          inTauri ? <Settings settings={settings} onSaved={(s) => { setSettings(s); refreshStored(); }} /> : <p className="muted">Настройки доступны только в десктопном приложении.</p>
+          inTauri ? <Settings settings={settings} onSaved={(s) => { setSettings(s); refreshStored(); }} /> : <p className="muted">{t.desktopOnly}</p>
         ) : (
           <Report settings={settings} setup={setupState(settings, stored)} onOpenSettings={() => setTab("settings")} analysis={analysis} onChange={setAnalysis} />
         )}

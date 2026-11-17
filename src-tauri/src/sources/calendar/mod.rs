@@ -2,9 +2,11 @@
 //! The server expands recurring meetings itself, so every occurrence arrives as its own item.
 mod ews;
 
+use crate::texts::Lang;
 use crate::util::truncate;
 use chrono::{DateTime, SecondsFormat};
 use serde::Serialize;
+use crate::error::{AppError, AppResult};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -31,12 +33,12 @@ pub async fn fetch(
     url: &str,
     user: &str,
     password: &str,
-    start_ms: i64,
-    end_ms: i64,
+    (start_ms, end_ms): (i64, i64),
     only_calls: bool,
-) -> Result<Vec<Meeting>, String> {
+    lang: Lang,
+) -> AppResult<Vec<Meeting>> {
     if url.trim().is_empty() || user.trim().is_empty() {
-        return Err("Exchange: укажите адрес почты и логин в настройках".into());
+        return Err(AppError::new("exchangeNotConfigured"));
     }
     let endpoint = ews::endpoint(url);
     for version in VERSIONS {
@@ -47,27 +49,25 @@ pub async fn fetch(
             .body(ews::envelope(version, &iso(start_ms), &iso(end_ms)))
             .send()
             .await
-            .map_err(|e| format!("Exchange: {e}"))?;
+            .map_err(|e| AppError::service("Exchange", e))?;
         let status = resp.status();
-        let text = resp.text().await.map_err(|e| e.to_string())?;
+        let text = resp.text().await.map_err(AppError::raw)?;
         if status.as_u16() == 401 {
-            return Err("Exchange: 401 — логин или пароль не приняты. Формат логина: ДОМЕН\\логин или логин@компания.ru. \
-                        Если пароль точно верный, возможно сервер требует NTLM/Kerberos вместо Basic — напишите об этом, добавим."
-                .into());
+            return Err(AppError::new("exchangeUnauthorized"));
         }
         if !status.is_success() && !text.contains("FindItemResponse") {
-            return Err(format!("Exchange HTTP {status}: {}", truncate(&text, 160)));
+            return Err(AppError::http("Exchange", status, &truncate(&text, 160)));
         }
-        if let Some(list) = ews::parse(&text, start_ms, end_ms, only_calls)? {
+        if let Some(list) = ews::parse(&text, start_ms, end_ms, only_calls, lang)? {
             return Ok(list);
         }
     }
-    Err("Exchange: сервер не поддерживает запрошенную версию протокола".into())
+    Err(AppError::new("exchangeVersion"))
 }
 
-pub async fn test(client: &reqwest::Client, url: &str, user: &str, password: &str) -> Result<String, String> {
+/// Number of meetings within ±1 day of now.
+pub async fn test(client: &reqwest::Client, url: &str, user: &str, password: &str) -> AppResult<usize> {
     let now = chrono::Utc::now().timestamp_millis();
     let day = 86_400_000;
-    let list = fetch(client, url, user, password, now - day, now + day, false).await?;
-    Ok(format!("OK: подключено, встреч в ближайшие сутки (±1 день): {}", list.len()))
+    Ok(fetch(client, url, user, password, (now - day, now + day), false, Lang::default()).await?.len())
 }

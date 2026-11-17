@@ -7,6 +7,8 @@ use crate::util::trim_url;
 use parse::Me;
 use serde::Serialize;
 use serde_json::Value;
+use crate::texts::Lang;
+use crate::error::AppResult;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -26,11 +28,11 @@ impl<'a> Jira<'a> {
         Self { api: JsonApi::new(client, "Jira", Auth::Bearer(pat)), base: trim_url(base) }
     }
 
-    async fn get(&self, path: &str, query: &[(&str, String)]) -> Result<Value, String> {
+    async fn get(&self, path: &str, query: &[(&str, String)]) -> AppResult<Value> {
         self.api.get(&format!("{}{path}", self.base), query).await
     }
 
-    async fn myself(&self) -> Result<Me, String> {
+    async fn myself(&self) -> AppResult<Me> {
         Ok(Me::from_json(&self.get("/rest/api/2/myself", &[]).await?))
     }
 
@@ -43,13 +45,14 @@ impl<'a> Jira<'a> {
             .and_then(|f| f["id"].as_str().map(String::from))
     }
 
-    async fn search(&self, jql: String, fields: String, max: usize) -> Result<Value, String> {
+    async fn search(&self, jql: String, fields: String, max: usize) -> AppResult<Value> {
         self.get("/rest/api/2/search", &[("jql", jql), ("fields", fields), ("maxResults", max.to_string())]).await
     }
 }
 
-pub async fn test(client: &reqwest::Client, base: &str, pat: &str) -> Result<String, String> {
-    Ok(format!("OK: {}", Jira::new(client, base, pat).myself().await?.display))
+/// Display name of the token owner.
+pub async fn test(client: &reqwest::Client, base: &str, pat: &str) -> AppResult<String> {
+    Ok(Jira::new(client, base, pat).myself().await?.display)
 }
 
 /// Links attached in the issue's "Web links" panel (often Confluence pages).
@@ -72,7 +75,8 @@ pub async fn fetch(
     start_day: &str,
     start_ms: i64,
     end_ms: i64,
-) -> Result<JiraResult, String> {
+    lang: Lang,
+) -> AppResult<JiraResult> {
     let jira = Jira::new(client, base, pat);
     let me = jira.myself().await?;
     let epic = jira.epic_field().await;
@@ -103,7 +107,7 @@ pub async fn fetch(
         let arr = v["issues"].as_array().cloned().unwrap_or_default();
         let total = v["total"].as_u64().unwrap_or(0) as usize;
         for it in &arr {
-            events.extend(parse::my_events(it, &me, start_ms, end_ms));
+            events.extend(parse::my_events(it, &me, start_ms, end_ms, lang));
             let mut info = parse::issue(it, &epic);
             info.transitions = parse::transitions(it, &me);
             issues.push(info);
@@ -118,7 +122,7 @@ pub async fn fetch(
 
 /// Summaries for keys mentioned in git/chat. An unknown key (e.g. "UTF-8" in a commit message) makes
 /// the whole JQL fail with 400, so a failed batch is retried key by key.
-pub async fn lookup(client: &reqwest::Client, base: &str, pat: &str, keys: &[String]) -> Result<Vec<IssueInfo>, String> {
+pub async fn lookup(client: &reqwest::Client, base: &str, pat: &str, keys: &[String]) -> AppResult<Vec<IssueInfo>> {
     let jira = Jira::new(client, base, pat);
     let epic = jira.epic_field().await;
     let fields = parse::issue_fields(&epic);

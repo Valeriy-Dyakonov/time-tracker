@@ -2,13 +2,14 @@ import { useMemo, useState } from "react";
 import type { Analysis } from "../../types";
 import { api } from "../../api";
 import { dayTotal } from "../../lib/allocate";
-import { formatRu } from "../../lib/dates";
+import { formatDate } from "../../lib/dates";
 import { parseNarrative } from "../../lib/prompt";
 import { fmtH, weeksOf, type Week } from "../../lib/report";
-import { WEEK_SYSTEM, weekHours, weekPrompt, weekText, weekTitle } from "../../lib/submit";
+import { weekHours, weekPrompt, weekSystemPrompt, weekText, weekTitle } from "../../lib/submit";
 import { useStored } from "../hooks/useStored";
 import { Button, Card, CopyChip, InfoTip } from "../ui";
 import { StepHeader } from "./StepHeader";
+import { useT } from "../../i18n";
 
 /** Step 2: a ready text per week for a time system that wants a weekly description. */
 export function WeeklyText({ a, storeId, canAi }: { a: Analysis; storeId: string; canAi: boolean }) {
@@ -16,16 +17,18 @@ export function WeeklyText({ a, storeId, canAi }: { a: Analysis; storeId: string
   const [texts, setTexts] = useStored<Record<string, string>>(`${storeId}.weeks`, {});
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
+  const t = useT();
+  const m = t.submit.weekly;
 
   async function rewrite(w: Week) {
     setBusy(w.monday);
     setErr("");
     try {
-      const t = parseNarrative(await api.llmChat(WEEK_SYSTEM, weekPrompt(a, w)));
-      if (t) setTexts((p) => ({ ...p, [w.monday]: t }));
-      else setErr("ИИ вернул пустой ответ — текст не изменён.");
+      const text = parseNarrative(await api.llmChat(weekSystemPrompt(), weekPrompt(a, w)));
+      if (text) setTexts((p) => ({ ...p, [w.monday]: text }));
+      else setErr(m.aiEmpty);
     } catch (e) {
-      setErr(`Ошибка ИИ: ${e}`);
+      setErr(m.aiError(String(e)));
     } finally {
       setBusy(null);
     }
@@ -35,11 +38,7 @@ export function WeeklyText({ a, storeId, canAi }: { a: Analysis; storeId: string
 
   return (
     <Card className="step">
-      <StepHeader n={2} title="Своя система — текст за неделю"
-        tip="Для систем учёта, где за неделю пишут общий текст «что сделано» и часы. Текст собран из задач недели; правки сохраняются.">
-        Для каждой недели готов текст. Поправьте при необходимости, нажмите «Копировать» и вставьте в поле недели.
-        Часы по дням лежат отдельной кнопкой, если система их спросит.
-      </StepHeader>
+      <StepHeader n={2} title={m.title} tip={m.tip}>{m.intro}</StepHeader>
       {err && <div className="error">{err}</div>}
       <div className="wk-grid">
         {weeks.map((w) => {
@@ -49,26 +48,26 @@ export function WeeklyText({ a, storeId, canAi }: { a: Analysis; storeId: string
           return (
             <article className="wk-card" key={w.monday}>
               <header>
-                <b>Неделя {weekTitle(w)}</b>
-                <span className="wl-sum sm">{fmtH(weekHours(w))}&nbsp;<small>ч</small></span>
+                <b>{m.week(weekTitle(w))}</b>
+                <span className="wl-sum sm">{fmtH(weekHours(w))}&nbsp;<small>{t.common.h}</small></span>
                 <span className="spacer" />
-                {edited && <Button variant="link" title="Отменить правки и вернуть автоматически собранный текст" onClick={() => reset(w.monday)}>вернуть исходный</Button>}
+                {edited && <Button variant="link" title={m.revertTitle} onClick={() => reset(w.monday)}>{m.revert}</Button>}
               </header>
               <textarea rows={Math.min(12, Math.max(4, text.split("\n").length + 1))} value={text} onChange={(e) => setTexts((p) => ({ ...p, [w.monday]: e.target.value }))} />
               <div className="row wrap">
-                <CopyChip text={text} label="Копировать текст" wide />
+                <CopyChip text={text} label={m.copyText} wide />
                 <CopyChip
-                  text={w.days.filter((d) => !d.off).map((d) => `${formatRu(d.date)}\t${fmtH(dayTotal(d))}`).join("\n")}
-                  label="Часы по дням"
-                  title="Даты и часы рабочих дней недели, по строке на день — если система просит часы отдельно"
+                  text={w.days.filter((d) => !d.off).map((d) => `${formatDate(d.date)}\t${fmtH(dayTotal(d))}`).join("\n")}
+                  label={m.dayHours}
+                  title={m.dayHoursTitle}
                   wide
                 />
                 {canAi && (
                   <>
                     <Button size="small" disabled={busy !== null} onClick={() => rewrite(w)}>
-                      {busy === w.monday ? "ИИ пишет текст…" : "Переписать связным текстом через ИИ"}
+                      {busy === w.monday ? m.aiBusy : m.aiRewrite}
                     </Button>
-                    <InfoTip>ИИ превратит список задач недели в связный абзац для отчёта: что делали и зачем. Текст в поле заменится; исходный можно вернуть кнопкой «вернуть исходный».</InfoTip>
+                    <InfoTip>{m.aiTip}</InfoTip>
                   </>
                 )}
               </div>

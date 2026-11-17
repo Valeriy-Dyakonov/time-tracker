@@ -1,7 +1,9 @@
 import type { DayPlan, FillMode, IssueInfo, TaskHours } from "../../types";
-import { dayBounds, formatRu } from "../dates";
+import { t } from "../../i18n";
+import { dateShort } from "../../i18n/format";
+import { dayBounds } from "../dates";
 import { distribute, normalized, toTasks } from "./distribute";
-import { fillerNote, PHASE_LABEL, TaskTimeline } from "./phase";
+import { fillerNote, phaseLabel, TaskTimeline } from "./phase";
 import type { DayActivity } from "./types";
 
 export function autoSummary(tasks: TaskHours[], issues: Record<string, IssueInfo>): string {
@@ -11,8 +13,8 @@ export function autoSummary(tasks: TaskHours[], issues: Record<string, IssueInfo
     .join("; ");
 }
 
-const short = (d: string) => formatRu(d).slice(0, 5);
-const listTasks = (tasks: TaskHours[]) => tasks.map((t) => `${t.key} (${t.hours} ч)`).join(", ");
+const plan = () => t().analysis.plan;
+const listTasks = (tasks: TaskHours[]) => tasks.map((x) => plan().taskHours(x.key, x.hours)).join(", ");
 
 /** Stage-aware notes for inferred days; numbering runs across the whole period so wording varies. */
 class FillerNotes {
@@ -23,11 +25,11 @@ class FillerNotes {
 
   apply(tasks: TaskHours[], date: string): TaskHours[] {
     const phases: string[] = [];
-    const out = tasks.map((t) => {
-      const phase = this.timeline.phaseOf(t.key, date);
-      phases.push(`${t.key}: ${PHASE_LABEL[phase]}`);
-      const n = (this.used[t.key] = (this.used[t.key] ?? -1) + 1);
-      return { ...t, notes: [fillerNote(t.key, n, this.issues, phase)] };
+    const out = tasks.map((x) => {
+      const phase = this.timeline.phaseOf(x.key, date);
+      phases.push(`${x.key}: ${phaseLabel(phase)}`);
+      const n = (this.used[x.key] = (this.used[x.key] ?? -1) + 1);
+      return { ...x, notes: [fillerNote(x.key, n, this.issues, phase)] };
     });
     this.lastPhases = phases.join("; ");
     return out;
@@ -76,7 +78,7 @@ class EmptyFiller implements GapFiller {
       tasks: [],
       basis: "empty",
       summary: "",
-      reasoning: `${g.why} День оставлен пустым${this.noDataAtAll ? ": во всём периоде нет данных для распределения" : " по выбранному режиму"}.`,
+      reasoning: plan().empty(g.why, this.noDataAtAll),
     };
   }
 }
@@ -96,7 +98,7 @@ class PeriodFiller implements GapFiller {
 
   fill(g: Gap): DayPlan {
     const tasks = this.periodTasks(g);
-    return this.inferred(g, tasks, `${g.why} Часы распределены пропорционально задачам всего периода: ${listTasks(tasks)}.`);
+    return this.inferred(g, tasks, plan().byPeriod(g.why, listTasks(tasks)));
   }
 }
 
@@ -112,12 +114,12 @@ class NeighborsFiller extends PeriodFiller {
       return this.inferred(
         g,
         tasks,
-        `${g.why} Взято по ${src < g.date ? "предыдущему" : "следующему"} дню с активностью — ${short(src)}: ${listTasks(tasks)}. Описание типовое, по этапу задачи (${this.c.notes.lastPhases}): за этот день нет следов работы.`,
+        plan().byNeighbor(g.why, src < g.date, dateShort(src), listTasks(tasks), this.c.notes.lastPhases),
         src,
       );
     }
     const tasks = this.periodTasks(g);
-    return this.inferred(g, tasks, `${g.why} Подходящих соседних дней нет — часы распределены по задачам всего периода: ${listTasks(tasks)}.`);
+    return this.inferred(g, tasks, plan().noNeighbors(g.why, listTasks(tasks)));
   }
 }
 

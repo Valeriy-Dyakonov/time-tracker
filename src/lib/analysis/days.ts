@@ -1,10 +1,10 @@
 import type { DayProgress, Evt, Meeting } from "../../types";
-import { eachDate, isoWeekday, weekdayName } from "../dates";
+import { eachDate, isoWeekday } from "../dates";
 import { groupByDay, localDay } from "../events/days";
 import { distribute } from "../plan/distribute";
 import type { DayActivity } from "../plan/types";
 import { dayAllocator } from "./dayAllocators";
-import { bySource, nEv, pool, sd } from "./format";
+import { bySource, dayLabel, msg, nEv, pool } from "./format";
 import { normFor, type RunContext } from "./types";
 
 /** Calendar entries without a task key are only context: a day with nothing but meetings has no task activity. */
@@ -20,7 +20,7 @@ export class ProgressBoard {
       const mc = meetingsByDay[date]?.length ?? 0;
       return {
         date, events: byDay[date]?.length ?? 0, status: active ? "queued" : "nodata",
-        note: active ? undefined : mc ? `только звонки: ${mc}` : "нет событий",
+        note: active ? undefined : mc ? msg().days.onlyCalls(mc) : msg().days.noEvents,
       };
     });
     onDays(this.days);
@@ -46,7 +46,7 @@ export async function analyseDays(ctx: RunContext, dates: string[], onDays: (d: 
   const inRange = new Set(eachDate(ctx.o.start, ctx.o.end));
   for (const d of Object.keys(byDay).sort()) {
     if (inRange.has(d) && !ctx.settings.workdays.includes(isoWeekday(d)))
-      ctx.log("info", `${sd(d)} (${weekdayName(d)}): ${nEv(byDay[d].length)} в нерабочий день — часы не начисляются.`);
+      ctx.log("info", msg().days.offDay(dayLabel(d), nEv(byDay[d].length)));
   }
 
   const meetingsByDay: Record<string, Meeting[]> = {};
@@ -54,7 +54,7 @@ export async function analyseDays(ctx: RunContext, dates: string[], onDays: (d: 
   const board = new ProgressBoard(dates, byDay, meetingsByDay, onDays);
 
   const withEvents = dates.filter((d) => (byDay[d] ?? []).some(isActivity));
-  ctx.log("info", `Дней с событиями: ${withEvents.length} из ${dates.length}; без событий: ${dates.length - withEvents.length} (они будут заполнены в конце).`);
+  ctx.log("info", msg().days.withEvents(withEvents.length, dates.length));
 
   const allocator = dayAllocator(ctx);
   const activity: Record<string, DayActivity> = {};
@@ -62,9 +62,9 @@ export async function analyseDays(ctx: RunContext, dates: string[], onDays: (d: 
 
   await pool(withEvents, 3, async (date) => {
     const events = byDay[date];
-    const label = `${sd(date)} (${weekdayName(date)})`;
+    const label = dayLabel(date);
     board.patch(date, { status: "running" });
-    ctx.log("info", `${label}: ${nEv(events.length)} — ${bySource(events)}; с ключом задачи: ${events.filter((e) => e.issueKey).length}.`);
+    ctx.log("info", msg().days.dayEvents(label, nEv(events.length), bySource(events), events.filter((e) => e.issueKey).length));
 
     const r = await allocator.allocate({ date, label, events, byDay });
     if (r.usedAi) aiDays += 1;

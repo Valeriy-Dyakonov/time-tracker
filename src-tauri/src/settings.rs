@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use tauri::Manager;
+use crate::error::{AppError, AppResult};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
@@ -67,22 +68,22 @@ impl Default for Settings {
     }
 }
 
-fn path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
-    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+fn path(app: &tauri::AppHandle) -> AppResult<PathBuf> {
+    let dir = app.path().app_config_dir().map_err(AppError::raw)?;
+    fs::create_dir_all(&dir).map_err(AppError::raw)?;
     Ok(dir.join("settings.json"))
 }
 
-pub fn load(app: &tauri::AppHandle) -> Result<Settings, String> {
+pub fn load(app: &tauri::AppHandle) -> AppResult<Settings> {
     let p = path(app)?;
     if !p.exists() {
         return Ok(Settings::default());
     }
-    let s = fs::read_to_string(p).map_err(|e| e.to_string())?;
-    serde_json::from_str(&s).map_err(|e| e.to_string())
+    let s = fs::read_to_string(p).map_err(AppError::raw)?;
+    serde_json::from_str(&s).map_err(AppError::raw)
 }
 
-pub fn save(app: &tauri::AppHandle, settings: &Settings) -> Result<(), String> {
-    let json = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
-    fs::write(path(app)?, json).map_err(|e| e.to_string())
+pub fn save(app: &tauri::AppHandle, settings: &Settings) -> AppResult<()> {
+    let json = serde_json::to_string_pretty(settings).map_err(AppError::raw)?;
+    fs::write(path(app)?, json).map_err(AppError::raw)
 }

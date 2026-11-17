@@ -10,29 +10,34 @@ import { LlmSection } from "./sections/LlmSection";
 import { MatrixSection } from "./sections/MatrixSection";
 import { WorkSection } from "./sections/WorkSection";
 import { AppearanceSection } from "./sections/AppearanceSection";
-import { readTheme, THEMES } from "../../theme";
+import { readTheme, themeText } from "../../theme";
+import { hours, t } from "../../i18n";
 import type { SettingsForm } from "./useSettingsForm";
+
+type SectionId = keyof ReturnType<typeof t>["settings"]["nav"];
 
 export interface SectionStatus { ok: boolean; sub: string; required?: boolean }
 
 export interface SettingsSection {
-  id: string;
-  label: string;
+  id: SectionId;
   status: (ready: SetupState, s: Settings) => SectionStatus;
   Component: ComponentType<{ f: SettingsForm }>;
 }
 
-const optional = (ok: boolean, sub: string): SectionStatus => ({ ok, sub: ok ? sub : "необязательно" });
+const optional = (ok: boolean, sub: () => string): SectionStatus => ({ ok, sub: ok ? sub() : t().common.optional });
+const st = () => t().settings.status;
+
+export const sectionLabel = (id: SectionId): string => t().settings.nav[id];
 
 /** Side navigation and content of the settings page, in display order. */
 export const SECTIONS: SettingsSection[] = [
-  { id: "jira", label: "Jira", status: (r) => ({ ok: r.jira, sub: r.jira ? "подключена" : "обязательно", required: true }), Component: JiraSection },
-  { id: "llm", label: "Корпоративный ИИ", status: (r, s) => ({ ok: r.llm, sub: r.llm ? s.llmModel : "рекомендуется" }), Component: LlmSection },
-  { id: "git", label: "Git", status: (r, s) => optional(r.git, `репозиториев: ${s.gitRepos.length}`), Component: GitSection },
-  { id: "gitlab", label: "GitLab", status: (r, s) => optional(r.gitlab, s.gitlabLocalOnly ? "MR ваших репозиториев" : "все проекты"), Component: GitlabSection },
-  { id: "matrix", label: "Matrix", status: (r, s) => optional(r.matrix, s.matrixExcludeRooms.length ? `исключено: ${s.matrixExcludeRooms.length}` : "все комнаты"), Component: MatrixSection },
-  { id: "confluence", label: "Confluence", status: (r) => optional(r.confluence, "подключён"), Component: ConfluenceSection },
-  { id: "calendar", label: "Почта и календарь", status: (r, s) => optional(r.calendar, s.calendarOnlyCalls ? "только звонки" : "звонки и встречи"), Component: CalendarSection },
-  { id: "work", label: "Рабочее время", status: (_, s) => ({ ok: true, sub: `${s.hoursPerDay} ч · ${s.workdays.length} дн./нед.` }), Component: WorkSection },
-  { id: "appearance", label: "Оформление", status: () => ({ ok: true, sub: THEMES.find((t) => t.id === readTheme())?.label ?? "" }), Component: AppearanceSection },
+  { id: "jira", status: (r) => ({ ok: r.jira, sub: r.jira ? st().jiraOn : t().common.required, required: true }), Component: JiraSection },
+  { id: "llm", status: (r, s) => ({ ok: r.llm, sub: r.llm ? s.llmModel : t().common.recommended }), Component: LlmSection },
+  { id: "git", status: (r, s) => optional(r.git, () => st().repos(s.gitRepos.length)), Component: GitSection },
+  { id: "gitlab", status: (r, s) => optional(r.gitlab, () => (s.gitlabLocalOnly ? st().gitlabLocal : st().gitlabAll)), Component: GitlabSection },
+  { id: "matrix", status: (r, s) => optional(r.matrix, () => (s.matrixExcludeRooms.length ? st().matrixExcluded(s.matrixExcludeRooms.length) : st().matrixAll)), Component: MatrixSection },
+  { id: "confluence", status: (r) => optional(r.confluence, () => st().confluenceOn), Component: ConfluenceSection },
+  { id: "calendar", status: (r, s) => optional(r.calendar, () => (s.calendarOnlyCalls ? st().calendarCalls : st().calendarAll)), Component: CalendarSection },
+  { id: "work", status: (_, s) => ({ ok: true, sub: st().work(hours(s.hoursPerDay), s.workdays.length) }), Component: WorkSection },
+  { id: "appearance", status: () => ({ ok: true, sub: themeText(readTheme()).label }), Component: AppearanceSection },
 ];

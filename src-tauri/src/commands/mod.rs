@@ -9,6 +9,7 @@ pub mod settings;
 
 use crate::settings::Settings;
 use crate::util;
+use crate::error::AppResult;
 
 /// What every command needs: the saved settings and an HTTP client built from them.
 pub struct Ctx {
@@ -17,7 +18,7 @@ pub struct Ctx {
 }
 
 impl Ctx {
-    pub fn load(app: &tauri::AppHandle) -> Result<Self, String> {
+    pub fn load(app: &tauri::AppHandle) -> AppResult<Self> {
         let settings = crate::settings::load(app)?;
         let client = util::client(settings.accept_invalid_certs)?;
         Ok(Self { settings, client })

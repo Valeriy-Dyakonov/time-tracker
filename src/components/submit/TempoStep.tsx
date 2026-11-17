@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Analysis } from "../../types";
-import { formatRu, weekdayName } from "../../lib/dates";
+import { isoWeekday } from "../../lib/dates";
+import { dateFull, useT, weekdayShort } from "../../i18n";
 import { fmtH } from "../../lib/report";
 import { rowId, worklogRows, type HoursFormat, type WorklogRow as Row } from "../../lib/submit";
 import { useStored } from "../hooks/useStored";
@@ -25,6 +26,8 @@ export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
   const [comments, setComments] = useStored<Record<string, string>>(`${storeId}.comments`, {});
   const [fmt, setFmt] = useStored<HoursFormat>("worklog.submit.fmt", "hm");
   const [group, setGroup] = useState<Group>("tasks");
+  const t = useT();
+  const m = t.submit.tempo;
 
   const rows = useMemo(() => worklogRows(a), [a]);
   const byTask = useMemo(() => groupBy(rows, (r) => r.key).sort((x, y) => sumHours(y[1]) - sumHours(x[1])), [rows]);
@@ -48,23 +51,21 @@ export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
 
   return (
     <Card className="step">
-      <StepHeader n={1} title="Tempo в Jira — часы по задачам"
-        tip="Tempo — плагин Jira для учёта времени. Каждая строка ниже — одна запись «Log work»: задача, дата, часы и описание. Отметки и правки описаний сохраняются, можно вернуться позже.">
-        Нажмите на ключ задачи — она откроется в браузере. В Tempo нажмите «Log work» и для каждой строки скопируйте <b>часы</b> и <b>описание</b>
-        (клик по значку ⧉), выберите дату и сохраните. Потом поставьте галочку — так не потеряете, где остановились.
+      <StepHeader n={1} title={m.title} tip={m.tip}>
+        {m.introBefore}<b>{m.introHours}</b>{m.introAnd}<b>{m.introDesc}</b>{m.introAfter}
       </StepHeader>
       <div className="ts-bar">
         <Segmented size="small" value={group} onChange={setGroup}
-          options={[{ value: "tasks", label: "По задачам" }, { value: "days", label: "По дням" }]} />
+          options={[{ value: "tasks", label: m.byTask }, { value: "days", label: m.byDay }]} />
         <Segmented size="small" value={fmt} onChange={setFmt}
           options={[{ value: "hm", label: "2h 30m" }, { value: "decimal", label: "2.5" }]} />
-        <InfoTip>В каком виде копировать часы. Tempo принимает оба, но в некоторых настройках понимает только один — выберите тот, что у вас срабатывает.</InfoTip>
-        <span className="progress" title="Сколько строк вы уже отметили как внесённые">
+        <InfoTip>{m.formatTip}</InfoTip>
+        <span className="progress" title={m.progressTitle}>
           <span className="pg-bar"><i style={{ width: `${pct}%` }} /></span>
-          <span><b>{doneRows.length}</b> из {rows.length} строк · <b>{fmtH(sumHours(doneRows))}</b> из {fmtH(sumHours(rows))}&nbsp;ч</span>
+          <span><b>{doneRows.length}</b>{m.progressRows(rows.length)}<b>{fmtH(sumHours(doneRows))}</b>{m.progressOf(fmtH(sumHours(rows)))}&nbsp;{t.common.h}</span>
         </span>
         <span className="spacer" />
-        {doneRows.length > 0 && <Button variant="ghost" size="small" title="Снять все галочки «внесено» за этот период" onClick={() => setDone({})}>Сбросить отметки</Button>}
+        {doneRows.length > 0 && <Button variant="ghost" size="small" title={m.resetTitle} onClick={() => setDone({})}>{m.reset}</Button>}
       </div>
 
       <div className="wl-grid">
@@ -78,8 +79,8 @@ export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
                     <b className="wl-key"><IssueLink k={key} /></b>
                     <span className="wl-ttl" title={a.issues[key]?.summary}>{a.issues[key]?.summary}</span>
                     <span className="spacer" />
-                    <span className="wl-sum">{fmtH(sumHours(rs))}&nbsp;<small>ч</small></span>
-                    <span className={`wl-cnt ${d === rs.length ? "ok" : ""}`} title="Внесено строк из всех по задаче">{d}/{rs.length}</span>
+                    <span className="wl-sum">{fmtH(sumHours(rs))}&nbsp;<small>{t.common.h}</small></span>
+                    <span className={`wl-cnt ${d === rs.length ? "ok" : ""}`} title={m.countTitle}>{d}/{rs.length}</span>
                   </header>
                   {rs.map((r) => line(r, "date"))}
                 </article>
@@ -88,9 +89,9 @@ export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
           : byDay.map(([date, rs]) => (
               <article className="wl-card" key={date}>
                 <header>
-                  <b className="nw">{weekdayName(date)}, {formatRu(date)}</b>
+                  <b className="nw">{weekdayShort(isoWeekday(date))}, {dateFull(date)}</b>
                   <span className="spacer" />
-                  <span className="wl-sum">{fmtH(sumHours(rs))}&nbsp;<small>ч</small></span>
+                  <span className="wl-sum">{fmtH(sumHours(rs))}&nbsp;<small>{t.common.h}</small></span>
                 </header>
                 {rs.map((r) => line(r, "task"))}
               </article>

@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
-import { setTheme, SYSTEM_DARK_PREVIEW, THEMES, useTheme, type ThemeInfo } from "../../../theme";
+import { setTheme, SYSTEM_DARK_PREVIEW, THEMES, themeText, useTheme, type ThemeInfo } from "../../../theme";
 import { SectionCard } from "../parts";
-import { LOCALES, setLocale, useLocale } from "../../../i18n";
+import { LOCALES, setLocale, useLocale, useT } from "../../../i18n";
 import { Segmented } from "../../ui";
 
 const vars = (p: ThemeInfo["preview"]) => ({
@@ -31,8 +31,9 @@ function Preview({ t }: { t: ThemeInfo }) {
 
 function LanguagePicker() {
   const locale = useLocale();
+  const m = useT().settings.language;
   return (
-    <SectionCard title="Язык · Language" tip="Язык интерфейса, отчётов и текстов от ИИ. Interface, report and AI text language.">
+    <SectionCard title={m.title} tip={m.tip}>
       <Segmented value={locale} onChange={setLocale} options={LOCALES.map((l) => ({ value: l.id, label: l.label }))} />
     </SectionCard>
   );
@@ -40,19 +41,20 @@ function LanguagePicker() {
 
 export function AppearanceSection() {
   const current = useTheme();
+  const m = useT().settings.appearance;
   return (
     <>
     <LanguagePicker />
-    <SectionCard title="Оформление" tip="Цветовая тема приложения. Применяется сразу и запоминается на этом компьютере — кнопку «Сохранить» нажимать не нужно.">
-      <div className="themes" role="radiogroup" aria-label="Тема оформления">
+    <SectionCard title={m.title} tip={m.tip}>
+      <div className="themes" role="radiogroup" aria-label={m.groupLabel}>
         {THEMES.map((t) => (
           <button key={t.id} role="radio" aria-checked={current === t.id} className={`theme-card ${current === t.id ? "on" : ""}`} onClick={() => setTheme(t.id)}>
             <Preview t={t} />
             <span className="tc-name">
-              {t.label}
+              {themeText(t.id).label}
               {current === t.id && <svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-6.5" /></svg>}
             </span>
-            <span className="tc-sub">{t.sub}</span>
+            <span className="tc-sub">{themeText(t.id).sub}</span>
           </button>
         ))}
       </div>

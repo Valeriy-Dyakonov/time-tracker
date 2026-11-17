@@ -1,13 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { addDays, isoWeekday, localDate, parseDate, WEEKDAYS_SHORT } from "../lib/dates";
+import { dayMonth, monthName, useT, weekdaysShort } from "../i18n";
+import { addDays, isoWeekday, localDate, parseDate } from "../lib/dates";
 
-const MONTHS = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-const MONTHS_GEN = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
-
-const label = (s: string, withYear: boolean) => {
-  const d = parseDate(s);
-  return `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}${withYear ? ` ${d.getFullYear()}` : ""}`;
-};
+const label = (s: string, withYear: boolean) => dayMonth(parseDate(s), withYear);
 
 /** Days of a month grid, Monday first, padded with neighbouring months' days. */
 function monthGrid(year: number, month: number): string[] {
@@ -21,6 +16,7 @@ function monthGrid(year: number, month: number): string[] {
  * First click picks the start, second the end; Esc or a click outside closes it.
  */
 export default function DateRange(props: { start: string; end: string; onChange: (start: string, end: string) => void }) {
+  const t = useT().shell.dateRange;
   const [open, setOpen] = useState(false);
   const [view, setView] = useState(() => { const d = parseDate(props.start); return { y: d.getFullYear(), m: d.getMonth() }; });
   const [pick, setPick] = useState<string | null>(null); // start chosen, waiting for the end
@@ -66,18 +62,18 @@ export default function DateRange(props: { start: string; end: string; onChange:
         <span>{label(props.start, !sameYear)} — {label(props.end, true)}</span>
       </button>
       {open && (
-        <div className="dr-pop" role="dialog" aria-label="Выбор периода">
+        <div className="dr-pop" role="dialog" aria-label={t.dialog}>
           <div className="dr-head">
-            <button type="button" className="dr-nav" onClick={() => shift(-1)} aria-label="Предыдущий месяц">‹</button>
-            <span className="dr-hint">{pick ? "Выберите конец периода" : "Выберите начало периода"}</span>
-            <button type="button" className="dr-nav" onClick={() => shift(1)} aria-label="Следующий месяц">›</button>
+            <button type="button" className="dr-nav" onClick={() => shift(-1)} aria-label={t.prevMonth}>‹</button>
+            <span className="dr-hint">{pick ? t.pickEnd : t.pickStart}</span>
+            <button type="button" className="dr-nav" onClick={() => shift(1)} aria-label={t.nextMonth}>›</button>
           </div>
           <div className="dr-months">
             {months.map(({ y, m }) => (
               <div className="dr-month" key={`${y}-${m}`}>
-                <div className="dr-title">{MONTHS[m]} {y}</div>
+                <div className="dr-title">{monthName(m)} {y}</div>
                 <div className="dr-grid">
-                  {WEEKDAYS_SHORT.map((w, i) => <span key={w} className={`dr-wd ${i > 4 ? "we" : ""}`}>{w}</span>)}
+                  {weekdaysShort().map((w, i) => <span key={w} className={`dr-wd ${i > 4 ? "we" : ""}`}>{w}</span>)}
                   {monthGrid(y, m).map((d) => {
                     const out = parseDate(d).getMonth() !== m;
                     if (out) return <span key={d} className="dr-day out" />;

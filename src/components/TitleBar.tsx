@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { inTauri } from "../api";
+import { t as messages, useT } from "../i18n";
 
 type Upd = { version: string; downloadAndInstall: (cb?: (e: { event: string; data?: { contentLength?: number; chunkLength?: number } }) => void) => Promise<void> };
 type Win = { minimize(): Promise<void>; toggleMaximize(): Promise<void>; close(): Promise<void>; isMaximized(): Promise<boolean>; onResized(cb: () => void): Promise<() => void> };
@@ -8,6 +9,7 @@ const RECHECK_MS = 4 * 60 * 60 * 1000;
 
 /** Custom window title bar (the native one is off via "decorations": false): app name, version, update button, window controls. */
 export default function TitleBar(props: { settingsOpen: boolean; onToggleSettings: () => void }) {
+  const t = useT().shell.titlebar;
   const [win, setWin] = useState<Win | null>(null);
   const [maximized, setMaximized] = useState(false);
   const [version, setVersion] = useState("");
@@ -45,13 +47,14 @@ export default function TitleBar(props: { settingsOpen: boolean; onToggleSetting
   const install = async () => {
     if (!upd) return;
     setState("busy");
-    setMsg("Скачиваю…");
+    const tb = messages().shell.titlebar;
+    setMsg(tb.downloading);
     let total = 0, got = 0;
     try {
       await upd.downloadAndInstall((e) => {
         if (e.event === "Started") total = e.data?.contentLength ?? 0;
-        if (e.event === "Progress") { got += e.data?.chunkLength ?? 0; if (total) setMsg(`Скачано ${Math.round((got / total) * 100)}%`); }
-        if (e.event === "Finished") setMsg("Устанавливаю…");
+        if (e.event === "Progress") { got += e.data?.chunkLength ?? 0; if (total) setMsg(tb.downloaded(Math.round((got / total) * 100))); }
+        if (e.event === "Finished") setMsg(tb.installing);
       });
     } catch (e) {
       setState("error");
@@ -69,28 +72,28 @@ export default function TitleBar(props: { settingsOpen: boolean; onToggleSetting
           {state === "busy" ? (
             <span className="tb-msg">{msg}</span>
           ) : (
-            <button className="tb-upd-btn" onClick={install} title={state === "error" ? `Не удалось обновить: ${msg}` : `Установить версию ${upd.version}`}>
-              {state === "error" ? "Повторить обновление" : `Обновить до v${upd.version}`}
+            <button className="tb-upd-btn" onClick={install} title={state === "error" ? t.updateFailed(msg) : t.installVersion(upd.version)}>
+              {state === "error" ? t.retryUpdate : t.updateTo(upd.version)}
             </button>
           )}
         </div>
       )}
       <div className="tb-fill" data-tauri-drag-region />
-      <button className={`tb-btn tb-gear ${props.settingsOpen ? "on" : ""}`} aria-label="Настройки" title={props.settingsOpen ? "Закрыть настройки" : "Настройки"} onClick={props.onToggleSettings}>
+      <button className={`tb-btn tb-gear ${props.settingsOpen ? "on" : ""}`} aria-label={t.settings} title={props.settingsOpen ? t.closeSettings : t.settings} onClick={props.onToggleSettings}>
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
       </button>
       {win && <span className="tb-sep" />}
       {win && (
         <div className="tb-controls">
-          <button className="tb-btn" aria-label="Свернуть" onClick={() => win.minimize()}>
+          <button className="tb-btn" aria-label={t.minimize} onClick={() => win.minimize()}>
             <svg viewBox="0 0 10 10"><path d="M0 5h10" /></svg>
           </button>
-          <button className="tb-btn" aria-label={maximized ? "Восстановить" : "Развернуть"} onClick={() => win.toggleMaximize()}>
+          <button className="tb-btn" aria-label={maximized ? t.restore : t.maximize} onClick={() => win.toggleMaximize()}>
             {maximized
               ? <svg viewBox="0 0 10 10"><path d="M2 0.5h7.5v7.5M0.5 2h7.5v7.5h-7.5z" /></svg>
               : <svg viewBox="0 0 10 10"><path d="M0.5 0.5h9v9h-9z" /></svg>}
           </button>
-          <button className="tb-btn tb-close" aria-label="Закрыть" onClick={() => win.close()}>
+          <button className="tb-btn tb-close" aria-label={t.close} onClick={() => win.close()}>
             <svg viewBox="0 0 10 10"><path d="M0 0l10 10M10 0l-10 10" /></svg>
           </button>
         </div>

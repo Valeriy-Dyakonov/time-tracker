@@ -1,5 +1,5 @@
 import type { Analysis, DayPlan } from "../types";
-import { formatRu } from "./dates";
+import { dateShort, t } from "../i18n";
 import { dayTotal } from "./allocate";
 import { fmtH, fmtMinutes, meetingMinutes, type Week } from "./report";
 
@@ -62,20 +62,18 @@ export function weekText(a: Analysis, w: Week): string {
     .map(([key, v]) => {
       const title = a.issues[key]?.summary ?? "";
       const said = v.said.filter((s) => s !== title).slice(0, 2).join("; ");
-      return `• ${key} ${title} — ${fmtH(v.hours)} ч${said ? `: ${said}` : ""}`;
+      return t().analysis.submit.line(key, title, fmtH(v.hours), said);
     });
   const mm = days.reduce((s, d) => s + meetingMinutes(d), 0);
-  if (mm > 0) lines.push(`Звонки и встречи: ${fmtMinutes(mm)}.`);
+  if (mm > 0) lines.push(t().analysis.submit.meetings(fmtMinutes(mm)));
   return lines.join("\n");
 }
 
-export const weekTitle = (w: Week): string => `${formatRu(w.monday).slice(0, 5)} – ${formatRu(w.sunday).slice(0, 5)}`;
+export const weekTitle = (w: Week): string => `${dateShort(w.monday)} – ${dateShort(w.sunday)}`;
 export const weekHours = (w: Week): number => w.days.reduce((s, d) => s + (d.off ? 0 : dayTotal(d)), 0);
 
-export const WEEK_SYSTEM = `Ты помощник по учёту рабочего времени.
-Тебе дают задачи недели с часами и описания дней. Напиши для сотрудника короткий отчёт о неделе, 2-4 предложения, простым деловым русским языком, без markdown и списков: над чем работал, что сделано.
-Упоминай ключи задач. Не выдумывай ничего, чего нет во входных данных.
-Верни ТОЛЬКО JSON: {"text":"..."}`;
+/** System prompt for rewriting a week as prose, in the current language. */
+export const weekSystemPrompt = (): string => t().analysis.prompt.week;
 
 export function weekPrompt(a: Analysis, w: Week): string {
   return JSON.stringify({

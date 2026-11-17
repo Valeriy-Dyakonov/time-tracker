@@ -1,22 +1,23 @@
 use crate::secrets;
 use crate::settings::{self, Settings};
 use std::collections::HashMap;
+use crate::error::{AppError, AppResult};
 
 #[tauri::command]
-pub fn load_settings(app: tauri::AppHandle) -> Result<Settings, String> {
+pub fn load_settings(app: tauri::AppHandle) -> AppResult<Settings> {
     settings::load(&app)
 }
 
 #[tauri::command]
-pub fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String> {
+pub fn save_settings(app: tauri::AppHandle, settings: Settings) -> AppResult<()> {
     settings::save(&app, &settings)
 }
 
 /// An empty value removes the secret.
 #[tauri::command]
-pub fn set_secret(name: String, value: String) -> Result<(), String> {
+pub fn set_secret(name: String, value: String) -> AppResult<()> {
     if !secrets::is_known(&name) {
-        return Err("unknown secret".into());
+        return Err(AppError::new("unknownSecret").with("secret", name));
     }
     secrets::set(&name, &value)
 }

@@ -16,11 +16,14 @@ pub struct Event {
     /// Who a chat message was addressed to (mentions, reply target or the other person in a DM).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub to: Option<String>,
+    /// Language-neutral type of the action ("created", "comment", "mr_opened"...), so the frontend never parses `text`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
 }
 
 impl Event {
     pub fn new(source: &str, ts: i64, text: String) -> Self {
-        Self { source: source.into(), ts, issue_key: None, text, context: None, weight: 1.0, to: None }
+        Self { source: source.into(), ts, issue_key: None, text, context: None, weight: 1.0, to: None, kind: None }
     }
 }
 

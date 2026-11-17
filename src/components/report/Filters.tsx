@@ -1,3 +1,4 @@
+import { useT } from "../../i18n";
 import type { FillMode } from "../../types";
 import { monthRange } from "../../lib/dates";
 import type { SetupState } from "../../lib/setup";
@@ -13,15 +14,11 @@ export interface FilterValues {
   sources: SourceToggles;
 }
 
-const PRESETS: [string, number][] = [["Этот месяц", 0], ["Прошлый месяц", -1]];
+const PRESETS = [0, -1] as const;
 const activePreset = (start: string, end: string) =>
-  PRESETS.map(([, offset]) => String(offset)).find((o) => { const r = monthRange(Number(o)); return r.start === start && r.end === end; }) ?? null;
+  PRESETS.map(String).find((o) => { const r = monthRange(Number(o)); return r.start === start && r.end === end; }) ?? null;
 
-const FILLS: [FillMode, string, string][] = [
-  ["neighbors", "Как соседние", "Взять задачи и доли ближайшего дня, по которому есть события"],
-  ["period", "По периоду", "Разделить день между задачами всего периода пропорционально их часам"],
-  ["none", "Пустыми", "Ничего не заполнять — такие дни вы распределите сами"],
-];
+const FILLS: FillMode[] = ["neighbors", "period", "none"];
 
 export function Filters(props: {
   value: FilterValues;
@@ -32,6 +29,9 @@ export function Filters(props: {
   onRun: () => void;
   onOpenSettings: () => void;
 }) {
+  const all = useT();
+  const t = all.report.filters;
+  const presetLabel = { "0": t.thisMonth, "-1": t.lastMonth };
   const v = props.value;
   const patch = (p: Partial<FilterValues>) => props.onChange({ ...v, ...p });
 
@@ -39,30 +39,30 @@ export function Filters(props: {
     <Card className="filters">
       <div className="f-grid">
         <div className="fg">
-          <span className="f-label">Период<InfoTip>За какие дни собрать события и распределить часы. Обычно — месяц, за который сдаёте отчёт. Можно выбрать любой диапазон в календаре.</InfoTip></span>
+          <span className="f-label">{t.period}<InfoTip>{t.periodTip}</InfoTip></span>
           <div className="f-ctl">
             <Segmented value={activePreset(v.start, v.end)} onChange={(offset) => patch(monthRange(Number(offset)))}
-              options={PRESETS.map(([label, offset]) => ({ value: String(offset), label }))} />
+              options={PRESETS.map((offset) => ({ value: String(offset), label: presetLabel[offset] }))} />
             <DateRange start={v.start} end={v.end} onChange={(start, end) => patch({ start, end })} />
           </div>
         </div>
         <div className="fg">
-          <span className="f-label">Норма в день
-            <InfoTip>Сколько часов нужно списать в каждый рабочий день. Время задач в дне масштабируется до этой суммы. Праздники и выходные не заполняются, предпраздничные дни короче (см. Настройки → Рабочее время).</InfoTip>
+          <span className="f-label">{t.norm}
+            <InfoTip>{t.normTip}</InfoTip>
           </span>
-          <div className="f-ctl"><Stepper value={v.hours} step={0.5} min={1} max={24} suffix="ч" onChange={(hours) => patch({ hours })} /></div>
+          <div className="f-ctl"><Stepper value={v.hours} step={0.5} min={1} max={24} suffix={all.common.h} onChange={(hours) => patch({ hours })} /></div>
         </div>
         <div className="fg">
-          <span className="f-label">Дни без событий
+          <span className="f-label">{t.emptyDays}
             <InfoTip wide>
-              Бывает, что в рабочий день нет ни коммитов, ни изменений в Jira, ни сообщений, ни встреч — например, день ушёл на чтение кода или созвон без календаря. Что ставить в такой день:
-              <ul>{FILLS.map(([id, label, text]) => <li key={id}><b>{label}</b> — {text.charAt(0).toLowerCase() + text.slice(1)}.</li>)}</ul>
-              Такие дни помечаются жёлтым, их стоит проверить.
+              {t.emptyDaysIntro}
+              <ul>{FILLS.map((id) => <li key={id}><b>{t.fill[id].label}</b> — {t.fill[id].tip}</li>)}</ul>
+              {t.emptyDaysOutro}
             </InfoTip>
           </span>
           <div className="f-ctl">
             <Segmented value={v.fillMode} onChange={(fillMode) => patch({ fillMode })}
-              options={FILLS.map(([value, label, title]) => ({ value, label, title }))} />
+              options={FILLS.map((value) => ({ value, label: t.fill[value].label, title: t.fill[value].hint }))} />
           </div>
         </div>
         <div className="fg run-wrap">
@@ -70,20 +70,22 @@ export function Filters(props: {
         </div>
       </div>
       <div className="f-src">
-        <span className="f-label">Источники
-          <InfoTip>Откуда брать события. Jira нужна всегда: из неё берутся задачи. Остальные помогают понять, чем вы занимались в конкретный день. Пунктиром — ещё не настроенные; нажмите, чтобы подключить.</InfoTip>
+        <span className="f-label">{t.sources}
+          <InfoTip>{t.sourcesTip}</InfoTip>
         </span>
         <div className="srcpick">
-          <button className="srcbtn on locked" title="Jira используется всегда: из неё берутся задачи и ваши действия в них" disabled><span className="dot" />Jira</button>
+          <button className="srcbtn on locked" title={t.jiraAlways} disabled><span className="dot" />{all.common.sources.jira}</button>
           {ANALYSIS_SOURCES.map((s) => {
             const on = v.sources[s.id];
+            const label = all.common.sources[s.label];
+            const hint = t.sourceHints[s.id];
             return props.setup[s.setup] ? (
-              <button key={s.id} className={`srcbtn ${on ? "on" : ""}`} aria-pressed={on} title={s.hint} onClick={() => patch({ sources: { ...v.sources, [s.id]: !on } })}>
-                <span className="dot" />{s.label}
+              <button key={s.id} className={`srcbtn ${on ? "on" : ""}`} aria-pressed={on} title={hint} onClick={() => patch({ sources: { ...v.sources, [s.id]: !on } })}>
+                <span className="dot" />{label}
               </button>
             ) : (
-              <button key={s.id} className="srcbtn na" title={`${s.hint}. Не настроен — открыть настройки`} onClick={props.onOpenSettings}>
-                <span className="dot" />{s.label}
+              <button key={s.id} className="srcbtn na" title={t.notConfigured(hint)} onClick={props.onOpenSettings}>
+                <span className="dot" />{label}
               </button>
             );
           })}
@@ -95,12 +97,13 @@ export function Filters(props: {
 }
 
 function RunButton({ busy, ready, onRun }: { busy: boolean; ready: boolean; onRun: () => void }) {
+  const t = useT().report.filters;
   return (
-    <button className={`runbtn ${busy ? "busy" : ""}`} disabled={busy || !ready} title={ready ? "Собрать события за период и распределить часы" : "Сначала настройте Jira"} onClick={onRun}>
+    <button className={`runbtn ${busy ? "busy" : ""}`} disabled={busy || !ready} title={ready ? t.runHint : t.setupJiraFirst} onClick={onRun}>
       {busy ? <span className="spin" /> : (
         <svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" /><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></svg>
       )}
-      {busy ? "Анализирую…" : "Проанализировать"}
+      {busy ? t.running : t.run}
     </button>
   );
 }

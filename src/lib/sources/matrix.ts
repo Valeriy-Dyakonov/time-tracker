@@ -1,21 +1,22 @@
 import { api } from "../../api";
-import { plural } from "../dates";
+import { count } from "../../i18n";
 import { isWorkMessage } from "../events/keys";
-import { countBy } from "../analysis/format";
+import { countBy, joinCounts, msg } from "../analysis/format";
 import type { SourceCollector } from "./types";
 
+const m = () => msg().sources.matrix;
+
 export const matrixSource: SourceCollector = {
-  name: "Matrix",
-  step: "чаты Matrix: рабочие сообщения",
-  skipped: "Matrix: пропущен (не настроен или выключен).",
+  get name() { return m().name; },
+  get step() { return m().step; },
+  get skipped() { return m().skipped; },
   enabled: ({ o, settings }) => o.useMatrix && !!settings.matrixHomeserver,
   async collect(ctx) {
-    const excluded = ctx.settings.matrixExcludeRooms.length;
-    ctx.log("info", `Matrix: читаю ваши сообщения (${excluded ? `все комнаты, кроме ${excluded} исключённых` : "все комнаты — можно исключить лишние в настройках"})…`);
+    ctx.log("info", m().reading(ctx.settings.matrixExcludeRooms.length));
     const all = await api.fetchMatrix(ctx.o.start, ctx.o.end);
     const work = all.filter((e) => isWorkMessage(e.text));
     ctx.events = ctx.events.concat(work);
-    const rooms = countBy(work, (e) => e.context ?? "?").slice(0, 5).map(([r, n]) => `${r} ${n}`).join(", ");
-    ctx.log("ok", `Matrix: ${all.length} ${plural(all.length, "сообщение", "сообщения", "сообщений")}, похожих на рабочие ${work.length}${work.length ? ` (${rooms})` : ""}. Короткие реплики и приветствия отброшены, остальное ИИ отфильтрует по смыслу.`);
+    const rooms = joinCounts(countBy(work, (e) => e.context ?? "?").slice(0, 5));
+    ctx.log("ok", m().done(count(all.length, m().messages), work.length, work.length ? rooms : ""));
   },
 };

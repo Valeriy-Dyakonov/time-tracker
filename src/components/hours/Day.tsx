@@ -1,6 +1,7 @@
 import type { Analysis, DayPlan } from "../../types";
 import { dayTotal, rebalance, statusOnDate, STEP } from "../../lib/allocate";
-import { monthShort, weekdayName } from "../../lib/dates";
+import { monthShortName, useT, weekdayShort } from "../../i18n";
+import { isoWeekday, parseDate } from "../../lib/dates";
 import { fmtH, fmtMinutes, meetingMinutes, meetingRange } from "../../lib/report";
 import IssueLink from "../IssueLink";
 import { Button, CopyButton, InfoTip, keyColor, Stepper } from "../ui";
@@ -21,6 +22,8 @@ export function Day({ a, d, open, onToggle, update }: { a: Analysis; d: DayPlan;
 }
 
 function DaySummary({ a, d, open, onToggle }: { a: Analysis; d: DayPlan; open: boolean; onToggle: () => void }) {
+  const all = useT();
+  const t = all.hours.day;
   const total = dayTotal(d);
   const balanced = isBalanced(d);
   const mm = meetingMinutes(d);
@@ -31,11 +34,11 @@ function DaySummary({ a, d, open, onToggle }: { a: Analysis; d: DayPlan; open: b
     <button className="day-sum" onClick={onToggle} aria-expanded={open}>
       <span className="d-date">
         <b>{Number(d.date.slice(8))}</b>
-        <span>{weekdayName(d.date)}<br />{monthShort(d.date)}</span>
+        <span>{weekdayShort(isoWeekday(d.date))}<br />{monthShortName(parseDate(d.date).getMonth())}</span>
       </span>
       <span className="d-mid">
         {d.off ? (
-          <span className="d-line muted">Выходной или отпуск — часы не списываются</span>
+          <span className="d-line muted">{t.off}</span>
         ) : d.tasks.length === 0 ? (
           <span className="d-line bad">{reviewReason(d)}</span>
         ) : (
@@ -57,10 +60,10 @@ function DaySummary({ a, d, open, onToggle }: { a: Analysis; d: DayPlan; open: b
       <span className="d-bar" aria-hidden>
         {!d.off && tasks.map((t) => <i key={t.key} style={{ flex: t.hours, background: keyColor(t.key) }} />)}
       </span>
-      <span className="d-meet">{mm > 0 && <>{fmtMinutes(mm)}<small>встречи</small></>}</span>
+      <span className="d-meet">{mm > 0 && <>{fmtMinutes(mm)}<small>{t.meetings}</small></>}</span>
       <span className={`d-total ${balanced ? "" : "bad"}`}>
-        {d.off ? "—" : fmtH(total)}{!d.off && <small> ч</small>}
-        {!balanced && <em>норма {fmtH(d.target)}</em>}
+        {d.off ? "—" : fmtH(total)}{!d.off && <small> {all.common.h}</small>}
+        {!balanced && <em>{t.norm(fmtH(d.target))}</em>}
       </span>
       <svg className="chev" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" /></svg>
     </button>
@@ -68,6 +71,8 @@ function DaySummary({ a, d, open, onToggle }: { a: Analysis; d: DayPlan; open: b
 }
 
 function DayDetails({ a, d, update }: { a: Analysis; d: DayPlan; update: DayUpdate }) {
+  const all = useT();
+  const t = all.hours.day;
   const balanced = isBalanced(d);
   const setHoursFor = (key: string, v: number) =>
     update((x) => ({ ...x, tasks: x.tasks.map((t) => (t.key === key ? { ...t, hours: Math.max(0, v) } : t)) }));
@@ -77,60 +82,62 @@ function DayDetails({ a, d, update }: { a: Analysis; d: DayPlan; update: DayUpda
       {!d.off && (
         <div className="db-grid">
           <div className="db-tasks">
-            <h5>Задачи и часы <span>для Jira</span><InfoTip>Сколько часов списать на каждую задачу в этот день. Часы можно поправить кнопками − и + или ввести число; итог дня пересчитается.</InfoTip></h5>
-            {d.tasks.map((t) => {
-              const status = statusOnDate(a.issues[t.key], d.date);
+            <h5>{t.tasks} <span>{t.forJira}</span><InfoTip>{t.tasksTip}</InfoTip></h5>
+            {d.tasks.map((task) => {
+              const status = statusOnDate(a.issues[task.key], d.date);
               return (
-                <div className="dt-row" key={t.key}>
-                  <i className="dot" style={{ background: keyColor(t.key) }} />
+                <div className="dt-row" key={task.key}>
+                  <i className="dot" style={{ background: keyColor(task.key) }} />
                   <div className="dt-main">
                     <div className="dt-head">
-                      <IssueLink k={t.key} />
-                      <span className="dt-title" title={a.issues[t.key]?.summary}>{a.issues[t.key]?.summary}</span>
-                      {status && <span className="t-status" title="Статус задачи в этот день по истории Jira">{status}</span>}
+                      <IssueLink k={task.key} />
+                      <span className="dt-title" title={a.issues[task.key]?.summary}>{a.issues[task.key]?.summary}</span>
+                      {status && <span className="t-status" title={t.statusHint}>{status}</span>}
                     </div>
-                    {t.notes.length > 0 && <ul className="dt-notes">{t.notes.slice(0, 4).map((n, i) => <li key={i}>{n}</li>)}</ul>}
+                    {task.notes.length > 0 && <ul className="dt-notes">{task.notes.slice(0, 4).map((n, i) => <li key={i}>{n}</li>)}</ul>}
                   </div>
-                  <Stepper small value={t.hours} step={STEP} min={0} max={24} suffix="ч" onChange={(v) => setHoursFor(t.key, v)} />
+                  <Stepper small value={task.hours} step={STEP} min={0} max={24} suffix={all.common.h} onChange={(v) => setHoursFor(task.key, v)} />
                 </div>
               );
             })}
-            {d.tasks.length === 0 && <p className="muted">Задач нет — день пока не заполнен.</p>}
+            {d.tasks.length === 0 && <p className="muted">{t.noTasks}</p>}
           </div>
           <DaySide d={d} />
         </div>
       )}
       <div className="db-actions">
         {!balanced && (
-          <Button size="small" onClick={() => update(rebalance)} title="Пропорционально изменить часы задач так, чтобы сумма дня стала равна норме">
-            Выровнять до {fmtH(d.target)} ч
+          <Button size="small" onClick={() => update(rebalance)} title={t.rebalanceHint}>
+            {t.rebalance(fmtH(d.target))}
           </Button>
         )}
         <Button variant="ghost" size="small" onClick={() => update((x) => ({ ...x, off: !x.off }))}
-          title={d.off ? "Снова считать день рабочим и списывать на него часы" : "Отпуск, больничный или отгул: день не попадёт в списание и норму"}>
-          {d.off ? "Вернуть рабочий день" : "Сделать выходным"}
+          title={d.off ? t.makeWorkingHint : t.makeOffHint}>
+          {d.off ? t.makeWorking : t.makeOff}
         </Button>
         <span className="spacer" />
-        {!d.off && <CopyButton label="Копировать день" title="Задачи и часы этого дня текстом — чтобы вставить в чат или заметку" text={() => dayCopyText(a, d)} />}
+        {!d.off && <CopyButton label={t.copy} title={t.copyHint} text={() => dayCopyText(a, d)} />}
       </div>
     </div>
   );
 }
 
 function DaySide({ d }: { d: DayPlan }) {
+  const all = useT();
+  const t = all.hours.day;
   const mm = meetingMinutes(d);
   return (
     <div className="db-side">
-      <h5>Что делали<InfoTip>Краткое описание дня и почему часы разделились именно так. Ниже — из каких источников собраны события.</InfoTip></h5>
+      <h5>{t.whatDone}<InfoTip>{t.whatDoneTip}</InfoTip></h5>
       {d.summary && <p className="db-text">{d.summary}</p>}
       {d.reasoning && <p className="db-text muted">{d.reasoning}</p>}
-      <SourceChips counts={sourceCounts([d])} title="Из чего собран день" />
+      <SourceChips counts={sourceCounts([d])} title={t.sourcesHint} />
       {d.meetings.length > 0 && (
         <>
-          <h5>Встречи и звонки <span>{fmtMinutes(mm)}</span></h5>
+          <h5>{t.meetingsTitle} <span>{fmtMinutes(mm)}</span></h5>
           <ul className="db-meet">
             {d.meetings.map((m, i) => (
-              <li key={i} className={m.isCall ? "call" : ""} title={`${m.title}${m.organizer ? "\nОрганизатор: " + m.organizer : ""}`}>
+              <li key={i} className={m.isCall ? "call" : ""} title={`${m.title}${m.organizer ? "\n" + all.shell.meetings.organizer(m.organizer) : ""}`}>
                 <b>{meetingRange(m)}</b><span>{m.title}</span>
               </li>
             ))}

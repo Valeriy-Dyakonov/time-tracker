@@ -1,4 +1,5 @@
 //! Room members and room names, computed the way the Matrix spec (and Element) does.
+use crate::texts::Lang;
 use super::Matrix;
 use std::collections::HashMap;
 
@@ -37,14 +38,14 @@ impl Members {
     }
 }
 
-/// "Иван", "Иван и Мария", "Иван, Мария и ещё 3".
-fn members_label(mut names: Vec<String>) -> Option<String> {
+/// "Иван", "Иван и Мария", "Иван, Мария и ещё 3" (in the requested language).
+fn members_label(mut names: Vec<String>, lang: Lang) -> Option<String> {
     names.sort_by_key(|n| n.to_lowercase());
     match names.len() {
         0 => None,
         1 => Some(names.remove(0)),
-        2 => Some(format!("{} и {}", names[0], names[1])),
-        n => Some(format!("{}, {} и ещё {}", names[0], names[1], n - 2)),
+        2 => Some(lang.two_names(&names[0], &names[1])),
+        n => Some(lang.names_and_more(&names[0], &names[1], n - 2)),
     }
 }
 
@@ -73,9 +74,9 @@ pub async fn room_name(mx: &Matrix<'_>, room: &str, me: &str, members: Option<&M
         }
     };
     if members.0.is_empty() {
-        return format!("(без названия) {room}");
+        return mx.lang.room_unnamed(room);
     }
-    members_label(members.others(me)).unwrap_or_else(|| "Пустая комната".into())
+    members_label(members.others(me), mx.lang).unwrap_or_else(|| mx.lang.room_empty().into())
 }
 
 #[cfg(test)]
@@ -88,10 +89,10 @@ mod tests {
 
     #[test]
     fn labels_rooms_by_members() {
-        assert_eq!(members_label(v(&[])), None);
-        assert_eq!(members_label(v(&["Иван"])).as_deref(), Some("Иван"));
-        assert_eq!(members_label(v(&["Мария", "Иван"])).as_deref(), Some("Иван и Мария"));
-        assert_eq!(members_label(v(&["Пётр", "Мария", "Иван", "Анна"])).as_deref(), Some("Анна, Иван и ещё 2"));
+        assert_eq!(members_label(v(&[]), Lang::Ru), None);
+        assert_eq!(members_label(v(&["Иван"]), Lang::Ru).as_deref(), Some("Иван"));
+        assert_eq!(members_label(v(&["Мария", "Иван"]), Lang::Ru).as_deref(), Some("Иван и Мария"));
+        assert_eq!(members_label(v(&["Пётр", "Мария", "Иван", "Анна"]), Lang::Ru).as_deref(), Some("Анна, Иван и ещё 2"));
     }
 
     #[test]

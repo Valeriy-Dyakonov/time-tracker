@@ -1,3 +1,4 @@
+import { t } from "../../i18n";
 import type { IssueInfo } from "../../types";
 import { localDay } from "../events/days";
 import type { DayActivity } from "./types";
@@ -13,47 +14,23 @@ export function statusOnDate(issue: IssueInfo | undefined, date: string): string
 export type Phase = "analysis" | "dev" | "qa";
 
 /**
- * Neutral wording for days that have no traces: what a person really does on a task without leaving commits.
- * Deliberately generic (no invented results, bugs or deliverables), but matched to the stage of the task:
- * before the first commit it is analysis, between commits it is development, after the last commit it is
- * testing, QA support and environment problems.
+ * Neutral wording for days that have no traces (catalog `analysis.plan.filler`): what a person really does on a task
+ * without leaving commits. Deliberately generic, but matched to the stage of the task: before the first commit it is
+ * analysis, between commits it is development, after the last commit it is testing, QA support and environment problems.
  */
-const FILLER: Record<Phase, string[]> = {
-  analysis: [
-    "Анализ задачи и изучение контекста",
-    "Проработка требований, уточнение деталей",
-    "Изучение связанных задач и документации",
-    "Анализ существующего решения, подготовка подхода",
-    "Обсуждение деталей реализации, проработка решения",
-    "Планирование работ по задаче",
-  ],
-  dev: [
-    "Работа над реализацией, отладка",
-    "Доработка решения, проверка на локальном окружении",
-    "Рефакторинг и подготовка изменений по задаче",
-    "Отладка и проверка граничных случаев",
-    "Обсуждение деталей реализации с командой",
-  ],
-  qa: [
-    "Тестирование, проверка результата",
-    "Поддержка QA: разбор вопросов по задаче",
-    "Решение проблем окружения и стенда при тестировании",
-    "Проверка на тестовом стенде, разбор результатов тестирования",
-    "Подготовка к релизу, проверка результата",
-    "Анализ и устранение инфраструктурных проблем при тестировании",
-  ],
-};
+const plan = () => t().analysis.plan;
 
-export const PHASE_LABEL: Record<Phase, string> = { analysis: "анализ", dev: "разработка", qa: "после разработки (тестирование, поддержка QA)" };
+/** Human-readable name of a task stage, e.g. for the reasoning of an inferred day. */
+export const phaseLabel = (p: Phase): string => plan().phase[p];
 
 export function fillerNote(key: string, n: number, issues: Record<string, IssueInfo>, phase: Phase = "analysis"): string {
   const i = issues[key];
   const parent = i?.epic ?? i?.parent;
   const pt = phase !== "qa" && parent ? issues[parent]?.summary : "";
-  const list = FILLER[phase];
+  const list = plan().filler[phase];
   const h = [...key].reduce((s, c) => s + c.charCodeAt(0), 0);
   const idx = (h + n) % (list.length + (pt ? 1 : 0));
-  return pt && idx === list.length ? `Проработка задачи в рамках «${pt.slice(0, 80)}»` : list[idx];
+  return pt && idx === list.length ? plan().fillerWithin(pt.slice(0, 80)) : list[idx];
 }
 
 const QA_STATUS = /test|qa|review|verif|ready|done|closed|resolved|тест|ревью|провер|готов|закрыт|выполнен|решен|решён/i;

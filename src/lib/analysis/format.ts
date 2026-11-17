@@ -1,9 +1,14 @@
+import { count, dateShort, t } from "../../i18n";
 import type { Evt } from "../../types";
-import { formatRu, plural } from "../dates";
+import { weekdayName } from "../dates";
 
-export const sd = (d: string) => formatRu(d).slice(0, 5);
+export const msg = () => t().analysis;
 
-export const nEv = (n: number) => `${n} ${plural(n, "событие", "события", "событий")}`;
+export const sd = (d: string) => dateShort(d);
+
+export const dayLabel = (d: string) => msg().days.label(sd(d), weekdayName(d));
+
+export const nEv = (n: number) => count(n, msg().units.event);
 
 export function countBy<T>(items: T[], f: (x: T) => string): [string, number][] {
   const m = new Map<string, number>();
@@ -11,7 +16,9 @@ export function countBy<T>(items: T[], f: (x: T) => string): [string, number][] 
   return [...m.entries()].sort((a, b) => b[1] - a[1]);
 }
 
-export const bySource = (evs: Evt[]) => countBy(evs, (e) => e.source).map(([s, n]) => `${s} ${n}`).join(", ");
+export const joinCounts = (pairs: [string, number][], sep = " ") => pairs.map(([k, n]) => `${k}${sep}${n}`).join(", ");
+
+export const bySource = (evs: Evt[]) => joinCounts(countBy(evs, (e) => e.source));
 
 export function percents(weights: Record<string, number>): string {
   const sum = Object.values(weights).reduce((a, b) => a + b, 0) || 1;

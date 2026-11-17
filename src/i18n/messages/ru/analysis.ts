@@ -1,1 +1,288 @@
-export default {};
+import { forms } from "../../format";
+
+export default {
+  units: {
+    h: "ч",
+    min: "мин",
+    hm: (h: number, m: number) => `${h} ч ${m} мин`,
+    event: forms({ one: "событие", few: "события", many: "событий", other: "события" }),
+  },
+
+  log: {
+    period: (start: string, end: string, hours: string, workdays: string) =>
+      `Период ${start} – ${end}, норма ${hours} ч в день, рабочие дни: ${workdays}.`,
+    contextProjects: (list: string) => `Проекты только для контекста (часы на них не начисляются): ${list}.`,
+    toFill: (n: number, futureSkipped: boolean, ai: boolean) =>
+      `К заполнению ${n} рабочих дн.${futureSkipped ? " (будущие дни не заполняются)" : ""}. Анализ ИИ: ${ai ? "включён" : "выключен — будет эвристика"}.`,
+    step: (i: number, n: number, title: string) => `━━ Шаг ${i} из ${n}: ${title}`,
+    daysStage: "━━ Анализ по дням: события сопоставляются по времени (коммиты, Jira, звонки, чат), затем часы распределяются, дни без данных заполняются.",
+    done: (total: string, target: string, tasks: number, aiDays: number, withEvents: number) =>
+      `Готово: ${total} ч из ${target} ч; задач ${tasks}; ИИ использован в ${aiDays} из ${withEvents} дней с событиями.`,
+  },
+
+  steps: {
+    matchCommits: "сопоставление коммитов с задачами Jira",
+    matchCommitsWhat: "коммитов и Jira",
+    matchChatWhat: "чата и календаря",
+    context: "родительские задачи, эпики и связанные тикеты — для контекста",
+  },
+
+  sources: {
+    git: {
+      name: "Git",
+      step: "история git (только ваши коммиты)",
+      skipped: "Git: пропущен (не выбран или нет репозиториев).",
+      reading: (repos: number) => `Git: читаю ${repos} репозиториев, все ветки…`,
+      commits: forms({ one: "коммит", few: "коммита", many: "коммитов", other: "коммита" }),
+      done: (commits: string, perRepo: string) => `Git: ${commits}${perRepo ? ` (${perRepo})` : ""}.`,
+    },
+    gitlab: {
+      kinds: { mr_opened: "Создал MR", mr_merged: "MR смёржен", mr_merged_by_me: "Смёржил MR", mr_approved: "Одобрил MR", mr_comment: "Комментарий" },
+      name: "GitLab",
+      step: "GitLab: ваши MR и ревью",
+      skipped: "GitLab: пропущен (не настроен или выключен).",
+      reading: "GitLab: читаю MR, которые вы создали, одобрили или комментировали…",
+      other: "другое",
+      scoped: (n: number, head: string) => `только проекты ваших локальных репозиториев (${n}): ${head}`,
+      fallback: "ни один локальный репозиторий не указывает на этот GitLab — прочитаны все проекты",
+      all: "все проекты",
+      done: (me: string, n: number, by: string, scope: string) => `GitLab (${me}): ${n} событий${by ? ` (${by})` : ""}; ${scope}.`,
+    },
+    jira: {
+      name: "Jira",
+      step: "Jira за период",
+      skipped: "",
+      reading: "Jira: загружаю задачи, где вы исполнитель/автор, и ваши действия за период…",
+      done: (me: string, issues: number, actions: number, comments: number, created: number) =>
+        `Jira (${me}): задач ${issues}; ваших действий ${actions} — комментариев ${comments}, созданных задач ${created}, смен статусов/полей ${actions - comments - created}.`,
+    },
+    confluence: {
+      name: "Confluence",
+      step: "Confluence: страницы задач и ваши правки",
+      skipped: "Confluence: пропущен (не настроен или выключен).",
+      reading: "Confluence: ищу страницы и комментарии, которые вы создали или правили…",
+      done: (events: string) => `Confluence: ${events}.`,
+    },
+    calendar: {
+      name: "Календарь",
+      step: "календарь: встречи и звонки",
+      skipped: "Календарь: пропущен (не настроен или выключен).",
+      reading: (onlyCalls: boolean) => `Календарь (Exchange): читаю встречи и звонки${onlyCalls ? " (только звонки)" : ""}…`,
+      meetings: forms({ one: "встреча", few: "встречи", many: "встреч", other: "встречи" }),
+      done: (meetings: string, calls: number, total: string) =>
+        `Календарь: ${meetings}, из них похожих на звонки ${calls}; всего ${total}. Отменённые, отклонённые и «свободные» пропущены.`,
+      eventContext: (range: string, minutes: number, isCall: boolean, organizer: string) =>
+        `${range}, ${minutes} мин${isCall ? " · звонок" : ""}${organizer ? " · организатор " + organizer : ""}`,
+    },
+    matrix: {
+      name: "Matrix",
+      step: "чаты Matrix: рабочие сообщения",
+      skipped: "Matrix: пропущен (не настроен или выключен).",
+      reading: (excluded: number) =>
+        `Matrix: читаю ваши сообщения (${excluded ? `все комнаты, кроме ${excluded} исключённых` : "все комнаты — можно исключить лишние в настройках"})…`,
+      messages: forms({ one: "сообщение", few: "сообщения", many: "сообщений", other: "сообщения" }),
+      done: (messages: string, work: number, rooms: string) =>
+        `Matrix: ${messages}, похожих на рабочие ${work}${rooms ? ` (${rooms})` : ""}. Короткие реплики и приветствия отброшены, остальное ИИ отфильтрует по смыслу.`,
+    },
+  },
+
+  enrich: {
+    matched: (what: string, found: number, total: number, left: number, ai: boolean) =>
+      `Привязка (${what}): ключ вида ABC-123 найден в тексте, ветке или названии у ${found} из ${total} событий; без ключа осталось ${left}${ai ? " — их смысл определит ИИ" : " — без ИИ они в расчёте не участвуют"}.`,
+    checking: (n: number, what: string, head: string) => `Jira: проверяю ${n} задач из ${what} (${head}).`,
+    found: (found: number, total: number) => `Jira: найдено ${found} из ${total}.`,
+    lookupFailed: (e: string) => `Jira lookup: ${e}`,
+    contextReading: (n: number, head: string) => `Jira: читаю родительские задачи, эпики и связанные тикеты (${n}): ${head}.`,
+    contextDone: (got: number, want: number) => `Jira: контекст получен для ${got} из ${want}. Часы на них не начисляются.`,
+    contextFailed: (e: string) => `Jira: контекст (родители/эпики): ${e}`,
+    pagesReading: (n: number) => `Confluence: ищу страницы, связанные с ${n} задачами и их эпиками (ссылки в описании и веб-ссылки Jira)…`,
+    pages: forms({ one: "страница", few: "страницы", many: "страниц", other: "страницы" }),
+    pagesFound: (pages: string, tasks: number) => `Confluence: найдено ${pages} у ${tasks} задач — используются как контекст.`,
+    pagesNone: "Confluence: связанных страниц у этих задач нет.",
+    pagesFailed: (e: string) => `Confluence: связанные страницы: ${e}`,
+    dropped: (list: string) => `Пропущены ключи, которых Jira не вернула (нет такой задачи или нет доступа): ${list}. Это нормально — в расчёт они не идут.`,
+  },
+
+  days: {
+    onlyCalls: (n: number) => `только звонки: ${n}`,
+    noEvents: "нет событий",
+    offDay: (label: string, events: string) => `${label}: ${events} в нерабочий день — часы не начисляются.`,
+    withEvents: (n: number, total: number) => `Дней с событиями: ${n} из ${total}; без событий: ${total - n} (они будут заполнены в конце).`,
+    dayEvents: (label: string, events: string, bySource: string, keyed: number) => `${label}: ${events} — ${bySource}; с ключом задачи: ${keyed}.`,
+    label: (date: string, weekday: string) => `${date} (${weekday})`,
+  },
+
+  alloc: {
+    heuristicReasoning: (why: string, parts: string, unkeyed: number) =>
+      `${why} Доли посчитаны по числу и размеру действий с ключом задачи: ${parts}.` +
+      (unkeyed ? ` Ещё ${unkeyed} событий без ключа задачи в расчёте не участвуют.` : ""),
+    aiOff: "Анализ ИИ выключен.",
+    heuristic: (label: string, shares: string) => `${label}: эвристика → ${shares || "нет событий с ключом задачи"}.`,
+    noCandidates: (label: string) => `${label}: нет задач-кандидатов — ИИ не вызывался.`,
+    noCandidatesWhy: "ИИ не использовался для этого дня.",
+    noCandidatesNote: "нет задач-кандидатов",
+    asking: (label: string, n: number) => `${label}: → запрос к ИИ (кандидатов: ${n})…`,
+    aiError: (label: string, e: string) => `${label}: ошибка ИИ — ${e}. Использована эвристика.`,
+    aiErrorWarning: (date: string, e: string) => `${date}: ошибка ИИ (${e}), использована эвристика.`,
+    aiErrorWhy: "ИИ не ответил.",
+    aiErrorNote: "ошибка ИИ",
+    unparsed: (label: string, head: string) => `${label}: ответ ИИ не удалось разобрать — использована эвристика. Начало ответа: ${head}`,
+    unparsedWarning: (date: string) => `${date}: непонятный ответ ИИ, использована эвристика.`,
+    unparsedWhy: "Ответ ИИ не удалось разобрать.",
+    unparsedNote: "непонятный ответ ИИ",
+    aiDone: (label: string, sec: string, shares: string, summary: string) => `${label}: ИИ за ${sec} с → ${shares}${summary ? ` — «${summary}»` : ""}`,
+    aiNoTask: (label: string, sec: string, said: string, hasKeys: boolean) =>
+      `${label}: ИИ за ${sec} с не нашёл подходящей задачи${said ? ` — «${said}»` : ""}.${hasKeys ? " Использованы доли по ключам задач." : " День будет заполнен по режиму «дни без данных»."}`,
+    aiNoTaskReason: "ИИ не нашёл подходящей задачи.",
+    aiNoTaskNote: "ИИ: нет подходящей задачи",
+  },
+
+  period: {
+    modeName: { neighbors: "по соседним дням", period: "по всему периоду", none: "оставить пустыми" },
+    gaps: (n: number, mode: string) => `Дней без привязки к задачам: ${n}. Режим заполнения: «${mode}».`,
+    notFilled: (list: string) => `Не заполнены дни: ${list}.`,
+    filledFrom: (date: string) => `заполнен по ${date}`,
+    filledPeriod: "заполнен по всему периоду",
+    projects: (list: string) => `Часы начислены по проектам: ${list}. Лишний проект можно перенести в «только для контекста» в настройках Jira.`,
+    projectHours: (project: string, hours: string) => `${project} (${hours} ч)`,
+    narrativeAsk: "Итог периода: прошу ИИ описать картину целиком…",
+    narrativeOk: "Итог периода получен.",
+    narrativeEmpty: "ИИ вернул пустой итог — использован шаблон.",
+    narrativeError: (e: string) => `Итог периода: ошибка ИИ (${e}) — использован шаблон.`,
+  },
+
+  calendar: {
+    loaded: (country: string, source: string, offList: string[], shortList: string[], shortHours: string, saturdays: number) =>
+      `Производственный календарь (${country}, ${source}): праздничных и перенесённых выходных в будни ${offList.length}${offList.length ? " — " + offList.join(", ") : ""}; ` +
+      `сокращённых дней ${shortList.length}${shortList.length ? " — " + shortList.join(", ") + ` (по ${shortHours} ч)` : ""}; рабочих суббот ${saturdays}.`,
+    failed: (e: string) => `Производственный календарь не загружен (${e}) — праздники не учтены, считаю только по дням недели.`,
+    warning: (e: string) => `Праздники не учтены: ${e}`,
+  },
+
+  plan: {
+    filler: {
+      analysis: [
+        "Анализ задачи и изучение контекста",
+        "Проработка требований, уточнение деталей",
+        "Изучение связанных задач и документации",
+        "Анализ существующего решения, подготовка подхода",
+        "Обсуждение деталей реализации, проработка решения",
+        "Планирование работ по задаче",
+      ],
+      dev: [
+        "Работа над реализацией, отладка",
+        "Доработка решения, проверка на локальном окружении",
+        "Рефакторинг и подготовка изменений по задаче",
+        "Отладка и проверка граничных случаев",
+        "Обсуждение деталей реализации с командой",
+      ],
+      qa: [
+        "Тестирование, проверка результата",
+        "Поддержка QA: разбор вопросов по задаче",
+        "Решение проблем окружения и стенда при тестировании",
+        "Проверка на тестовом стенде, разбор результатов тестирования",
+        "Подготовка к релизу, проверка результата",
+        "Анализ и устранение инфраструктурных проблем при тестировании",
+      ],
+    },
+    fillerWithin: (parent: string) => `Проработка задачи в рамках «${parent}»`,
+    phase: { analysis: "анализ", dev: "разработка", qa: "после разработки (тестирование, поддержка QA)" },
+    taskHours: (key: string, hours: number) => `${key} (${hours} ч)`,
+    whyUnmatched: (reasoning: string) => `События за этот день не удалось привязать ни к одной задаче, на которую начисляются часы.${reasoning ? ` ${reasoning}` : ""}`,
+    whyMeetingsOnly: "В этот день были только звонки и встречи — по ним задачу определить нельзя.",
+    whyNothing: "За этот день нет ни действий в Jira, ни коммитов, ни сообщений.",
+    empty: (why: string, noDataAtAll: boolean) => `${why} День оставлен пустым${noDataAtAll ? ": во всём периоде нет данных для распределения" : " по выбранному режиму"}.`,
+    byPeriod: (why: string, tasks: string) => `${why} Часы распределены пропорционально задачам всего периода: ${tasks}.`,
+    byNeighbor: (why: string, earlier: boolean, date: string, tasks: string, phases: string) =>
+      `${why} Взято по ${earlier ? "предыдущему" : "следующему"} дню с активностью — ${date}: ${tasks}. Описание типовое, по этапу задачи (${phases}): за этот день нет следов работы.`,
+    noNeighbors: (why: string, tasks: string) => `${why} Подходящих соседних дней нет — часы распределены по задачам всего периода: ${tasks}.`,
+  },
+
+  report: {
+    call: " (звонок)",
+    narrativeNoData: (start: string, end: string) => `За период ${start} – ${end} не удалось распределить часы: нет данных.`,
+    narrativeTop: (key: string, summary: string, hours: string, days: number) => `${key}${summary ? " «" + summary + "»" : ""} — ${hours} ч (${days} дн.)`,
+    narrative: (start: string, end: string, hours: string, tasks: number, workdays: number, top: string, inferred: string) =>
+      `За период ${start} – ${end} распределено ${hours} ч по ${tasks} задачам, рабочих дней: ${workdays}. ` +
+      `Больше всего времени: ${top}.` +
+      (inferred ? ` Дни без данных (${inferred}) заполнены по соседним дням или по всему периоду — проверьте их.` : ""),
+    csvTasks: ["Дата", "Задача", "Название", "Часы", "Заметки", "Ссылка"],
+    csvDays: ["Дата", "Часы", "Описание", "Звонки и встречи"],
+    dayOff: "Выходной/отпуск",
+    md: {
+      title: (start: string, end: string) => `# Отчёт по времени ${start} – ${end}`,
+      total: (total: string, target: string) => `Всего: **${total} ч** из ${target} ч`,
+      byTask: "## По задачам",
+      tableHead: "| Задача | Название | Часы | Дней |",
+      byWeek: "## По неделям",
+      week: (from: string, to: string, hours: string) => `### ${from} – ${to}: ${hours} ч`,
+      day: (weekday: string, date: string, hours: string, off: boolean) => `- **${weekday} ${date}** — ${hours} ч${off ? " (выходной)" : ""}`,
+      task: (key: string, summary: string, hours: string) => `  - ${key} ${summary}: ${hours} ч`,
+      meetings: (total: string, list: string) => `  - 📞 Звонки и встречи (${total}): ${list}`,
+    },
+    dayTextHead: (date: string, hours: string) => `${date} — ${hours} ч`,
+    dayTextTask: (key: string, summary: string, hours: string, link: string) => `${key} ${summary}: ${hours} ч${link ? " " + link : ""}`,
+    dayTextMeetings: (total: string, list: string) => `Звонки и встречи (${total}): ${list}`,
+  },
+
+  submit: {
+    line: (key: string, title: string, hours: string, said: string) => `• ${key} ${title} — ${hours} ч${said ? `: ${said}` : ""}`,
+    meetings: (total: string) => `Звонки и встречи: ${total}.`,
+  },
+
+  prompt: {
+    day: `Ты помощник по учёту рабочего времени разработчика.
+Тебе дают события ОДНОГО рабочего дня (действия в Jira, коммиты git, сообщения в чате) и список задач-кандидатов из Jira.
+Определи, над какими задачами человек работал в этот день и в каких относительных долях трудозатрат.
+
+Верни ТОЛЬКО JSON без пояснений и без markdown:
+{"tasks":[{"key":"ABC-1","weight":0.6,"note":"что именно сделано, до 100 символов"}],"summary":"1-2 коротких предложения о том, чем занимался в этот день (для отчёта)","reasoning":"2-4 предложения простым языком: какие именно события (коммиты, переходы статусов, комментарии, сообщения, страницы) определили выбор задач и почему доли такие; отдельно скажи, что отнесено по смыслу, а что неясно"}
+
+Правила:
+- Используй только ключи из списка кандидатов.
+- weight — относительная доля трудозатрат (числа не обязаны давать в сумме 1). Больше коммитов, обсуждений и переходов статусов по задаче — больше вес.
+- События без ключа (коммиты, сообщения чата) отнеси к наиболее подходящей задаче по смыслу. Если уверенности нет — не учитывай их.
+- События src=calendar — встречи и звонки из календаря (в ctx время и длительность). Используй их как контекст: тема встречи может указывать на задачу. Их время уже входит в рабочий день, отдельно вычитать его не нужно.
+- Сообщения чата (src=matrix) учитывай только если они по работе: обсуждение задач, кода, багов, релизов, решений, согласований. Приветствия, бытовые и личные темы, обычное общение игнорируй.
+- У кандидатов могут быть description, parent, epic и linked — это родительская задача, эпик и связанные тикеты. Используй их, чтобы понять смысл коммитов и сообщений без ключа.
+- pages — страницы Confluence, связанные с задачей, её родителем или эпиком (название, начало текста, дочерние страницы). Это справка о предмете работы, а не событие дня.
+- Сопоставляй события по времени: сообщение чата, звонок или комментарий рядом по времени с коммитами на ту же тему относятся к той же задаче.
+- События src=gitlab — работа с merge request в GitLab: создание, слияние, одобрение и комментарии в ревью. Ревью чужого MR — тоже рабочее время, относи его к задаче из названия, ветки или описания MR (они в text и ctx). Если ключа нет, определи задачу по смыслу или не учитывай.
+- Задачи из contextOnly — только контекст: НЕ включай их в tasks (время на них не списывается), но используй, чтобы понять, чем занимался человек.
+- Если ни одна задача-кандидат не подходит — верни пустой tasks и объясни в reasoning, что было сделано.
+- Не выдумывай работу, которой нет в событиях. Пиши по-русски, note и summary — деловым стилем, как описание для отчёта.
+- Не пытайся подгонять веса под длину рабочего дня.`,
+    narrative: `Ты помощник по учёту рабочего времени.
+Тебе дают итоги периода: суммарные часы по задачам и короткие описания дней.
+Напиши для сотрудника связный рассказ простым деловым русским языком, 5-9 предложений, без markdown и списков:
+над чем в основном шла работа, как распределилось время, какие задачи заняли больше всего, были ли дни, заполненные без данных (basis = inferred).
+Не выдумывай ничего, чего нет во входных данных.
+Верни ТОЛЬКО JSON: {"text":"..."}`,
+    week: `Ты помощник по учёту рабочего времени.
+Тебе дают задачи недели с часами и описания дней. Напиши для сотрудника короткий отчёт о неделе, 2-4 предложения, простым деловым русским языком, без markdown и списков: над чем работал, что сделано.
+Упоминай ключи задач. Не выдумывай ничего, чего нет во входных данных.
+Верни ТОЛЬКО JSON: {"text":"..."}`,
+  },
+
+  demo: {
+    issues: {
+      "PAY-101": "Интеграция с платёжным шлюзом",
+      "PAY-117": "Ошибка округления в чеках",
+      "OPS-42": "Обновить CI-пайплайн",
+      "PAY-130": "Рефакторинг модуля возвратов",
+    },
+    noteApi: "Реализовал вызов API шлюза",
+    noteCache: "Починил кэш в пайплайне",
+    summary: "Работа над интеграцией платежей и поддержка CI.",
+    reasoning: "В этот день были переходы статусов по PAY-101, три коммита в ветке интеграции и комментарий к OPS-42, поэтому основная доля — у PAY-101, остальное — у CI-задачи.",
+    commit: "[payments] PAY-101 вызов API шлюза (+84/-12, файлов: 3)",
+    comment: "Комментарий: кэш пайплайна починил",
+    lead: "Тимлид",
+    architect: "Архитектор",
+    archMeeting: "Обсуждение архитектуры PAY-130",
+    room: "Переговорка 5",
+    narrative: "Это демонстрационный отчёт. В реальном отчёте здесь ИИ связным текстом опишет, над чем шла работа за период, какие задачи заняли больше всего времени и какие дни пришлось заполнять без данных.",
+    log: "Демо-данные: журнал реального анализа появится после запуска.",
+    warning: "Демо-данные: это не ваша реальная активность.",
+  },
+};

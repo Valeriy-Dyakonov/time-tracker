@@ -1,4 +1,5 @@
 //! Jira JSON -> issues and the user's own events.
+use crate::texts::Lang;
 use crate::model::{Event, IssueInfo, StatusChange};
 use crate::util::{parse_jira_time, truncate};
 use serde_json::Value;
@@ -93,17 +94,17 @@ pub fn transitions(it: &Value, me: &Me) -> Vec<StatusChange> {
 }
 
 /// What the user did with the issue in [start_ms, end_ms): created it, changed fields, commented.
-pub fn my_events(it: &Value, me: &Me, start_ms: i64, end_ms: i64) -> Vec<Event> {
+pub fn my_events(it: &Value, me: &Me, start_ms: i64, end_ms: i64, lang: Lang) -> Vec<Event> {
     let key = it["key"].as_str().unwrap_or("").to_string();
     let f = &it["fields"];
     let in_range = |ts: i64| ts >= start_ms && ts < end_ms;
-    let event = |ts: i64, text: String| Event { issue_key: Some(key.clone()), ..Event::new("jira", ts, text) };
+    let event = |ts: i64, kind: &str, text: String| Event { issue_key: Some(key.clone()), kind: Some(kind.into()), ..Event::new("jira", ts, text) };
     let mut out = vec![];
 
     if me.is(&f["reporter"]) {
         if let Some(ts) = f["created"].as_str().and_then(parse_jira_time).filter(|t| in_range(*t)) {
             let summary = f["summary"].as_str().unwrap_or("");
-            out.push(event(ts, format!("Создал задачу: {}", truncate(summary, 120))));
+            out.push(event(ts, "created", lang.jira_created(&truncate(summary, 120))));
         }
     }
 
@@ -126,7 +127,7 @@ pub fn my_events(it: &Value, me: &Me, start_ms: i64, end_ms: i64) -> Vec<Event> 
             })
             .collect();
         if !items.is_empty() {
-            out.push(event(ts, items.join("; ")));
+            out.push(event(ts, "changed", items.join("; ")));
         }
     }
 
@@ -135,7 +136,7 @@ pub fn my_events(it: &Value, me: &Me, start_ms: i64, end_ms: i64) -> Vec<Event> 
             continue;
         }
         let Some(ts) = c["created"].as_str().and_then(parse_jira_time).filter(|t| in_range(*t)) else { continue };
-        out.push(event(ts, format!("Комментарий: {}", truncate(c["body"].as_str().unwrap_or(""), 300))));
+        out.push(event(ts, "comment", lang.jira_comment(&truncate(c["body"].as_str().unwrap_or(""), 300))));
     }
     out
 }
@@ -168,7 +169,7 @@ mod tests {
             "changelog": { "histories": [] }
         });
         let start = parse_jira_time("2026-11-10T00:00:00.000+0000").unwrap();
-        let events = my_events(&it, &me, start, start + 86_400_000);
+        let events = my_events(&it, &me, start, start + 86_400_000, Lang::Ru);
         let texts: Vec<&str> = events.iter().map(|e| e.text.as_str()).collect();
         assert_eq!(texts, vec!["Создал задачу: Task", "Комментарий: done"]);
         assert!(events.iter().all(|e| e.issue_key.as_deref() == Some("A-1")));

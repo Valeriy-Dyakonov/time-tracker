@@ -1,3 +1,6 @@
+import { getLocale } from "../i18n/locale";
+import { monthShortName, weekdayShort } from "../i18n/format";
+
 export function pad(n: number): string {
   return n < 10 ? `0${n}` : `${n}`;
 }
@@ -32,16 +35,17 @@ export function mondayOf(s: string): string {
   return addDays(s, -(isoWeekday(s) - 1));
 }
 
-export const WEEKDAYS_SHORT = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
-
 export function weekdayName(s: string): string {
-  return WEEKDAYS_SHORT[isoWeekday(s) - 1];
+  return weekdayShort(isoWeekday(s));
 }
 
-export function formatRu(s: string): string {
+/** Numeric date for copied text, CSV and logs: dd.mm.yyyy in Russian, ISO yyyy-mm-dd in English (unambiguous). */
+export function formatDate(s: string): string {
+  if (getLocale() === "en") return s;
   const [y, m, d] = s.split("-");
   return `${d}.${m}.${y}`;
 }
+
 
 export function monthRange(offset: number, now = new Date()): { start: string; end: string } {
   const first = new Date(now.getFullYear(), now.getMonth() + offset, 1, 12);
@@ -49,7 +53,7 @@ export function monthRange(offset: number, now = new Date()): { start: string; e
   return { start: localDate(first), end: localDate(last) };
 }
 
-/** Russian plural: plural(5, "событие", "события", "событий") */
+/** @deprecated Russian-only; use `plural`/`count` with forms from i18n. */
 export function plural(n: number, one: string, few: string, many: string): string {
   const m10 = n % 10, m100 = n % 100;
   if (m10 === 1 && m100 !== 11) return one;
@@ -57,8 +61,7 @@ export function plural(n: number, one: string, few: string, many: string): strin
   return many;
 }
 
-export const MONTHS_SHORT = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
-export const monthShort = (s: string): string => MONTHS_SHORT[parseDate(s).getMonth()];
+export const monthShort = (s: string): string => monthShortName(parseDate(s).getMonth());
 
 /** [start, end) of a local calendar day in ms. */
 export function dayBounds(s: string): [number, number] {

@@ -7,10 +7,11 @@ use crate::util::{parse_jira_time, trim_url, truncate};
 use chrono::DateTime;
 use serde_json::Value;
 use std::collections::HashMap;
+use crate::texts::Lang;
+use crate::error::{AppError, AppResult};
 
 const DAY_MS: i64 = 86_400_000;
 const MAX_MR_LOOKUPS: usize = 120;
-const REVIEW_NOTE: &str = "Комментарий в ревью MR";
 
 struct GitLab<'a> {
     api: JsonApi<'a>,
@@ -20,11 +21,11 @@ struct GitLab<'a> {
 impl<'a> GitLab<'a> {
     fn new(client: &'a reqwest::Client, base: &str, pat: &'a str) -> Self {
         let api = JsonApi::new(client, "GitLab", Auth::Header("PRIVATE-TOKEN", pat))
-            .on_unauthorized(|_| "GitLab: 401 — токен не принят или истёк (нужны права read_api)".into());
+            .on_unauthorized("gitlabUnauthorized");
         Self { api, root: format!("{}/api/v4", trim_url(base)) }
     }
 
-    async fn get(&self, path: &str, query: &[(&str, String)]) -> Result<Value, String> {
+    async fn get(&self, path: &str, query: &[(&str, String)]) -> AppResult<Value> {
         self.api.get(&format!("{}{path}", self.root), query).await
     }
 
@@ -47,9 +48,10 @@ impl<'a> GitLab<'a> {
     }
 }
 
-pub async fn test(client: &reqwest::Client, base: &str, pat: &str) -> Result<String, String> {
+/// "Name (@username)" of the token owner.
+pub async fn test(client: &reqwest::Client, base: &str, pat: &str) -> AppResult<String> {
     let v = GitLab::new(client, base, pat).get("/user", &[]).await?;
-    Ok(format!("OK: {} (@{})", v["name"].as_str().unwrap_or("?"), v["username"].as_str().unwrap_or("?")))
+    Ok(format!("{} (@{})", v["name"].as_str().unwrap_or("?"), v["username"].as_str().unwrap_or("?")))
 }
 
 fn day(ms: i64) -> String {
@@ -85,29 +87,30 @@ impl MrInfo {
         }
     }
 
-    fn event(&self, ts: i64, what: &str, extra: &str, weight: f64) -> Event {
+    fn event(&self, ts: i64, kind: &str, what: &str, extra: &str, weight: f64) -> Event {
         let proj = self.project.rsplit('/').next().unwrap_or("");
         // The key search also looks into `context` when the title has no key.
         let ctx = [self.branch.as_str(), self.desc.as_str()].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" · ");
         Event {
             context: (!ctx.is_empty()).then_some(ctx),
             weight,
+            kind: Some(kind.into()),
             ..Event::new("gitlab", ts, format!("[{proj}] {what} !{}: {}{extra}", self.iid, truncate(&self.title, 140)))
         }
     }
 }
 
-/// Activity-feed entry -> (description, weight, MR iid), or None when it is not about a merge request.
-fn feed_action(e: &Value) -> Option<(&'static str, f64, u64)> {
+/// Activity-feed entry -> (description, weight, MR iid, is a review note), or None when it is not about a merge request.
+fn feed_action(e: &Value, lang: Lang) -> Option<(&'static str, &'static str, f64, u64, bool)> {
     let target = e["target_type"].as_str().unwrap_or("");
     let on_mr_note = matches!(target, "Note" | "DiffNote") && e["note"]["noteable_type"].as_str() == Some("MergeRequest");
-    let (what, weight, iid) = match (e["action_name"].as_str().unwrap_or(""), target) {
-        ("approved", "MergeRequest") => ("Одобрил MR (ревью)", 1.0, e["target_iid"].as_u64()),
-        ("accepted", "MergeRequest") => ("Смёржил MR", 1.0, e["target_iid"].as_u64()),
-        _ if on_mr_note => (REVIEW_NOTE, 0.5, e["note"]["noteable_iid"].as_u64()),
+    let (kind, what, weight, iid) = match (e["action_name"].as_str().unwrap_or(""), target) {
+        ("approved", "MergeRequest") => ("mr_approved", lang.mr_approved(), 1.0, e["target_iid"].as_u64()),
+        ("accepted", "MergeRequest") => ("mr_merged_by_me", lang.mr_accepted(), 1.0, e["target_iid"].as_u64()),
+        _ if on_mr_note => ("mr_comment", lang.mr_review_note(), 0.5, e["note"]["noteable_iid"].as_u64()),
         _ => return None,
     };
-    Some((what, weight, iid.unwrap_or(0)))
+    Some((kind, what, weight, iid.unwrap_or(0), on_mr_note))
 }
 
 /// Returns (my name, events).
@@ -118,12 +121,13 @@ pub async fn fetch(
     start_ms: i64,
     end_ms: i64,
     scope: &[String],
-) -> Result<(String, Vec<Event>), String> {
+    lang: Lang,
+) -> AppResult<(String, Vec<Event>)> {
     let gl = GitLab::new(client, base, pat);
     let scope = Scope(scope);
     let in_range = |ts: i64| ts >= start_ms && ts < end_ms;
     let me = gl.get("/user", &[]).await?;
-    let me_id = me["id"].as_u64().ok_or("GitLab: нет id пользователя")?;
+    let me_id = me["id"].as_u64().ok_or_else(|| AppError::service("GitLab", "no user id"))?;
     let mut events: Vec<Event> = vec![];
 
     let mine = gl
@@ -144,10 +148,10 @@ pub async fn fetch(
         }
         let at = |field: &str| mr[field].as_str().and_then(parse_jira_time).filter(|t| in_range(*t));
         if let Some(ts) = at("created_at") {
-            events.push(i.event(ts, "Создал MR", "", 1.5));
+            events.push(i.event(ts, "mr_opened", lang.mr_opened(), "", 1.5));
         }
         if let Some(ts) = at("merged_at") {
-            events.push(i.event(ts, "MR смёржен", "", 1.0));
+            events.push(i.event(ts, "mr_merged", lang.mr_merged(), "", 1.0));
         }
     }
 
@@ -161,7 +165,7 @@ pub async fn fetch(
     let mut cache: HashMap<(u64, u64), Option<MrInfo>> = HashMap::new();
     for e in &feed {
         let Some(ts) = e["created_at"].as_str().and_then(parse_jira_time).filter(|t| in_range(*t)) else { continue };
-        let Some((what, weight, iid)) = feed_action(e) else { continue };
+        let Some((kind, what, weight, iid, is_note)) = feed_action(e, lang) else { continue };
         let pid = e["project_id"].as_u64().unwrap_or(0);
         if pid == 0 || iid == 0 {
             continue;
@@ -178,8 +182,8 @@ pub async fn fetch(
             continue;
         }
         let body = truncate(e["note"]["body"].as_str().unwrap_or(""), 120);
-        let extra = if what == REVIEW_NOTE && !body.is_empty() { format!(" — «{body}»") } else { String::new() };
-        events.push(i.event(ts, what, &extra, weight));
+        let extra = if is_note && !body.is_empty() { format!(" — «{body}»") } else { String::new() };
+        events.push(i.event(ts, kind, what, &extra, weight));
     }
 
     events.sort_by_key(|e| e.ts);
@@ -194,11 +198,11 @@ mod tests {
     #[test]
     fn maps_feed_entries_to_review_actions() {
         let approved = json!({ "action_name": "approved", "target_type": "MergeRequest", "target_iid": 7 });
-        assert_eq!(feed_action(&approved), Some(("Одобрил MR (ревью)", 1.0, 7)));
+        assert_eq!(feed_action(&approved, Lang::Ru), Some(("mr_approved", "Одобрил MR (ревью)", 1.0, 7, false)));
         let note = json!({ "action_name": "commented on", "target_type": "DiffNote", "note": { "noteable_type": "MergeRequest", "noteable_iid": 3 } });
-        assert_eq!(feed_action(&note), Some((REVIEW_NOTE, 0.5, 3)));
+        assert_eq!(feed_action(&note, Lang::En), Some(("mr_comment", "Review comment on MR", 0.5, 3, true)));
         let issue_note = json!({ "action_name": "commented on", "target_type": "Note", "note": { "noteable_type": "Issue", "noteable_iid": 3 } });
-        assert_eq!(feed_action(&issue_note), None);
+        assert_eq!(feed_action(&issue_note, Lang::Ru), None);
     }
 
     #[test]

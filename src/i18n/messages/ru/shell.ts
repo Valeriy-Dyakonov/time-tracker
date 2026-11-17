@@ -1,1 +1,60 @@
-export default {};
+export default {
+  app: {
+    backToReport: "Вернуться к отчёту",
+    report: "Отчёт",
+    settings: "Настройки",
+    desktopOnly: "Настройки доступны только в десктопном приложении.",
+  },
+  titlebar: {
+    downloading: "Скачиваю…",
+    downloaded: (pct: number) => `Скачано ${pct}%`,
+    installing: "Устанавливаю…",
+    updateFailed: (msg: string) => `Не удалось обновить: ${msg}`,
+    installVersion: (v: string) => `Установить версию ${v}`,
+    retryUpdate: "Повторить обновление",
+    updateTo: (v: string) => `Обновить до v${v}`,
+    settings: "Настройки",
+    closeSettings: "Закрыть настройки",
+    minimize: "Свернуть",
+    maximize: "Развернуть",
+    restore: "Восстановить",
+    close: "Закрыть",
+  },
+  dateRange: {
+    dialog: "Выбор периода",
+    prevMonth: "Предыдущий месяц",
+    nextMonth: "Следующий месяц",
+    pickStart: "Выберите начало периода",
+    pickEnd: "Выберите конец периода",
+  },
+  live: {
+    running: "Идёт анализ…",
+    stopped: "Анализ остановлен",
+    progress: (done: number, total: number) => `Проанализировано дней с событиями: ${done} из ${total}`,
+    withoutEvents: (n: number) => ` · без событий: ${n}`,
+    log: "Журнал",
+    taskHours: (key: string, h: string) => `${key} ${h}ч`,
+    status: {
+      queued: "в очереди",
+      running: "анализирую…",
+      done: "готово",
+      fallback: "эвристика",
+      nodata: "нет событий",
+    },
+  },
+  meetings: {
+    title: "Звонки и встречи",
+    calls: (n: number) => ` · звонков ${n}`,
+    organizer: (name: string) => `Организатор: ${name}`,
+    call: "звонок",
+  },
+  issueLink: {
+    open: (key: string) => `Открыть ${key} в браузере`,
+  },
+  ui: {
+    copyTitle: "Скопировать",
+    clickToCopy: "Нажмите, чтобы скопировать",
+    less: "Меньше",
+    more: "Больше",
+  },
+};

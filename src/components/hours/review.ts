@@ -1,6 +1,7 @@
 import type { Analysis, DayPlan, Source } from "../../types";
 import { dayTotal } from "../../lib/allocate";
-import { formatRu } from "../../lib/dates";
+import { dateShort, t } from "../../i18n";
+import { formatDate } from "../../lib/dates";
 import { fmtH } from "../../lib/report";
 
 const EPS = 0.001;
@@ -11,10 +12,10 @@ export const needsReview = (d: DayPlan): boolean => !d.off && (d.basis !== "acti
 
 /** Why a day is in the "check me" list, in plain words. */
 export function reviewReason(d: DayPlan): string {
-  if (d.basis === "empty") return "Нет событий — день не заполнен";
-  if (d.basis === "inferred")
-    return d.inferredFrom ? `Нет событий — часы взяты со дня ${formatRu(d.inferredFrom).slice(0, 5)}` : "Нет событий — часы распределены по периоду";
-  return `Сумма ${fmtH(dayTotal(d))} ч, а норма ${fmtH(d.target)} ч`;
+  const r = t().hours.reason;
+  if (d.basis === "empty") return r.empty;
+  if (d.basis === "inferred") return d.inferredFrom ? r.inferredFrom(dateShort(d.inferredFrom)) : r.inferredPeriod;
+  return r.unbalanced(fmtH(dayTotal(d)), fmtH(d.target));
 }
 
 export function sourceCounts(days: DayPlan[]): [Source, number][] {
@@ -23,7 +24,10 @@ export function sourceCounts(days: DayPlan[]): [Source, number][] {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-export const dayCopyText = (a: Analysis, d: DayPlan): string =>
-  `${formatRu(d.date)}\n` + d.tasks.map((t) => `${t.key} ${a.issues[t.key]?.summary ?? ""}: ${fmtH(t.hours)} ч`).join("\n") + `\nИтого: ${fmtH(dayTotal(d))} ч`;
+export function dayCopyText(a: Analysis, d: DayPlan): string {
+  const m = t();
+  const lines = d.tasks.map((x) => `${x.key} ${a.issues[x.key]?.summary ?? ""}: ${m.common.hoursValue(fmtH(x.hours))}`);
+  return [formatDate(d.date), ...lines, m.hours.day.copyTotal(fmtH(dayTotal(d)))].join("\n");
+}
 
 export const percent = (part: number, whole: number): number => (whole ? (part / whole) * 100 : 0);

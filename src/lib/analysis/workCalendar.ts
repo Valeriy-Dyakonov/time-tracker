@@ -3,7 +3,7 @@ import type { LogLevel, Settings } from "../../types";
 import { isoWeekday, localDate } from "../dates";
 import { workDates } from "../events/days";
 import { fmtH } from "../report";
-import { sd } from "./format";
+import { msg, sd } from "./format";
 
 export interface WorkCalendar {
   dates: string[];
@@ -40,10 +40,10 @@ export async function loadWorkCalendar(
       }
       const weekdayOff = [...off].filter((d) => settings.workdays.includes(isoWeekday(d)));
       const short = Object.keys(targets);
-      log("info", `Производственный календарь (${settings.holidayCountry.toUpperCase()}, ${h.source}): праздничных и перенесённых выходных в будни ${weekdayOff.length}${weekdayOff.length ? " — " + weekdayOff.map(sd).join(", ") : ""}; сокращённых дней ${short.length}${short.length ? " — " + short.map(sd).join(", ") + ` (по ${fmtH(Math.max(0, hoursPerDay - 1))} ч)` : ""}; рабочих суббот ${extra.size}.`);
+      log("info", msg().calendar.loaded(settings.holidayCountry.toUpperCase(), h.source, weekdayOff.map(sd), short.map(sd), fmtH(Math.max(0, hoursPerDay - 1)), extra.size));
     } catch (e) {
-      log("warn", `Производственный календарь не загружен (${e}) — праздники не учтены, считаю только по дням недели.`);
-      warning = `Праздники не учтены: ${e}`;
+      log("warn", msg().calendar.failed(String(e)));
+      warning = msg().calendar.warning(String(e));
     }
   }
   return { dates: workDates(start, end, settings.workdays, localDate(new Date()), { off, extra }), targets, warning };

@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { setLocale } from "../i18n";
 import {
   attachKeys,
   buildPlan,
@@ -18,6 +19,10 @@ import { weeksOf } from "./report";
 import { fmtTempo, weekText, worklogRows } from "./submit";
 
 const sum = (o: Record<string, number>) => Object.values(o).reduce((a, b) => a + b, 0);
+
+// Expected texts below are the Russian wording; the English catalog is checked at the end.
+beforeAll(() => setLocale("ru"));
+afterAll(() => setLocale("ru"));
 
 describe("distribute", () => {
   it("always sums to the total, in 0.25 steps", () => {
@@ -242,5 +247,27 @@ describe("production calendar", () => {
     const act = { "2026-11-03": { weights: { "A-1": 1 }, notes: {}, summary: "", reasoning: "", eventCount: 1, evidence: [] } } as never;
     const plan = buildPlan(["2026-11-02", "2026-11-03"], act, {}, 8, "neighbors", {}, { "2026-11-03": 7 });
     expect(plan.map((p) => [p.target, p.tasks.reduce((s, t) => s + t.hours, 0)])).toEqual([[8, 8], [7, 7]]);
+  });
+});
+
+describe("English wording", () => {
+  beforeAll(() => setLocale("en"));
+  afterAll(() => setLocale("ru"));
+
+  it("formats hours with a dot and writes stage-aware filler notes in English", async () => {
+    const { fmtH } = await import("./report");
+    expect(fmtH(7.5)).toBe("7.5");
+    const issues = { "A-1": { key: "A-1", summary: "Task", status: "In Progress", issueType: "Task" } };
+    const note = fillerNote("A-1", 0, issues, "qa");
+    expect(note).toMatch(/Testing|QA|environment|stand|release|infrastructure|Checking|verifying/);
+    expect(note).not.toMatch(/[А-Яа-яЁё]/);
+  });
+
+  it("explains inferred days in English", () => {
+    const act = { weights: { "A-1": 1 }, notes: {}, summary: "s", reasoning: "r", evidence: [], eventCount: 1 };
+    const issues = { "A-1": { key: "A-1", summary: "Task", status: "In Progress", issueType: "Task" } };
+    const plan = buildPlan(["2026-11-02", "2026-11-03"], { "2026-11-02": act }, issues, 8, "neighbors");
+    expect(plan[1].reasoning).toContain("Taken from the previous day with activity");
+    expect(plan[1].reasoning).not.toMatch(/[А-Яа-яЁё]/);
   });
 });

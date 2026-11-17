@@ -1,11 +1,10 @@
 import { useSyncExternalStore } from "react";
+import { t } from "./i18n";
 
 export type ThemeId = "system" | "light" | "dark" | "sepia" | "graphite" | "contrast";
 
 export interface ThemeInfo {
   id: ThemeId;
-  label: string;
-  sub: string;
   /** Colours for the preview card; kept in sync with styles/themes.css. */
   preview: { bg: string; card: string; text: string; muted: string; line: string; accent: string };
 }
@@ -14,13 +13,16 @@ const LIGHT = { bg: "#f5f6f8", card: "#fff", text: "#1c2330", muted: "#6b7686", 
 const DARK = { bg: "#14171c", card: "#1c2027", text: "#e6e9ef", muted: "#8b95a5", line: "#2b313b", accent: "#5b8cff" };
 
 export const THEMES: ThemeInfo[] = [
-  { id: "system", label: "Как в системе", sub: "светлая или тёмная по настройке Windows", preview: LIGHT },
-  { id: "light", label: "Светлая", sub: "нейтральная, синий акцент", preview: LIGHT },
-  { id: "dark", label: "Тёмная", sub: "для вечера и тёмных комнат", preview: DARK },
-  { id: "sepia", label: "Сепия", sub: "тёплая, как бумага — меньше устают глаза", preview: { bg: "#f1e8d4", card: "#fbf6ea", text: "#3b2f22", muted: "#7d6b55", line: "#e0d2b4", accent: "#a0522d" } },
-  { id: "graphite", label: "Графит", sub: "мягкая тёмная, холодные цвета", preview: { bg: "#2e3440", card: "#3b4252", text: "#eceff4", muted: "#a3adbf", line: "#4c566a", accent: "#88c0d0" } },
-  { id: "contrast", label: "Контрастная", sub: "максимальная читаемость", preview: { bg: "#fff", card: "#fff", text: "#000", muted: "#3a3a3a", line: "#7a7a7a", accent: "#0040a8" } },
+  { id: "system", preview: LIGHT },
+  { id: "light", preview: LIGHT },
+  { id: "dark", preview: DARK },
+  { id: "sepia", preview: { bg: "#f1e8d4", card: "#fbf6ea", text: "#3b2f22", muted: "#7d6b55", line: "#e0d2b4", accent: "#a0522d" } },
+  { id: "graphite", preview: { bg: "#2e3440", card: "#3b4252", text: "#eceff4", muted: "#a3adbf", line: "#4c566a", accent: "#88c0d0" } },
+  { id: "contrast", preview: { bg: "#fff", card: "#fff", text: "#000", muted: "#3a3a3a", line: "#7a7a7a", accent: "#0040a8" } },
 ];
+
+/** Name and one-line description of a theme in the current language. */
+export const themeText = (id: ThemeId): { label: string; sub: string } => t().settings.appearance.themes[id];
 
 export const SYSTEM_DARK_PREVIEW = DARK;
 

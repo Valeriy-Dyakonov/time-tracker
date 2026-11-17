@@ -1,5 +1,72 @@
 import type ru from "../ru/report";
 
-const en: typeof ru = {};
+const en: typeof ru = {
+  tabs: {
+    weeks: { label: "Hours", hint: "Hours by day and task: review and adjust" },
+    submit: { label: "Logging", hint: "Enter the hours into Tempo and the weekly time system, step by step" },
+    ai: { label: "AI review", hint: "Period summary and how each day was calculated: events, shares, meetings" },
+    log: { label: "Log", hint: "What the app did during the analysis: requests, errors, warnings" },
+    export: { label: "Export", hint: "Download CSV and Markdown" },
+  },
+  filters: {
+    period: "Period",
+    periodTip: "Which days to collect events for and distribute hours over. Usually the month you report for; any range can be picked in the calendar.",
+    thisMonth: "This month",
+    lastMonth: "Last month",
+    norm: "Hours per day",
+    normTip: "How many hours to log on each working day. Task time within a day is scaled to this total. Holidays and weekends are skipped, pre-holiday days are shorter (see Settings → Working time).",
+    emptyDays: "Days without events",
+    emptyDaysIntro: "Sometimes a working day has no commits, Jira changes, messages or meetings — e.g. it went into reading code or a call that wasn't in the calendar. What to put on such a day:",
+    emptyDaysOutro: "These days are marked yellow and worth a check.",
+    fill: {
+      neighbors: { label: "Like neighbours", hint: "Take the tasks and shares of the nearest day with events", tip: "take the tasks and shares of the nearest day with events." },
+      period: { label: "Across period", hint: "Split the day between the period's tasks in proportion to their hours", tip: "split the day between the period's tasks in proportion to their hours." },
+      none: { label: "Leave empty", hint: "Fill nothing — you will distribute these days yourself", tip: "fill nothing — you will distribute these days yourself." },
+    },
+    sources: "Sources",
+    sourcesTip: "Where to take events from. Jira is always needed: tasks come from it. The others help tell what you worked on on a given day. Dashed ones are not set up yet; click to connect.",
+    jiraAlways: "Jira is always used: tasks and your actions on them come from it",
+    notConfigured: (hint: string) => `${hint}. Not set up — open settings`,
+    sourceHints: {
+      useGit: "Your commits in the selected local repositories",
+      useGitlab: "Merge requests you opened, approved or commented on",
+      useConfluence: "Pages and comments you created or edited",
+      useCalendar: "Meetings and calls from Exchange: time and subject",
+      useMatrix: "Your messages in work chats",
+      useAi: "The company AI decides which tasks you worked on; without it a heuristic based on task keys is used",
+    },
+    run: "Analyse",
+    running: "Analysing…",
+    runHint: "Collect the period's events and distribute hours",
+    setupJiraFirst: "Set up Jira first",
+  },
+  warnings: (n: number) => `Notes (${n})`,
+  warningsHint: "Details are on the “Log” tab.",
+  log: {
+    title: "Analysis log",
+    tip: "Step-by-step record of the analysis: which sources were queried, how many events came in, where errors occurred. Useful when the result looks odd.",
+    copy: "Copy log",
+  },
+  welcome: {
+    readyTitle: "All set",
+    readyText: "Pick a period and press “Analyse”. You will see the analysis go day by day, then get hours per day and week, values ready to log, and a readable AI review.",
+    title: "Welcome 👋",
+    text: "To build a report, connect Jira once (address and personal token). Settings explain where to get a token for every service. Git, Confluence, calendar, Matrix and AI are optional.",
+    openSettings: "Open settings",
+  },
+  export: {
+    title: "Export",
+    tip: "Files to import or archive. CSV opens in Excel; Markdown is a readable report for a wiki, email or chat.",
+    intro: "For Jira — one row per “day + task”. For a day-based system — one row per day (with calls and meetings).",
+    tasksCsv: "CSV by task",
+    tasksCsvHint: "Date, task, hours, description — one row per task per day",
+    daysCsv: "CSV by day",
+    daysCsvHint: "Date, hours of the day, what was done, meetings — one row per day",
+    markdown: "Markdown report",
+    markdownHint: "The whole report as one document: period summary, weeks, days and tasks",
+    copyMarkdown: "Copy Markdown",
+    copyMarkdownHint: "The same report to the clipboard — paste into Confluence, email or chat",
+  },
+};
 
 export default en;

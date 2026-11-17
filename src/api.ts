@@ -1,4 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
+import { getLocale, t } from "./i18n";
+import type { ErrorParams } from "./i18n/messages/ru/errors";
 import type { Evt, IssueInfo, Meeting, PageCtx, Settings } from "./types";
 
 export interface JiraResult {
@@ -16,30 +18,76 @@ export interface RepoInfo {
   name: string;
 }
 
+type Service = "jira" | "llm" | "gitlab" | "matrix" | "confluence" | "calendar";
+type ProbeOk = { kind: "user"; name: string } | { kind: "meetings"; count: number } | { kind: "reply"; text: string };
+
+/** A backend failure worded in the UI language; `String(e)` gives just the message. */
+export class BackendError extends Error {
+  constructor(readonly code: string, readonly params: ErrorParams, message: string) {
+    super(message);
+    this.name = "BackendError";
+  }
+  toString() {
+    return this.message;
+  }
+}
+
+function localize(e: unknown): unknown {
+  if (!e || typeof e !== "object" || !("code" in e)) return e;
+  const { code, params = {} } = e as { code: string; params?: ErrorParams };
+  const m = t().errors;
+  const word = m.codes[code];
+  const text = word ? word(params) : m.unknown(code, Object.values(params).filter(Boolean).join(", "));
+  return new BackendError(code, params, text);
+}
+
+async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  try {
+    return await invoke<T>(cmd, args);
+  } catch (e) {
+    throw localize(e);
+  }
+}
+
+/** Commands whose data includes worded text (event descriptions, names) get the UI language. */
+const lang = () => ({ lang: getLocale() });
+
+function probeText(r: ProbeOk): string {
+  const p = t().errors.probe;
+  switch (r.kind) {
+    case "user": return p.user(r.name);
+    case "meetings": return p.meetings(r.count);
+    case "reply": return p.reply(r.text);
+  }
+}
+
 export const api = {
-  loadSettings: () => invoke<Settings>("load_settings"),
-  saveSettings: (settings: Settings) => invoke<void>("save_settings", { settings }),
-  setSecret: (name: string, value: string) => invoke<void>("set_secret", { name, value }),
-  secretsStatus: () => invoke<Record<string, boolean>>("secrets_status"),
-  testConnection: (service: "jira" | "llm" | "gitlab" | "matrix" | "confluence" | "calendar") => invoke<string>("test_connection", { service }),
-  openIssue: (key: string) => invoke<void>("open_issue", { key }),
-  fetchJira: (start: string, end: string) => invoke<JiraResult>("fetch_jira", { start, end }),
-  lookupIssues: (keys: string[]) => invoke<IssueInfo[]>("lookup_issues", { keys }),
-  scanGitRepos: (root: string) => invoke<RepoInfo[]>("scan_git_repos", { root }),
-  fetchGit: (start: string, end: string) => invoke<Evt[]>("fetch_git", { start, end }),
-  fetchConfluence: (start: string, end: string) => invoke<Evt[]>("fetch_confluence", { start, end }),
-  fetchCalendar: (start: string, end: string) => invoke<Meeting[]>("fetch_calendar", { start, end }),
-  fetchMatrix: (start: string, end: string) => invoke<Evt[]>("fetch_matrix", { start, end }),
-  matrixLoginSso: () => invoke<string>("matrix_login_sso"),
-  matrixLoginPassword: (user: string, password: string) => invoke<string>("matrix_login_password", { user, password }),
-  listMatrixRooms: () => invoke<Room[]>("list_matrix_rooms"),
+  loadSettings: () => call<Settings>("load_settings"),
+  saveSettings: (settings: Settings) => call<void>("save_settings", { settings }),
+  setSecret: (name: string, value: string) => call<void>("set_secret", { name, value }),
+  secretsStatus: () => call<Record<string, boolean>>("secrets_status"),
+  testConnection: (service: Service) => call<ProbeOk>("test_connection", { service }).then(probeText),
+  openIssue: (key: string) => call<void>("open_issue", { key }),
+  fetchJira: (start: string, end: string) => call<JiraResult>("fetch_jira", { start, end, ...lang() }),
+  lookupIssues: (keys: string[]) => call<IssueInfo[]>("lookup_issues", { keys }),
+  scanGitRepos: (root: string) => call<RepoInfo[]>("scan_git_repos", { root }),
+  fetchGit: (start: string, end: string) => call<Evt[]>("fetch_git", { start, end, ...lang() }),
+  fetchConfluence: (start: string, end: string) => call<Evt[]>("fetch_confluence", { start, end, ...lang() }),
+  fetchCalendar: (start: string, end: string) => call<Meeting[]>("fetch_calendar", { start, end, ...lang() }),
+  fetchMatrix: (start: string, end: string) => call<Evt[]>("fetch_matrix", { start, end, ...lang() }),
+  matrixLoginSso: () => call<string>("matrix_login_sso", lang()),
+  matrixLoginPassword: (user: string, password: string) => call<string>("matrix_login_password", { user, password }),
+  listMatrixRooms: () => call<Room[]>("list_matrix_rooms", lang()),
   fetchGitlab: (start: string, end: string) =>
-    invoke<{ me: string; events: Evt[]; scoped: string[]; fallback: boolean }>("fetch_gitlab", { start, end }),
+    call<{ me: string; events: Evt[]; scoped: string[]; fallback: boolean }>("fetch_gitlab", { start, end, ...lang() }),
   fetchHolidays: (country: string, start: string, end: string) =>
-    invoke<{ source: string; complete: boolean; days: { date: string; kind: "off" | "short" | "work"; name?: string }[] }>("fetch_holidays", { country, start, end }),
+    call<{ source: string; complete: boolean; days: { date: string; kind: "off" | "short" | "work"; name?: string }[] }>(
+      "fetch_holidays",
+      { country, start, end, ...lang() },
+    ),
   fetchIssuePages: (issues: { key: string; urls: string[] }[]) =>
-    invoke<{ key: string; pages: PageCtx[] }[]>("fetch_issue_pages", { issues }),
-  llmChat: (system: string, user: string) => invoke<string>("llm_chat", { system, user }),
+    call<{ key: string; pages: PageCtx[] }[]>("fetch_issue_pages", { issues }),
+  llmChat: (system: string, user: string) => call<string>("llm_chat", { system, user }),
 };
 
 export const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;

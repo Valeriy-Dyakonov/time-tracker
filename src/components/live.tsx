@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { DayProgress, LogEntry } from "../types";
-import { formatRu, plural, weekdayName } from "../lib/dates";
+import { count, dateShort, useT, weekdayShort } from "../i18n";
+import { isoWeekday } from "../lib/dates";
 import { fmtH } from "../lib/report";
 import { Card } from "./ui";
 
@@ -33,16 +34,12 @@ export function LogList(props: { entries: LogEntry[]; follow?: boolean }) {
   );
 }
 
-const STATUS: Record<DayProgress["status"], { icon: string; label: string }> = {
-  queued: { icon: "○", label: "в очереди" },
-  running: { icon: "◌", label: "анализирую…" },
-  done: { icon: "✓", label: "готово" },
-  fallback: { icon: "⚠", label: "эвристика" },
-  nodata: { icon: "–", label: "нет событий" },
-};
+const STATUS_ICON: Record<DayProgress["status"], string> = { queued: "○", running: "◌", done: "✓", fallback: "⚠", nodata: "–" };
 
 /** Live view of a running analysis: per-day status that fills in as days complete, plus the log. */
 export function LivePanel(props: { days: DayProgress[]; log: LogEntry[]; running: boolean }) {
+  const all = useT();
+  const t = all.shell.live;
   const work = props.days.filter((d) => d.status !== "nodata");
   const finished = work.filter((d) => d.status !== "queued" && d.status !== "running").length;
   const empty = props.days.length - work.length;
@@ -50,27 +47,27 @@ export function LivePanel(props: { days: DayProgress[]; log: LogEntry[]; running
   return (
     <Card className="live">
       <div className="live-head">
-        <h3>{props.running ? "Идёт анализ…" : "Анализ остановлен"}</h3>
-        <span className="muted">Проанализировано дней с событиями: {finished} из {work.length}{empty > 0 ? ` · без событий: ${empty}` : ""}</span>
+        <h3>{props.running ? t.running : t.stopped}</h3>
+        <span className="muted">{t.progress(finished, work.length)}{empty > 0 ? t.withoutEvents(empty) : ""}</span>
       </div>
       <div className="meter big"><i style={{ width: `${pct}%` }} /></div>
       {props.days.length > 0 && (
         <div className="daygrid">
           {props.days.map((d) => (
             <div key={d.date} className={`daycell ${d.status}`}>
-              <span className="ic">{STATUS[d.status].icon}</span>
-              <span className="dt"><b>{weekdayName(d.date)}</b> {formatRu(d.date).slice(0, 5)}</span>
+              <span className="ic">{STATUS_ICON[d.status]}</span>
+              <span className="dt"><b>{weekdayShort(isoWeekday(d.date))}</b> {dateShort(d.date)}</span>
               <span className="st">
                 {d.tasks && d.tasks.length > 0
-                  ? d.tasks.slice(0, 3).map((t) => `${t.key} ${fmtH(t.hours)}ч`).join(" · ")
-                  : d.note ?? STATUS[d.status].label}
+                  ? d.tasks.slice(0, 3).map((x) => t.taskHours(x.key, fmtH(x.hours))).join(" · ")
+                  : d.note ?? t.status[d.status]}
               </span>
-              {d.status !== "nodata" && <span className="ev">{d.events} {plural(d.events, "событие", "события", "событий")}</span>}
+              {d.status !== "nodata" && <span className="ev">{count(d.events, all.common.event)}</span>}
             </div>
           ))}
         </div>
       )}
-      <h4>Журнал</h4>
+      <h4>{t.log}</h4>
       <LogList entries={props.log} follow={props.running} />
     </Card>
   );

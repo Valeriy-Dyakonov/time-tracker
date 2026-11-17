@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { Analysis } from "../../types";
-import { formatRu, plural, weekdayName } from "../../lib/dates";
+import { dateShort, plural, useT, weekdayShort } from "../../i18n";
+import { formatDate, isoWeekday } from "../../lib/dates";
 import { fmtH, totalsByTask } from "../../lib/report";
 import IssueLink from "../IssueLink";
 import { CopyButton, keyColor } from "../ui";
@@ -18,6 +19,8 @@ function daysPerTask(a: Analysis): Map<string, TaskDay[]> {
 }
 
 export function ByTask({ a }: { a: Analysis }) {
+  const all = useT();
+  const t = all.hours.byTask;
   const rows = totalsByTask(a);
   const total = rows.reduce((s, r) => s + r.hours, 0) || 1;
   const perTask = useMemo(() => daysPerTask(a), [a]);
@@ -31,15 +34,15 @@ export function ByTask({ a }: { a: Analysis }) {
               <i className="dot" style={{ background: keyColor(r.key) }} />
               <IssueLink k={r.key} />
               <span className="tl-title" title={r.summary}>{r.summary}</span>
-              <span className="tl-share" title="Доля задачи от всех часов периода"><i style={{ width: `${percent(r.hours, total)}%`, background: keyColor(r.key) }} /></span>
-              <span className="tl-days">{days.length}&nbsp;{plural(days.length, "день", "дня", "дней")}</span>
-              <span className="tl-total">{fmtH(r.hours)}&nbsp;<small>ч</small></span>
-              <CopyButton label="Копировать" title="Даты и часы по этой задаче, по строке на день — удобно для списания в Jira" text={() => days.map((x) => `${formatRu(x.date)}\t${fmtH(x.hours)}`).join("\n")} />
+              <span className="tl-share" title={t.shareHint}><i style={{ width: `${percent(r.hours, total)}%`, background: keyColor(r.key) }} /></span>
+              <span className="tl-days">{days.length}&nbsp;{plural(days.length, all.common.day)}</span>
+              <span className="tl-total">{fmtH(r.hours)}&nbsp;<small>{all.common.h}</small></span>
+              <CopyButton label={all.common.copy} title={t.copyHint} text={() => days.map((x) => `${formatDate(x.date)}\t${fmtH(x.hours)}`).join("\n")} />
             </div>
             <div className="tl-chips">
               {days.map((x) => (
                 <span key={x.date} className="daychip" title={x.note ?? ""}>
-                  <i>{weekdayName(x.date)}&nbsp;{formatRu(x.date).slice(0, 5)}</i><b>{fmtH(x.hours)}</b>
+                  <i>{weekdayShort(isoWeekday(x.date))}&nbsp;{dateShort(x.date)}</i><b>{fmtH(x.hours)}</b>
                 </span>
               ))}
             </div>

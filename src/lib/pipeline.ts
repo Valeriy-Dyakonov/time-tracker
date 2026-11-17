@@ -5,7 +5,9 @@ import { logProjects, periodNarrative, reportGaps } from "./analysis/period";
 import { COLLECT_STEPS } from "./analysis/steps";
 import type { RunContext, RunHandlers, RunOptions } from "./analysis/types";
 import { loadWorkCalendar } from "./analysis/workCalendar";
-import { formatRu, localDate, WEEKDAYS_SHORT } from "./dates";
+import { weekdayShort } from "../i18n";
+import { formatDate, localDate } from "./dates";
+import { msg } from "./analysis/format";
 import { projectOf } from "./events/keys";
 import { buildPlan } from "./plan/buildPlan";
 import { fmtH, totalsOf } from "./report";
@@ -34,17 +36,18 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
   };
   const { dates } = cal;
 
-  log("info", `Период ${formatRu(o.start)} – ${formatRu(o.end)}, норма ${fmtH(o.hoursPerDay)} ч в день, рабочие дни: ${settings.workdays.map((d) => WEEKDAYS_SHORT[d - 1]).join(", ")}.`);
-  if (ctxProjects.size) log("info", `Проекты только для контекста (часы на них не начисляются): ${[...ctxProjects].join(", ")}.`);
-  log("info", `К заполнению ${dates.length} рабочих дн.${o.end > localDate(new Date()) ? " (будущие дни не заполняются)" : ""}. Анализ ИИ: ${ctx.aiOn ? "включён" : "выключен — будет эвристика"}.`);
+  const m = msg().log;
+  log("info", m.period(formatDate(o.start), formatDate(o.end), fmtH(o.hoursPerDay), settings.workdays.map(weekdayShort).join(", ")));
+  if (ctxProjects.size) log("info", m.contextProjects([...ctxProjects].join(", ")));
+  log("info", m.toFill(dates.length, o.end > localDate(new Date()), ctx.aiOn));
 
   for (const [i, step] of COLLECT_STEPS.entries()) {
-    log("info", `━━ Шаг ${i + 1} из ${COLLECT_STEPS.length}: ${step.title}`);
+    log("info", m.step(i + 1, COLLECT_STEPS.length, step.title));
     await step.run(ctx);
   }
   await ctx.enrich.secondPass(ctx);
   ctx.enrich.dropUnknownKeys(ctx);
-  log("info", "━━ Анализ по дням: события сопоставляются по времени (коммиты, Jira, звонки, чат), затем часы распределяются, дни без данных заполняются.");
+  log("info", m.daysStage);
 
   const r = await analyseDays(ctx, dates, h.onDays);
   const days = buildPlan(dates, r.activity, ctx.issues, o.hoursPerDay, o.fillMode, r.meetingsByDay, ctx.targets);
@@ -55,7 +58,7 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
   const narrative = await periodNarrative(ctx, days, totals);
 
   const total = days.reduce((s, d) => s + d.tasks.reduce((x, t) => x + t.hours, 0), 0);
-  log("ok", `Готово: ${fmtH(total)} ч из ${fmtH(days.reduce((s, d) => s + d.target, 0))} ч; задач ${totals.length}; ИИ использован в ${r.aiDays} из ${r.withEvents} дней с событиями.`);
+  log("ok", m.done(fmtH(total), fmtH(days.reduce((s, d) => s + d.target, 0)), totals.length, r.aiDays, r.withEvents));
 
   return {
     start: o.start, end: o.end, hoursPerDay: o.hoursPerDay, jiraUrl: settings.jiraUrl.trim().replace(/\/+$/, ""), days, issues: ctx.issues, warnings: ctx.warnings,

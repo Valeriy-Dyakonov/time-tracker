@@ -6,6 +6,7 @@
 //! Long tokens (JWT-like Matrix tokens) are therefore split into chunks `name#0`, `name#1`, …
 //! and the main entry `name` holds a small header with the chunk count.
 //! After every write the value is read back, so a silent failure becomes a visible error.
+use crate::error::{AppError, AppResult};
 const SERVICE: &str = "worklog-tracker";
 const DIRECT_MAX: usize = 900; // chars stored in a single entry
 const CHUNK: usize = 450;
@@ -13,7 +14,7 @@ const HEADER: &str = "\u{1}chunks:";
 
 pub trait Store {
     fn get(&self, key: &str) -> Option<String>;
-    fn put(&self, key: &str, value: &str) -> Result<(), String>;
+    fn put(&self, key: &str, value: &str) -> AppResult<()>;
     fn del(&self, key: &str);
 }
 
@@ -23,9 +24,9 @@ impl Store for Keychain {
     fn get(&self, key: &str) -> Option<String> {
         keyring::Entry::new(SERVICE, key).ok()?.get_password().ok().filter(|s| !s.is_empty())
     }
-    fn put(&self, key: &str, value: &str) -> Result<(), String> {
-        let e = keyring::Entry::new(SERVICE, key).map_err(|e| e.to_string())?;
-        e.set_password(value).map_err(|e| e.to_string())
+    fn put(&self, key: &str, value: &str) -> AppResult<()> {
+        let e = keyring::Entry::new(SERVICE, key).map_err(AppError::raw)?;
+        e.set_password(value).map_err(AppError::raw)
     }
     fn del(&self, key: &str) {
         if let Ok(e) = keyring::Entry::new(SERVICE, key) {
@@ -61,7 +62,7 @@ pub fn get_in(s: &dyn Store, name: &str) -> Option<String> {
     }
 }
 
-pub fn set_in(s: &dyn Store, name: &str, value: &str) -> Result<(), String> {
+pub fn set_in(s: &dyn Store, name: &str, value: &str) -> AppResult<()> {
     clear_in(s, name);
     if value.is_empty() {
         return Ok(());
@@ -78,14 +79,11 @@ pub fn set_in(s: &dyn Store, name: &str, value: &str) -> Result<(), String> {
     }
     match get_in(s, name) {
         Some(back) if back == value => Ok(()),
-        _ => Err(format!(
-            "Хранилище паролей Windows не сохранило значение «{name}» (длина {} симв.). Проверьте, что приложение запущено под вашим пользователем.",
-            chars.len()
-        )),
+        _ => Err(AppError::new("keychainNotSaved").with("secret", name).with("length", chars.len())),
     }
 }
 
-pub fn set(name: &str, value: &str) -> Result<(), String> {
+pub fn set(name: &str, value: &str) -> AppResult<()> {
     set_in(&Keychain, name, value)
 }
 
@@ -93,18 +91,16 @@ pub fn get(name: &str) -> Option<String> {
     get_in(&Keychain, name)
 }
 
-/// A keychain entry and the service name shown when it is missing.
 pub struct Secret {
     pub name: &'static str,
-    pub label: &'static str,
 }
 
-pub const JIRA: Secret = Secret { name: "jira_pat", label: "Jira" };
-pub const LLM: Secret = Secret { name: "llm_key", label: "ИИ" };
-pub const MATRIX: Secret = Secret { name: "matrix_token", label: "Matrix" };
-pub const CONFLUENCE: Secret = Secret { name: "confluence_pat", label: "Confluence" };
-pub const EXCHANGE: Secret = Secret { name: "exchange_password", label: "Почта" };
-pub const GITLAB: Secret = Secret { name: "gitlab_pat", label: "GitLab" };
+pub const JIRA: Secret = Secret { name: "jira_pat" };
+pub const LLM: Secret = Secret { name: "llm_key" };
+pub const MATRIX: Secret = Secret { name: "matrix_token" };
+pub const CONFLUENCE: Secret = Secret { name: "confluence_pat" };
+pub const EXCHANGE: Secret = Secret { name: "exchange_password" };
+pub const GITLAB: Secret = Secret { name: "gitlab_pat" };
 
 pub const ALL: [&Secret; 6] = [&JIRA, &LLM, &MATRIX, &CONFLUENCE, &EXCHANGE, &GITLAB];
 
@@ -112,6 +108,6 @@ pub fn is_known(name: &str) -> bool {
     ALL.iter().any(|s| s.name == name)
 }
 
-pub fn require(secret: &Secret) -> Result<String, String> {
-    get(secret.name).ok_or_else(|| format!("{}: токен не задан в настройках", secret.label))
+pub fn require(secret: &Secret) -> AppResult<String> {
+    get(secret.name).ok_or_else(|| AppError::new("tokenMissing").with("secret", secret.name))
 }

@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import type { Analysis, DayPlan } from "../../types";
 import { dayTotal } from "../../lib/allocate";
-import { formatRu } from "../../lib/dates";
+import { dateShort, useT } from "../../i18n";
+import { formatDate } from "../../lib/dates";
 import { fmtH, fmtMinutes, meetingMinutes, weeksOf, type Week } from "../../lib/report";
 import { CopyButton } from "../ui";
 import { Day } from "./Day";
@@ -37,21 +38,23 @@ export function Weeks(props: {
 }
 
 function WeekHeader({ w }: { w: Week }) {
+  const all = useT();
+  const t = all.hours.week;
   const work = w.days.filter((d) => !d.off);
   const mm = work.reduce((s, d) => s + meetingMinutes(d), 0);
   const target = work.reduce((s, d) => s + d.target, 0);
   const done = Math.abs(w.total - target) < 0.01;
   return (
     <header className="week-h">
-      <h3>{formatRu(w.monday).slice(0, 5)} – {formatRu(w.sunday).slice(0, 5)}</h3>
+      <h3>{dateShort(w.monday)} – {dateShort(w.sunday)}</h3>
       <span className="wk-meter"><i className={done ? "good" : "bad"} style={{ width: `${Math.min(100, percent(w.total, target))}%` }} /></span>
-      <span className={`wk-total ${done ? "ok" : "bad"}`}>{fmtH(w.total)}<small> / {fmtH(target)} ч</small></span>
-      {mm > 0 && <span className="muted">встречи {fmtMinutes(mm)}</span>}
+      <span className={`wk-total ${done ? "ok" : "bad"}`}>{fmtH(w.total)}<small> / {fmtH(target)} {all.common.h}</small></span>
+      {mm > 0 && <span className="muted">{t.meetings(fmtMinutes(mm))}</span>}
       <span className="spacer" />
       <CopyButton
-        label="Копировать итоги"
-        title="Даты и часы каждого дня недели, по строке на день — для системы учёта, где часы вводятся по дням"
-        text={() => w.days.map((d) => `${formatRu(d.date)}\t${fmtH(dayTotal(d))}`).join("\n")}
+        label={t.copy}
+        title={t.copyHint}
+        text={() => w.days.map((d) => `${formatDate(d.date)}\t${fmtH(dayTotal(d))}`).join("\n")}
       />
     </header>
   );

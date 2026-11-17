@@ -6,16 +6,18 @@ use crate::secrets::{self, require};
 use crate::sources::{confluence, jira};
 use crate::util::{range_ms, trim_url};
 use futures::StreamExt;
+use crate::texts::Lang;
+use crate::error::{AppError, AppResult};
 
 #[tauri::command]
-pub async fn fetch_jira(app: tauri::AppHandle, start: String, end: String) -> Result<jira::JiraResult, String> {
+pub async fn fetch_jira(app: tauri::AppHandle, start: String, end: String, lang: Option<String>) -> AppResult<jira::JiraResult> {
     let c = Ctx::load(&app)?;
     let (a, b) = range_ms(&start, &end)?;
-    jira::fetch(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &start, a, b).await
+    jira::fetch(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &start, a, b, Lang::parse(lang.as_deref())).await
 }
 
 #[tauri::command]
-pub async fn lookup_issues(app: tauri::AppHandle, keys: Vec<String>) -> Result<Vec<IssueInfo>, String> {
+pub async fn lookup_issues(app: tauri::AppHandle, keys: Vec<String>) -> AppResult<Vec<IssueInfo>> {
     let c = Ctx::load(&app)?;
     jira::lookup(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &keys).await
 }
@@ -27,19 +29,19 @@ fn is_issue_key(key: &str) -> bool {
 /// Opens `<jira>/browse/<KEY>`. The key is validated and the host is always the configured Jira,
 /// so the frontend cannot make the app open an arbitrary URL.
 #[tauri::command]
-pub fn open_issue(app: tauri::AppHandle, key: String) -> Result<(), String> {
+pub fn open_issue(app: tauri::AppHandle, key: String) -> AppResult<()> {
     let s = crate::settings::load(&app)?;
     if !is_issue_key(&key) || s.jira_url.trim().is_empty() {
-        return Err("Не удалось открыть задачу: неверный ключ или не задан адрес Jira".into());
+        return Err(AppError::new("openIssueInvalid"));
     }
     browser::open(&format!("{}/browse/{}", trim_url(&s.jira_url), key))
 }
 
 #[tauri::command]
-pub async fn fetch_confluence(app: tauri::AppHandle, start: String, end: String) -> Result<Vec<Event>, String> {
+pub async fn fetch_confluence(app: tauri::AppHandle, start: String, end: String, lang: Option<String>) -> AppResult<Vec<Event>> {
     let c = Ctx::load(&app)?;
     let (a, b) = range_ms(&start, &end)?;
-    confluence::fetch(&c.client, &c.settings.confluence_url, &require(&secrets::CONFLUENCE)?, &start, a, b).await
+    confluence::fetch(&c.client, &c.settings.confluence_url, &require(&secrets::CONFLUENCE)?, &start, a, b, Lang::parse(lang.as_deref())).await
 }
 
 #[derive(serde::Deserialize)]
@@ -56,13 +58,13 @@ pub struct IssuePages {
 
 /// Confluence pages related to tasks: links in the description plus the issue's web links. Context only.
 #[tauri::command]
-pub async fn fetch_issue_pages(app: tauri::AppHandle, issues: Vec<IssueUrls>) -> Result<Vec<IssuePages>, String> {
+pub async fn fetch_issue_pages(app: tauri::AppHandle, issues: Vec<IssueUrls>) -> AppResult<Vec<IssuePages>> {
     let c = Ctx::load(&app)?;
     let jira_pat = require(&secrets::JIRA)?;
     let wiki_pat = require(&secrets::CONFLUENCE)?;
     let (jira_url, wiki_url) = (&c.settings.jira_url, &c.settings.confluence_url);
     if wiki_url.trim().is_empty() {
-        return Err("Confluence: не задан адрес".into());
+        return Err(AppError::new("urlMissing").with("service", "Confluence"));
     }
     let out = futures::stream::iter(issues.into_iter().take(60))
         .map(|i| {

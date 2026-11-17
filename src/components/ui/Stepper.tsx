@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { hours, useT } from "../../i18n";
 
 /** Number field with −/+ buttons instead of the native spinner; accepts "7,5" as well as "7.5". */
 export function Stepper(props: {
@@ -11,6 +12,7 @@ export function Stepper(props: {
   title?: string;
   small?: boolean;
 }) {
+  const t = useT().shell.ui;
   const { value, step, min = 0, max = 24 } = props;
   const [text, setText] = useState<string | null>(null);
   const clamp = (v: number) => Math.min(max, Math.max(min, Math.round(v / step) * step));
@@ -19,10 +21,10 @@ export function Stepper(props: {
     if (Number.isFinite(v)) props.onChange(clamp(v));
     setText(null);
   };
-  const shown = text ?? (Math.round(value * 100) / 100).toString().replace(".", ",");
+  const shown = text ?? hours(value);
   return (
     <span className={`stepper ${props.small ? "small" : ""}`} title={props.title}>
-      <button type="button" aria-label="Меньше" disabled={value <= min} onClick={() => props.onChange(clamp(value - step))}>−</button>
+      <button type="button" aria-label={t.less} disabled={value <= min} onClick={() => props.onChange(clamp(value - step))}>−</button>
       <span className="mid">
         <input
           inputMode="decimal"
@@ -38,7 +40,7 @@ export function Stepper(props: {
         />
         {props.suffix && <span className="sfx">{props.suffix}</span>}
       </span>
-      <button type="button" aria-label="Больше" disabled={value >= max} onClick={() => props.onChange(clamp(value + step))}>+</button>
+      <button type="button" aria-label={t.more} disabled={value >= max} onClick={() => props.onChange(clamp(value + step))}>+</button>
     </span>
   );
 }

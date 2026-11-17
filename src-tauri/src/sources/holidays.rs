@@ -2,7 +2,9 @@
 //! Source: isdayoff.ru (free public API, no key; RU, BY, KZ, UA, UZ, US). If it is unreachable, Russia 2026
 //! is served from a built-in table. Read-only: the only thing sent out is the date range and country code.
 use chrono::{Datelike, Duration, NaiveDate};
+use crate::texts::Lang;
 use serde::Serialize;
+use crate::error::{AppError, AppResult};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -25,23 +27,12 @@ pub struct HolidayOut {
 
 pub const COUNTRIES: [&str; 6] = ["ru", "by", "kz", "ua", "uz", "us"];
 
-fn parse(s: &str) -> Result<NaiveDate, String> {
-    NaiveDate::parse_from_str(s, "%Y-%m-%d").map_err(|e| format!("дата {s}: {e}"))
+fn parse(s: &str) -> AppResult<NaiveDate> {
+    NaiveDate::parse_from_str(s, "%Y-%m-%d").map_err(|e| AppError::raw(format!("{s}: {e}")))
 }
 
-fn ru_name(d: NaiveDate) -> Option<String> {
-    let n = match (d.month(), d.day()) {
-        (1, 7) => "Рождество Христово",
-        (1, 1..=11) => "Новогодние каникулы",
-        (2, 23) => "День защитника Отечества",
-        (3, 8) | (3, 9) => "Международный женский день",
-        (5, 1) => "Праздник Весны и Труда",
-        (5, 9) | (5, 11) => "День Победы",
-        (6, 12) => "День России",
-        (11, 4) => "День народного единства",
-        _ => "Перенесённый выходной",
-    };
-    Some(n.to_string())
+fn ru_name(d: NaiveDate, lang: Lang) -> Option<String> {
+    Some(lang.holiday(d.month(), d.day()).to_string())
 }
 
 /// Russia 2026 (Постановление Правительства РФ от 24.09.2025 № 1466): weekday days off and shortened days.
@@ -52,18 +43,18 @@ const RU_2026_OFF: [&str; 15] = [
 ];
 const RU_2026_SHORT: [&str; 4] = ["2026-04-30", "2026-05-08", "2026-06-11", "2026-11-03"];
 
-fn builtin_ru_2026(a: NaiveDate, b: NaiveDate) -> Vec<HolidayDay> {
+fn builtin_ru_2026(a: NaiveDate, b: NaiveDate, lang: Lang) -> Vec<HolidayDay> {
     let mut out = vec![];
     for s in RU_2026_OFF.iter().filter(|s| **s != "2026-01-12") {
         let d = parse(s).unwrap();
         if d >= a && d <= b {
-            out.push(HolidayDay { date: s.to_string(), kind: "off".into(), name: ru_name(d) });
+            out.push(HolidayDay { date: s.to_string(), kind: "off".into(), name: ru_name(d, lang) });
         }
     }
     for s in RU_2026_SHORT {
         let d = parse(s).unwrap();
         if d >= a && d <= b {
-            out.push(HolidayDay { date: s.to_string(), kind: "short".into(), name: Some("Предпраздничный день".into()) });
+            out.push(HolidayDay { date: s.to_string(), kind: "short".into(), name: Some(lang.pre_holiday().into()) });
         }
     }
     out.sort_by(|x, y| x.date.cmp(&y.date));
@@ -71,7 +62,7 @@ fn builtin_ru_2026(a: NaiveDate, b: NaiveDate) -> Vec<HolidayDay> {
 }
 
 /// isdayoff.ru answer: one char per day of the range (0 work, 1 off, 2 short, 4 work).
-pub fn decode(cc: &str, start: NaiveDate, n: usize, text: &str) -> Option<Vec<HolidayDay>> {
+pub fn decode(cc: &str, start: NaiveDate, n: usize, text: &str, lang: Lang) -> Option<Vec<HolidayDay>> {
     let t = text.trim();
     if t.chars().count() != n || !t.chars().all(|c| "0124".contains(c)) {
         return None;
@@ -87,8 +78,8 @@ pub fn decode(cc: &str, start: NaiveDate, n: usize, text: &str) -> Option<Vec<Ho
                     _ => "work",
                 };
                 let name = match (cc, kind) {
-                    ("ru", "short") => Some("Предпраздничный день".to_string()),
-                    ("ru", "off") => ru_name(d),
+                    ("ru", "short") => Some(lang.pre_holiday().to_string()),
+                    ("ru", "off") => ru_name(d, lang),
                     _ => None,
                 };
                 HolidayDay { date: d.format("%Y-%m-%d").to_string(), kind: kind.into(), name }
@@ -97,15 +88,15 @@ pub fn decode(cc: &str, start: NaiveDate, n: usize, text: &str) -> Option<Vec<Ho
     )
 }
 
-pub async fn fetch(client: &reqwest::Client, country: &str, start: &str, end: &str) -> Result<HolidayOut, String> {
+pub async fn fetch(client: &reqwest::Client, country: &str, start: &str, end: &str, lang: Lang) -> AppResult<HolidayOut> {
     let cc = country.to_lowercase();
     if !COUNTRIES.contains(&cc.as_str()) {
-        return Err(format!("Страна «{country}» не поддерживается"));
+        return Err(AppError::new("holidaysCountry").with("country", country));
     }
     let a = parse(start)?;
     let mut b = parse(end)?;
     if b < a {
-        return Err("Конец периода раньше начала".into());
+        return Err(AppError::new("periodReversed"));
     }
     if (b - a).num_days() > 365 {
         b = a + Duration::days(365);
@@ -118,28 +109,28 @@ pub async fn fetch(client: &reqwest::Client, country: &str, start: &str, end: &s
         cc
     );
 
-    let online: Result<String, String> = async {
-        let r = client.get(&url).send().await.map_err(|e| e.to_string())?;
+    let online: AppResult<String> = async {
+        let r = client.get(&url).send().await.map_err(AppError::raw)?;
         if !r.status().is_success() {
-            return Err(format!("HTTP {}", r.status()));
+            return Err(AppError::raw(format!("HTTP {}", r.status())));
         }
-        r.text().await.map_err(|e| e.to_string())
+        r.text().await.map_err(AppError::raw)
     }
     .await;
 
     match online {
-        Ok(t) if decode(&cc, a, n, &t).is_some() => {
-            Ok(HolidayOut { source: "isdayoff.ru".into(), complete: true, days: decode(&cc, a, n, &t).unwrap() })
+        Ok(t) if decode(&cc, a, n, &t, lang).is_some() => {
+            Ok(HolidayOut { source: lang.source_isdayoff().into(), complete: true, days: decode(&cc, a, n, &t, lang).unwrap() })
         }
         other => {
             let why = match other {
-                Ok(t) => format!("неожиданный ответ: {}", t.chars().take(40).collect::<String>()),
-                Err(e) => e,
+                Ok(t) => lang.unexpected_answer(&t.chars().take(40).collect::<String>()),
+                Err(e) => e.detail(),
             };
             if cc == "ru" && a.year() == 2026 && b.year() == 2026 {
-                Ok(HolidayOut { source: format!("встроенный календарь РФ 2026 (isdayoff.ru недоступен: {why})"), complete: false, days: builtin_ru_2026(a, b) })
+                Ok(HolidayOut { source: lang.source_builtin(&why), complete: false, days: builtin_ru_2026(a, b, lang) })
             } else {
-                Err(format!("isdayoff.ru недоступен ({why}), встроенных данных для этого года нет"))
+                Err(AppError::new("holidaysUnavailable").with("detail", why))
             }
         }
     }

@@ -1,7 +1,7 @@
 import { api } from "../../api";
-import { plural } from "../dates";
+import { count } from "../../i18n";
 import { attachKeys, isPlausibleKey } from "../events/keys";
-import { listHead } from "./format";
+import { listHead, msg } from "./format";
 import type { RunContext } from "./types";
 
 /** Completes the picture around the collected events: task keys, the tasks themselves, their parents and wiki pages. */
@@ -16,21 +16,23 @@ export class IssueEnricher {
     const needKey = ctx.events.filter((e) => !e.issueKey).length;
     ctx.events = attachKeys(ctx.events);
     const left = ctx.events.filter((e) => !e.issueKey).length;
-    ctx.log("info", `Привязка (${what}): ключ вида ABC-123 найден в тексте, ветке или названии у ${needKey - left} из ${needKey} событий; без ключа осталось ${left}${ctx.aiOn ? " — их смысл определит ИИ" : " — без ИИ они в расчёте не участвуют"}.`);
+    const m = msg().enrich;
+    ctx.log("info", m.matched(what, needKey - left, needKey, left, ctx.aiOn));
     // Keys from commits/chat may belong to tasks touched only via git (not assignee/reporter): check every plausible key.
     const unknown = [...new Set(ctx.events.map((e) => e.issueKey).filter((k): k is string => !!k && !ctx.issues[k]))].filter(isPlausibleKey);
     if (unknown.length === 0) return;
-    ctx.log("info", `Jira: проверяю ${unknown.length} задач из ${what} (${listHead(unknown)}).`);
+    ctx.log("info", m.checking(unknown.length, what, listHead(unknown)));
     try {
       for (const i of await api.lookupIssues(unknown.slice(0, 200))) ctx.issues[i.key] = i;
       const found = unknown.filter((k) => ctx.issues[k]).length;
-      ctx.log(found === unknown.length ? "ok" : "info", `Jira: найдено ${found} из ${unknown.length}.`);
+      ctx.log(found === unknown.length ? "ok" : "info", m.found(found, unknown.length));
     } catch (e) {
-      ctx.log("warn", `Jira lookup: ${e}`);
+      ctx.log("warn", m.lookupFailed(String(e)));
     }
   }
 
   async loadContext(ctx: RunContext): Promise<void> {
+    const m = msg().enrich;
     for (let pass = 0; pass < 2; pass++) {
       const from = pass === 0 ? Object.values(ctx.issues) : [...this.contextParents].map((k) => ctx.issues[k]).filter(Boolean);
       const want = [...new Set(
@@ -38,13 +40,13 @@ export class IssueEnricher {
           .filter((k): k is string => !!k && !ctx.issues[k] && isPlausibleKey(k)),
       )].slice(0, 150);
       if (want.length === 0) break;
-      ctx.log("info", `Jira: читаю родительские задачи, эпики и связанные тикеты (${want.length}): ${listHead(want)}.`);
+      ctx.log("info", m.contextReading(want.length, listHead(want)));
       try {
         const got = await api.lookupIssues(want);
         for (const i of got) { ctx.issues[i.key] = i; this.contextParents.add(i.key); }
-        ctx.log("ok", `Jira: контекст получен для ${got.length} из ${want.length}. Часы на них не начисляются.`);
+        ctx.log("ok", m.contextDone(got.length, want.length));
       } catch (e) {
-        ctx.log("warn", `Jira: контекст (родители/эпики): ${e}`);
+        ctx.log("warn", m.contextFailed(String(e)));
         break;
       }
     }
@@ -60,21 +62,22 @@ export class IssueEnricher {
       .filter((k) => !this.pagesTried.has(k)).slice(0, 45);
     if (withUp.length === 0) return;
     withUp.forEach((k) => this.pagesTried.add(k));
-    ctx.log("info", `Confluence: ищу страницы, связанные с ${withUp.length} задачами и их эпиками (ссылки в описании и веб-ссылки Jira)…`);
+    const m = msg().enrich;
+    ctx.log("info", m.pagesReading(withUp.length));
     try {
       const got = await api.fetchIssuePages(withUp.map((k) => ({ key: k, urls: ctx.issues[k].urls ?? [] })));
       for (const g of got) ctx.issues[g.key] = { ...ctx.issues[g.key], pages: g.pages };
       const n = got.reduce((s, g) => s + g.pages.length, 0);
-      ctx.log(n ? "ok" : "info", n ? `Confluence: найдено ${n} ${plural(n, "страница", "страницы", "страниц")} у ${got.length} задач — используются как контекст.` : "Confluence: связанных страниц у этих задач нет.");
+      ctx.log(n ? "ok" : "info", n ? m.pagesFound(count(n, m.pages), got.length) : m.pagesNone);
     } catch (e) {
-      ctx.log("warn", `Confluence: связанные страницы: ${e}`);
+      ctx.log("warn", m.pagesFailed(String(e)));
     }
   }
 
   /** Chat and calendar may mention tasks that git/Jira did not: a second pass for the new keys, with their context. */
   async secondPass(ctx: RunContext): Promise<void> {
     const before = Object.keys(ctx.issues).length;
-    await this.matchAndLookup(ctx, "чата и календаря");
+    await this.matchAndLookup(ctx, msg().steps.matchChatWhat);
     if (Object.keys(ctx.issues).length > before) {
       await this.loadContext(ctx);
       await this.loadPages(ctx);
@@ -85,7 +88,7 @@ export class IssueEnricher {
   dropUnknownKeys(ctx: RunContext): void {
     const dropped = [...new Set(ctx.events.map((e) => e.issueKey).filter((k): k is string => !!k && !ctx.issues[k]))];
     if (dropped.length)
-      ctx.log("info", `Пропущены ключи, которых Jira не вернула (нет такой задачи или нет доступа): ${dropped.slice(0, 8).join(", ")}. Это нормально — в расчёт они не идут.`);
+      ctx.log("info", msg().enrich.dropped(dropped.slice(0, 8).join(", ")));
     ctx.events = ctx.events.map((e) => (e.issueKey && !ctx.issues[e.issueKey] ? { ...e, issueKey: null } : e));
   }
 }

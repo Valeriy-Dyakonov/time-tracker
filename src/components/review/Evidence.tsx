@@ -2,6 +2,7 @@ import type { DayPlan, Evidence as Item } from "../../types";
 import IssueLink from "../IssueLink";
 import { clock } from "../live";
 import { SOURCE_ORDER, sourceLabel } from "../sources";
+import { useT } from "../../i18n";
 
 function groupBySource(list: Item[]): [string, Item[]][] {
   const m = new Map<string, Item[]>();
@@ -11,10 +12,11 @@ function groupBySource(list: Item[]): [string, Item[]][] {
 
 /** Everything found for a day, grouped by tool; chat messages show the room and the addressee. */
 export function Evidence({ d }: { d: DayPlan }) {
+  const m = useT().review.evidence;
   if (d.evidence.length === 0) return null;
   return (
     <details className="evidence">
-      <summary>Что нашлось в этот день ({d.eventCount})</summary>
+      <summary>{m.title(d.eventCount)}</summary>
       <div className="ev-groups">
         {groupBySource(d.evidence).map(([src, list]) => (
           <section className={`ev-group s-${src}`} key={src}>
@@ -28,7 +30,8 @@ export function Evidence({ d }: { d: DayPlan }) {
 }
 
 function EvidenceLine({ e }: { e: Item }) {
-  const where = e.context && e.context !== e.to ? (e.source === "matrix" ? `в «${e.context}»` : e.context) : "";
+  const m = useT().review.evidence;
+  const where = e.context && e.context !== e.to ? (e.source === "matrix" ? m.inRoom(e.context) : e.context) : "";
   return (
     <li>
       <time>{clock(e.ts).slice(0, 5)}</time>
@@ -37,7 +40,7 @@ function EvidenceLine({ e }: { e: Item }) {
         <span className="ev-text">{e.text}</span>
         {(e.to || where) && (
           <span className="ev-ctx">
-            {e.to && <span className="ev-to" title="Кому адресовано: упомянутые, автор сообщения, на которое вы ответили, или собеседник в личном чате">→ {e.to}</span>}
+            {e.to && <span className="ev-to" title={m.toTitle}>→ {e.to}</span>}
             {where && <span>{where}</span>}
           </span>
         )}

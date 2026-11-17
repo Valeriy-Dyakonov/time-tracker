@@ -1,23 +1,24 @@
 import type { SetupState } from "../../lib/setup";
+import type { Source } from "../../types";
 
-type SourceFlag = "useGit" | "useGitlab" | "useConfluence" | "useCalendar" | "useMatrix" | "useAi";
+export type SourceFlag = "useGit" | "useGitlab" | "useConfluence" | "useCalendar" | "useMatrix" | "useAi";
 
 export interface AnalysisSource {
   id: SourceFlag;
-  label: string;
+  /** Key of the label in `common.sources`. */
+  label: Source | "ai";
   /** Which settings section must be filled in before the source can be used. */
   setup: keyof SetupState;
-  hint: string;
 }
 
 /** Optional sources the user can switch on and off before a run. Jira is always on. */
 export const ANALYSIS_SOURCES: AnalysisSource[] = [
-  { id: "useGit", label: "Git", setup: "git", hint: "Ваши коммиты в выбранных локальных репозиториях" },
-  { id: "useGitlab", label: "GitLab", setup: "gitlab", hint: "Merge request'ы, которые вы создали, одобрили или комментировали" },
-  { id: "useConfluence", label: "Confluence", setup: "confluence", hint: "Страницы и комментарии, которые вы создали или правили" },
-  { id: "useCalendar", label: "Календарь", setup: "calendar", hint: "Встречи и звонки из Exchange: время и тема" },
-  { id: "useMatrix", label: "Matrix", setup: "matrix", hint: "Ваши сообщения в рабочих чатах" },
-  { id: "useAi", label: "Анализ ИИ", setup: "llm", hint: "Корпоративный ИИ решает, над какими задачами вы работали; без него — эвристика по ключам задач" },
+  { id: "useGit", label: "git", setup: "git" },
+  { id: "useGitlab", label: "gitlab", setup: "gitlab" },
+  { id: "useConfluence", label: "confluence", setup: "confluence" },
+  { id: "useCalendar", label: "calendar", setup: "calendar" },
+  { id: "useMatrix", label: "matrix", setup: "matrix" },
+  { id: "useAi", label: "ai", setup: "llm" },
 ];
 
 export type SourceToggles = Record<SourceFlag, boolean>;

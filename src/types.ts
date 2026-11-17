@@ -71,6 +71,8 @@ export interface Evt {
   weight: number;
   /** Chat only: who the message was addressed to. */
   to?: string | null;
+  /** Language-neutral action type from the backend: "created", "comment", "changed", "mr_opened", "mr_merged", "mr_merged_by_me", "mr_approved", "mr_comment". */
+  kind?: string | null;
 }
 
 /** A Confluence page related to a task (context for the AI). */

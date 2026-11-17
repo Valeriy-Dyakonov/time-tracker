@@ -8,6 +8,8 @@ use crate::http::{Auth, JsonApi};
 use crate::model::Event;
 use crate::util::{parse_jira_time, trim_url, truncate};
 use serde_json::Value;
+use crate::texts::Lang;
+use crate::error::AppResult;
 
 struct Me {
     username: String,
@@ -33,11 +35,11 @@ impl<'a> Confluence<'a> {
         Self { api: JsonApi::new(client, "Confluence", Auth::Bearer(pat)), base: trim_url(base) }
     }
 
-    async fn get(&self, path: &str, query: &[(&str, String)]) -> Result<Value, String> {
+    async fn get(&self, path: &str, query: &[(&str, String)]) -> AppResult<Value> {
         self.api.get(&format!("{}{path}", self.base), query).await
     }
 
-    async fn myself(&self) -> Result<Me, String> {
+    async fn myself(&self) -> AppResult<Me> {
         let v = self.get("/rest/api/user/current", &[]).await?;
         let s = |k: &str| v[k].as_str().unwrap_or("").to_string();
         Ok(Me { username: s("username"), key: s("userKey"), display: s("displayName") })
@@ -68,33 +70,33 @@ fn plain(html: &str, max: usize) -> String {
     truncate(&out.split_whitespace().collect::<Vec<_>>().join(" "), max)
 }
 
-pub async fn test(client: &reqwest::Client, base: &str, pat: &str) -> Result<String, String> {
-    Ok(format!("OK: {}", Confluence::new(client, base, pat).myself().await?.display))
+/// Display name of the token owner.
+pub async fn test(client: &reqwest::Client, base: &str, pat: &str) -> AppResult<String> {
+    Ok(Confluence::new(client, base, pat).myself().await?.display)
 }
 
-fn content_events(r: &Value, me: &Me, in_range: impl Fn(i64) -> bool) -> Vec<Event> {
+fn content_events(r: &Value, me: &Me, in_range: impl Fn(i64) -> bool, lang: Lang) -> Vec<Event> {
     let is_comment = r["type"] == "comment";
     let title = if is_comment { r["container"]["title"].as_str() } else { r["title"].as_str() }.unwrap_or("");
     let space = r["space"]["name"].as_str().or_else(|| r["container"]["space"]["name"].as_str()).unwrap_or("");
-    let what = if is_comment { "комментарий к странице" } else { "страницу" };
     let excerpt = r["body"]["storage"]["value"].as_str().map(|h| plain(h, 300)).unwrap_or_default();
     let excerpt = if excerpt.is_empty() { String::new() } else { format!(": {excerpt}") };
-    let event = |ts: i64, verb: &str| Event {
+    let event = |ts: i64, edited: bool| Event {
         context: Some(title.to_string()),
-        ..Event::new("confluence", ts, format!("{verb} {what} «{title}» [{space}]{excerpt}"))
+        ..Event::new("confluence", ts, format!("{} [{space}]{excerpt}", lang.confluence(edited, is_comment, title)))
     };
 
     let mut out = vec![];
     let created = r["history"]["createdDate"].as_str().and_then(parse_jira_time).filter(|t| in_range(*t));
     let created_by_me = created.is_some() && me.is(&r["history"]["createdBy"]);
     if let (Some(ts), true) = (created, created_by_me) {
-        out.push(event(ts, "Создал"));
+        out.push(event(ts, false));
     }
     let ver = &r["version"];
     if let Some(ts) = ver["when"].as_str().and_then(parse_jira_time).filter(|t| in_range(*t)) {
         let is_creation = ver["number"].as_i64().unwrap_or(1) <= 1 && created_by_me;
         if me.is(&ver["by"]) && !is_creation {
-            out.push(event(ts, "Отредактировал"));
+            out.push(event(ts, true));
         }
     }
     out
@@ -107,7 +109,8 @@ pub async fn fetch(
     start_day: &str,
     start_ms: i64,
     end_ms: i64,
-) -> Result<Vec<Event>, String> {
+    lang: Lang,
+) -> AppResult<Vec<Event>> {
     let wiki = Confluence::new(client, base, pat);
     let me = wiki.myself().await?;
     let cql = format!(
@@ -132,7 +135,7 @@ pub async fn fetch(
             .await?;
         let results = v["results"].as_array().cloned().unwrap_or_default();
         for r in &results {
-            events.extend(content_events(r, &me, |ts| ts >= start_ms && ts < end_ms));
+            events.extend(content_events(r, &me, |ts| ts >= start_ms && ts < end_ms, lang));
         }
         start += results.len();
         if results.len() < LIMIT || start >= 500 {

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useT } from "../../i18n";
 
 export function Field(props: { label: string; hint?: string; tip?: ReactNode; children: ReactNode }) {
   return (
@@ -12,8 +13,9 @@ export function Field(props: { label: string; hint?: string; tip?: ReactNode; ch
 
 /** Small "i" badge that shows an explanation on hover or keyboard focus. */
 export function InfoTip(props: { children: ReactNode; wide?: boolean }) {
+  const t = useT().common;
   return (
-    <span className={`infotip ${props.wide ? "wide" : ""}`} tabIndex={0} aria-label="Подсказка">
+    <span className={`infotip ${props.wide ? "wide" : ""}`} tabIndex={0} aria-label={t.help}>
       <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" /><path d="M8 7.2v4M8 4.8v.1" /></svg>
       <span className="tip" role="tooltip">{props.children}</span>
     </span>

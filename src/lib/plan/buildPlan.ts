@@ -1,12 +1,13 @@
+import { t } from "../../i18n";
 import type { DayPlan, FillMode, IssueInfo, Meeting } from "../../types";
 import { distribute, toTasks } from "./distribute";
 import { autoSummary, gapFiller } from "./fill";
 import type { DayActivity } from "./types";
 
 function whyNoData(own: DayActivity | undefined, hasMeetings: boolean): string {
-  if (own) return `События за этот день не удалось привязать ни к одной задаче, на которую начисляются часы.${own.reasoning ? ` ${own.reasoning}` : ""}`;
-  if (hasMeetings) return "В этот день были только звонки и встречи — по ним задачу определить нельзя.";
-  return "За этот день нет ни действий в Jira, ни коммитов, ни сообщений.";
+  const plan = t().analysis.plan;
+  if (own) return plan.whyUnmatched(own.reasoning);
+  return hasMeetings ? plan.whyMeetingsOnly : plan.whyNothing;
 }
 
 /**

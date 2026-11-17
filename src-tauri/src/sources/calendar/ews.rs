@@ -2,6 +2,8 @@
 use super::Meeting;
 use crate::util::{trim_url, truncate};
 use chrono::DateTime;
+use crate::texts::Lang;
+use crate::error::{AppError, AppResult};
 
 /// Accepts the mailbox address (https://mail.company.ru) or the full EWS URL.
 pub fn endpoint(url: &str) -> String {
@@ -66,7 +68,7 @@ fn is_cancelled(it: roxmltree::Node) -> bool {
 }
 
 /// A calendar item the user actually attends, or None (all-day, cancelled, declined, free, out of range...).
-fn meeting(it: roxmltree::Node, start_ms: i64, end_ms: i64) -> Option<Meeting> {
+fn meeting(it: roxmltree::Node, start_ms: i64, end_ms: i64, lang: Lang) -> Option<Meeting> {
     if child_text(it, "IsAllDayEvent") == "true" || is_cancelled(it) {
         return None;
     }
@@ -95,7 +97,7 @@ fn meeting(it: roxmltree::Node, start_ms: i64, end_ms: i64) -> Option<Meeting> {
         ts,
         end_ts: end,
         minutes,
-        title: truncate(if title.is_empty() { "(без темы)" } else { title }, 120),
+        title: truncate(if title.is_empty() { lang.no_subject() } else { title }, 120),
         organizer: truncate(organizer, 60),
         location: truncate(location, 80),
         is_call: looks_like_call(title) || looks_like_call(location),
@@ -104,21 +106,19 @@ fn meeting(it: roxmltree::Node, start_ms: i64, end_ms: i64) -> Option<Meeting> {
 }
 
 /// `Ok(None)` means the server rejected the requested protocol version.
-pub fn parse(xml: &str, start_ms: i64, end_ms: i64, only_calls: bool) -> Result<Option<Vec<Meeting>>, String> {
-    let doc = roxmltree::Document::parse(xml).map_err(|_| {
-        "Exchange вернул не XML — похоже, это страница входа. Проверьте адрес и логин/пароль.".to_string()
-    })?;
+pub fn parse(xml: &str, start_ms: i64, end_ms: i64, only_calls: bool, lang: Lang) -> AppResult<Option<Vec<Meeting>>> {
+    let doc = roxmltree::Document::parse(xml).map_err(|_| AppError::new("exchangeNotXml"))?;
     for msg in doc.descendants().filter(|n| n.tag_name().name() == "FindItemResponseMessage") {
         match child_text(msg, "ResponseCode") {
             "ErrorInvalidServerVersion" => return Ok(None),
             "NoError" => {}
-            code => return Err(format!("Exchange: {code}: {}", truncate(child_text(msg, "MessageText"), 200))),
+            code => return Err(AppError::service("Exchange", format!("{code}: {}", truncate(child_text(msg, "MessageText"), 200)))),
         }
     }
     let mut out: Vec<Meeting> = doc
         .descendants()
         .filter(|n| n.tag_name().name() == "CalendarItem")
-        .filter_map(|it| meeting(it, start_ms, end_ms))
+        .filter_map(|it| meeting(it, start_ms, end_ms, lang))
         .filter(|m| !only_calls || m.is_call)
         .collect();
     out.sort_by_key(|m| m.ts);
@@ -145,7 +145,7 @@ mod tests {
     #[test]
     fn skips_free_and_cancelled_items() {
         let (a, b) = day();
-        let list = parse(XML, a, b, false).unwrap().unwrap();
+        let list = parse(XML, a, b, false, Lang::Ru).unwrap().unwrap();
         let titles: Vec<&str> = list.iter().map(|m| m.title.as_str()).collect();
         assert_eq!(titles, vec!["Daily в Teams", "Планирование"]);
         assert!(list[0].is_call && list[0].minutes == 15);
@@ -154,12 +154,12 @@ mod tests {
     #[test]
     fn only_calls_keeps_calls() {
         let (a, b) = day();
-        assert_eq!(parse(XML, a, b, true).unwrap().unwrap().len(), 1);
+        assert_eq!(parse(XML, a, b, true, Lang::Ru).unwrap().unwrap().len(), 1);
     }
 
     #[test]
     fn invalid_version_asks_for_retry() {
         let xml = "<a><FindItemResponseMessage><ResponseCode>ErrorInvalidServerVersion</ResponseCode></FindItemResponseMessage></a>";
-        assert!(parse(xml, 0, 1, false).unwrap().is_none());
+        assert!(parse(xml, 0, 1, false, Lang::Ru).unwrap().is_none());
     }
 }

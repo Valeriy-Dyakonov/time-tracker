@@ -4,8 +4,10 @@ use crate::util::truncate;
 use chrono::DateTime;
 use std::path::Path;
 use std::process::Command;
+use crate::texts::Lang;
+use crate::error::{AppError, AppResult};
 
-fn git(repo: &str, args: &[String]) -> Result<String, String> {
+fn git(repo: &str, args: &[String]) -> AppResult<String> {
     let mut cmd = Command::new("git");
     cmd.arg("-C").arg(repo).arg("-c").arg("core.quotepath=off").args(args);
     // A windowed app must not flash a console window for every git call.
@@ -14,12 +16,9 @@ fn git(repo: &str, args: &[String]) -> Result<String, String> {
         use std::os::windows::process::CommandExt;
         cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
     }
-    let out = cmd.output().map_err(|e| format!("git не запустился: {e}"))?;
+    let out = cmd.output().map_err(|e| AppError::new("gitStart").with("detail", e.to_string()))?;
     if !out.status.success() {
-        return Err(format!(
-            "git ({repo}): {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        ));
+        return Err(AppError::service("git", format!("{repo}: {}", String::from_utf8_lossy(&out.stderr).trim())));
     }
     Ok(String::from_utf8_lossy(&out.stdout).to_string())
 }
@@ -29,7 +28,7 @@ const DAY_MS: i64 = 86_400_000;
 const FORMAT: &str = "--pretty=format:%x1e%H%x1f%aI%x1f%S%x1f%s";
 
 /// Configured author patterns, or the repo's `user.email` when none are set.
-fn authors_for(repo: &str, authors: &[String]) -> Result<Vec<String>, String> {
+fn authors_for(repo: &str, authors: &[String]) -> AppResult<Vec<String>> {
     let who: Vec<String> = authors.iter().filter(|a| !a.trim().is_empty()).cloned().collect();
     if !who.is_empty() {
         return Ok(who);
@@ -48,7 +47,7 @@ fn log_args(since: &str, until: &str, who: &[String]) -> Vec<String> {
 }
 
 /// `git log` output in FORMAT with --numstat -> commits inside [start_ms, end_ms).
-fn parse_log(out: &str, repo_name: &str, start_ms: i64, end_ms: i64) -> Vec<Event> {
+fn parse_log(out: &str, repo_name: &str, start_ms: i64, end_ms: i64, lang: Lang) -> Vec<Event> {
     let mut events = vec![];
     for chunk in out.split('\x1e').filter(|c| !c.trim().is_empty()) {
         let mut lines = chunk.lines();
@@ -72,26 +71,26 @@ fn parse_log(out: &str, repo_name: &str, start_ms: i64, end_ms: i64) -> Vec<Even
         events.push(Event {
             context: Some(branch.to_string()),
             weight: ((ins + del) as f64).max(1.0),
-            ..Event::new("git", ts, format!("[{repo_name}] {} (+{ins}/-{del}, файлов: {files})", truncate(p[3], 160)))
+            ..Event::new("git", ts, format!("[{repo_name}] {} {}", truncate(p[3], 160), lang.commit_stats(ins, del, files)))
         });
     }
     events
 }
 
 /// The window is widened by a day on both sides: git dates are in the author's time zone.
-pub fn fetch(repos: &[String], authors: &[String], start_ms: i64, end_ms: i64) -> Result<Vec<Event>, String> {
-    let iso = |ms: i64, what: &str| DateTime::from_timestamp_millis(ms).map(|d| d.to_rfc3339()).ok_or(format!("bad {what}"));
+pub fn fetch(repos: &[String], authors: &[String], start_ms: i64, end_ms: i64, lang: Lang) -> AppResult<Vec<Event>> {
+    let iso = |ms: i64, what: &str| DateTime::from_timestamp_millis(ms).map(|d| d.to_rfc3339()).ok_or_else(|| AppError::raw(format!("bad {what}")));
     let since = iso(start_ms - DAY_MS, "since")?;
     let until = iso(end_ms + DAY_MS, "until")?;
     let mut events = vec![];
     for repo in repos.iter().filter(|r| !r.trim().is_empty()) {
         let path = Path::new(repo);
         if !path.exists() {
-            return Err(format!("Репозиторий не найден: {repo}"));
+            return Err(AppError::new("repoNotFound").with("path", repo.as_str()));
         }
         let name = path.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| repo.clone());
         let out = git(repo, &log_args(&since, &until, &authors_for(repo, authors)?))?;
-        events.extend(parse_log(&out, &name, start_ms, end_ms));
+        events.extend(parse_log(&out, &name, start_ms, end_ms, lang));
     }
     Ok(events)
 }
@@ -127,10 +126,10 @@ fn walk(dir: &Path, depth: u32, out: &mut Vec<RepoInfo>) {
 }
 
 /// Finds git repositories under `root` (up to 3 levels deep).
-pub fn scan(root: &str) -> Result<Vec<RepoInfo>, String> {
+pub fn scan(root: &str) -> AppResult<Vec<RepoInfo>> {
     let p = Path::new(root.trim());
     if !p.is_dir() {
-        return Err(format!("Папка не найдена: {root}"));
+        return Err(AppError::new("folderNotFound").with("path", root));
     }
     let mut out = vec![];
     walk(p, 3, &mut out);
@@ -189,7 +188,7 @@ mod log_tests {
         let out = "\x1eabc\x1f2026-11-10T10:00:00+03:00\x1frefs/heads/feature/A-1\x1fA-1 fix\n3\t1\tsrc/a.rs\n2\t0\tsrc/b.rs\n\
                    \x1edef\x1f2026-12-01T10:00:00+03:00\x1frefs/heads/main\x1fout of range\n";
         let start = DateTime::parse_from_rfc3339("2026-11-10T00:00:00+03:00").unwrap().timestamp_millis();
-        let ev = parse_log(out, "repo", start, start + 86_400_000);
+        let ev = parse_log(out, "repo", start, start + 86_400_000, Lang::Ru);
         assert_eq!(ev.len(), 1);
         assert_eq!(ev[0].text, "[repo] A-1 fix (+5/-1, файлов: 2)");
         assert_eq!(ev[0].context.as_deref(), Some("feature/A-1"));

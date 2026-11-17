@@ -1,27 +1,28 @@
 use chrono::{DateTime, Duration, Local, NaiveDate, TimeZone};
 use std::time::Duration as StdDuration;
+use crate::error::{AppError, AppResult};
 
-pub fn client(accept_invalid_certs: bool) -> Result<reqwest::Client, String> {
+pub fn client(accept_invalid_certs: bool) -> AppResult<reqwest::Client> {
     reqwest::Client::builder()
         .danger_accept_invalid_certs(accept_invalid_certs)
         .timeout(StdDuration::from_secs(120))
         .user_agent("worklog-tracker/0.1")
         .build()
-        .map_err(|e| e.to_string())
+        .map_err(AppError::raw)
 }
 
 /// `start`/`end` are inclusive local dates (YYYY-MM-DD).
 /// Returns [start_ms, end_ms) in epoch milliseconds.
-pub fn range_ms(start: &str, end: &str) -> Result<(i64, i64), String> {
-    let s = NaiveDate::parse_from_str(start, "%Y-%m-%d").map_err(|e| format!("start: {e}"))?;
-    let e = NaiveDate::parse_from_str(end, "%Y-%m-%d").map_err(|e| format!("end: {e}"))?;
+pub fn range_ms(start: &str, end: &str) -> AppResult<(i64, i64)> {
+    let s = NaiveDate::parse_from_str(start, "%Y-%m-%d").map_err(|e| AppError::service("start", e))?;
+    let e = NaiveDate::parse_from_str(end, "%Y-%m-%d").map_err(|e| AppError::service("end", e))?;
     let e = e + Duration::days(1);
-    let to_ms = |d: NaiveDate| -> Result<i64, String> {
+    let to_ms = |d: NaiveDate| -> AppResult<i64> {
         Local
             .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
             .earliest()
             .map(|dt| dt.timestamp_millis())
-            .ok_or_else(|| "bad local time".to_string())
+            .ok_or_else(|| AppError::raw("bad local time"))
     };
     Ok((to_ms(s)?, to_ms(e)?))
 }
