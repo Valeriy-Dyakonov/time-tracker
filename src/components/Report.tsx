@@ -14,11 +14,15 @@ import { Timesheet, Verdict } from "./Timesheet";
 import IssueLink from "./IssueLink";
 import Meetings from "./Meetings";
 import { LivePanel, LogList, logText } from "./live";
-import { CopyButton, download, keyColor } from "./ui";
+import { CopyButton, download, InfoTip, keyColor, Stepper } from "./ui";
 
 type View = "weeks" | "submit" | "ai" | "log" | "export";
-const TABS: [View, string][] = [
-  ["weeks", "Часы"], ["submit", "Списание"], ["ai", "Разбор ИИ"], ["log", "Журнал"], ["export", "Экспорт"],
+const TABS: [View, string, JSX.Element][] = [
+  ["weeks", "Часы", <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>],
+  ["submit", "Списание", <><path d="M5 12l4 4L19 6" /></>],
+  ["ai", "Разбор ИИ", <><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" /></>],
+  ["log", "Журнал", <><path d="M5 6h14M5 12h14M5 18h9" /></>],
+  ["export", "Экспорт", <><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></>],
 ];
 
 export default function Report(props: {
@@ -95,36 +99,65 @@ export default function Report(props: {
     );
   const presets: [string, number][] = [["Этот месяц", 0], ["Прошлый месяц", -1]];
   const fills: [FillMode, string, string][] = [
-    ["neighbors", "по соседним", "Заполнить по задачам соседних дней"],
-    ["period", "по периоду", "Распределить по задачам всего периода"],
-    ["none", "оставить", "Оставить такие дни пустыми"],
+    ["neighbors", "Как соседние", "Взять задачи и доли ближайшего дня, по которому есть события"],
+    ["period", "По периоду", "Разделить день между задачами всего периода пропорционально их часам"],
+    ["none", "Пустыми", "Ничего не заполнять — такие дни вы распределите сами"],
   ];
 
   return (
     <div>
       <section className="card filters">
-        <div className="f-row">
-          <div className="seg">
-            {presets.map(([l, off]) => {
-              const r = monthRange(off);
-              return <button key={l} className={start === r.start && end === r.end ? "on" : ""} onClick={() => { setStart(r.start); setEnd(r.end); }}>{l}</button>;
-            })}
+        <div className="f-grid">
+          <div className="fg">
+            <span className="f-label">Период</span>
+            <div className="f-ctl">
+              <div className="seg">
+                {presets.map(([l, off]) => {
+                  const r = monthRange(off);
+                  return <button key={l} className={start === r.start && end === r.end ? "on" : ""} onClick={() => { setStart(r.start); setEnd(r.end); }}>{l}</button>;
+                })}
+              </div>
+              <div className="daterange" title="Свой период">
+                <input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+                <span>—</span>
+                <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
+              </div>
+            </div>
           </div>
-          <div className="daterange" title="Свой период">
-            <input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
-            <span>—</span>
-            <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
+          <div className="fg">
+            <span className="f-label">Норма в день
+              <InfoTip>Сколько часов нужно списать в каждый рабочий день. Время задач в дне масштабируется до этой суммы. Праздники и выходные не заполняются, предпраздничные дни короче (см. Настройки → Рабочее время).</InfoTip>
+            </span>
+            <div className="f-ctl"><Stepper value={hours} step={0.5} min={1} max={24} suffix="ч" onChange={setHours} /></div>
           </div>
-          <label className="unit" title="Сколько часов списывать в рабочий день">
-            <input type="number" min={1} max={24} step={0.25} value={hours} onChange={(e) => setHours(Number(e.target.value) || 8)} />
-            <span>ч/день</span>
-          </label>
-          <span className="spacer" />
-          <button className="btn primary run" disabled={busy || !setup.jira} title={setup.jira ? "" : "Сначала настройте Jira"} onClick={run}>{busy ? "Анализирую…" : "Проанализировать"}</button>
+          <div className="fg">
+            <span className="f-label">Дни без событий
+              <InfoTip wide>
+                Бывает, что в рабочий день нет ни коммитов, ни изменений в Jira, ни сообщений, ни встреч — например, день ушёл на чтение кода или созвон без календаря. Что ставить в такой день:
+                <ul>{fills.map(([v, l, t]) => <li key={v}><b>{l}</b> — {t.charAt(0).toLowerCase() + t.slice(1)}.</li>)}</ul>
+                Такие дни помечаются жёлтым, их стоит проверить.
+              </InfoTip>
+            </span>
+            <div className="f-ctl">
+              <div className="seg">
+                {fills.map(([v, l, t]) => <button key={v} title={t} className={fillMode === v ? "on" : ""} onClick={() => setFillMode(v)}>{l}</button>)}
+              </div>
+            </div>
+          </div>
+          <div className="fg run-wrap">
+            <button className={`runbtn ${busy ? "busy" : ""}`} disabled={busy || !setup.jira} title={setup.jira ? "Собрать события за период и распределить часы" : "Сначала настройте Jira"} onClick={run}>
+              {busy ? <span className="spin" /> : (
+                <svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" /><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></svg>
+              )}
+              {busy ? "Анализирую…" : "Проанализировать"}
+            </button>
+          </div>
         </div>
-        <div className="f-row">
-          <span className="f-label">Источники</span>
-          <div className="srcs">
+        <div className="f-src">
+          <span className="f-label">Источники
+            <InfoTip>Откуда брать события. Jira нужна всегда: из неё берутся задачи. Остальные помогают понять, чем вы занимались в конкретный день. Пунктиром — ещё не настроенные; нажмите, чтобы подключить.</InfoTip>
+          </span>
+          <div className="srcpick">
             <button className="srcbtn on locked" title="Jira используется всегда" disabled><span className="dot" />Jira</button>
             {src("Git", useGit, setUseGit, setup.git)}
             {src("GitLab", useGitlab, setUseGitlab, setup.gitlab)}
@@ -132,11 +165,6 @@ export default function Report(props: {
             {src("Календарь", useCalendar, setUseCalendar, setup.calendar)}
             {src("Matrix", useMatrix, setUseMatrix, setup.matrix)}
             {src("Анализ ИИ", useAi, setUseAi, setup.llm)}
-          </div>
-          <span className="spacer" />
-          <span className="f-label" title="Что делать с рабочими днями, по которым не нашлось ни одного события">Дни без данных</span>
-          <div className="seg small">
-            {fills.map(([v, l, t]) => <button key={v} title={t} className={fillMode === v ? "on" : ""} onClick={() => setFillMode(v)}>{l}</button>)}
           </div>
         </div>
         {error && <div className="error">{error}</div>}
@@ -154,11 +182,13 @@ export default function Report(props: {
               <p className="hint">Подробности — на вкладке «Журнал».</p>
             </details>
           )}
-          <div className="tabs">
-            {TABS.map(([v, l]) => (
-              <button key={v} className={view === v ? "tab active" : "tab"} onClick={() => setView(v)}>{l}</button>
+          <nav className="viewtabs" role="tablist">
+            {TABS.map(([v, l, icon]) => (
+              <button key={v} role="tab" aria-selected={view === v} className={view === v ? "vt on" : "vt"} onClick={() => setView(v)}>
+                <svg viewBox="0 0 24 24">{icon}</svg>{l}
+              </button>
             ))}
-          </div>
+          </nav>
           {view === "weeks" && <Timesheet a={a} updateDay={updateDay} onlyReview={onlyReview} setOnlyReview={setOnlyReview} onAi={() => setView("ai")} />}
           {view === "submit" && <Submit a={a} canAi={setup.llm} />}
           {view === "ai" && <AiReview a={a} />}

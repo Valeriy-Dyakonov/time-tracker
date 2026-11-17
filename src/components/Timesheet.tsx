@@ -6,7 +6,7 @@ import {
   fmtH, fmtMinutes, grandTotal, meetingMinutes, meetingRange, targetTotal, totalsByTask, weeksOf,
 } from "../lib/report";
 import IssueLink from "./IssueLink";
-import { CopyButton, keyColor } from "./ui";
+import { CopyButton, keyColor, Stepper } from "./ui";
 
 const SRC: Record<Source, string> = { jira: "Jira", git: "Git", gitlab: "GitLab", matrix: "Matrix", confluence: "Confluence", calendar: "Календарь" };
 const EPS = 0.001;
@@ -35,6 +35,7 @@ export function Verdict({ a, onReview }: { a: Analysis; onReview: () => void }) 
   const ok = Math.abs(diff) < 0.01;
   const work = a.days.filter((d) => !d.off);
   const review = a.days.filter(needsReview);
+  const mm = work.reduce((s, d) => s + meetingMinutes(d), 0);
   const totalsSrc = useMemo(() => {
     const m = new Map<Source, number>();
     for (const d of work) for (const [s, n] of sourceCounts(d)) m.set(s, (m.get(s) ?? 0) + n);
@@ -42,31 +43,32 @@ export function Verdict({ a, onReview }: { a: Analysis; onReview: () => void }) 
   }, [a]);
 
   return (
-    <section className="verdict">
-      <div className={`vd ${ok ? "good" : "bad"}`}>
-        <div className="vd-big">{ok ? "Часы сходятся с нормой" : diff > 0 ? `Лишних ${fmtH(diff)} ч` : `Не хватает ${fmtH(-diff)} ч`}</div>
-        <div className="vd-sub">
-          Распределено <b>{fmtH(total)} ч</b> из нормы <b>{fmtH(target)} ч</b> — {work.length} {plural(work.length, "рабочий день", "рабочих дня", "рабочих дней")} по {fmtH(a.hoursPerDay)} ч.
-        </div>
+    <section className="stats">
+      <div className="stat">
+        <span className="st-label">Распределено</span>
+        <span className="st-val">{fmtH(total)}<small> / {fmtH(target)} ч</small></span>
+        <span className="st-bar"><i className={ok ? "good" : "bad"} style={{ width: `${Math.min(100, target ? (total / target) * 100 : 0)}%` }} /></span>
+        <span className={`st-sub ${ok ? "good" : "bad"}`}>{ok ? "сходится с нормой" : diff > 0 ? `лишних ${fmtH(diff)} ч` : `не хватает ${fmtH(-diff)} ч`}</span>
       </div>
-      <div className={`vd ${review.length ? "warn" : "good"}`}>
-        <div className="vd-big">{review.length ? `Проверьте ${review.length} ${plural(review.length, "день", "дня", "дней")}` : "Все дни по данным"}</div>
-        <div className="vd-sub">
-          {review.length ? (
-            <>По ним нет событий или сумма не равна норме. <button className="linkbtn" onClick={onReview}>Показать только их</button></>
-          ) : (
-            "Каждый день построен по реальным событиям: коммитам, задачам, чату и календарю."
-          )}
-        </div>
+      <div className="stat">
+        <span className="st-label">Рабочих дней</span>
+        <span className="st-val">{work.length}<small> × {fmtH(a.hoursPerDay)} ч</small></span>
+        <span className="st-sub">{formatRu(a.start).slice(0, 5)} – {formatRu(a.end).slice(0, 5)}</span>
       </div>
-      <div className="vd">
-        <div className="vd-big">{a.usedAi ? "Анализ ИИ" : "Без ИИ"}</div>
-        <div className="vd-sub">
-          {a.usedAi ? "ИИ определил, над какими задачами вы работали, и разделил время." : "Доли посчитаны эвристикой по ключам задач в коммитах и Jira."}
-          {totalsSrc.length > 0 && (
-            <span className="srcs">{totalsSrc.map(([s, n]) => <span key={s} className={`src s-${s}`}>{SRC[s]} {n}</span>)}</span>
-          )}
-        </div>
+      <button className={`stat ${review.length ? "warn click" : ""}`} disabled={!review.length} onClick={onReview} title={review.length ? "Показать только эти дни" : ""}>
+        <span className="st-label">Проверить</span>
+        <span className={`st-val ${review.length ? "warn" : "good"}`}>{review.length || "✓"}<small>{review.length ? ` ${plural(review.length, "день", "дня", "дней")}` : " всё по данным"}</small></span>
+        <span className="st-sub">{review.length ? "без событий или не равны норме →" : "каждый день — по реальным событиям"}</span>
+      </button>
+      <div className="stat">
+        <span className="st-label">Встречи</span>
+        <span className="st-val">{mm === 0 ? "—" : mm < 60 ? mm : Math.floor(mm / 60)}{mm > 0 && <small>{mm < 60 ? " мин" : ` ч${mm % 60 ? ` ${mm % 60} мин` : ""}`}</small>}</span>
+        <span className="st-sub">входят в рабочие часы</span>
+      </div>
+      <div className="stat wide">
+        <span className="st-label">{a.usedAi ? "Распределил ИИ" : "Эвристика без ИИ"}</span>
+        <span className="st-srcs">{totalsSrc.map(([s, n]) => <span key={s} className={`src s-${s}`}><i />{SRC[s]} <b>{n}</b></span>)}</span>
+        <span className="st-sub">событий из источников</span>
       </div>
     </section>
   );
@@ -83,10 +85,14 @@ export function Timesheet(props: {
 }) {
   const { a, updateDay, onlyReview, setOnlyReview } = props;
   const [mode, setMode] = useState<Mode>("days");
+  const [open, setOpen] = useState<Set<string>>(() => new Set());
   const review = a.days.filter(needsReview);
+  const toggle = (date: string) => setOpen((o) => { const n = new Set(o); if (n.has(date)) n.delete(date); else n.add(date); return n; });
+  const allOpen = a.days.length > 0 && a.days.every((d) => open.has(d.date));
 
   function jump(date: string) {
     setMode("days");
+    setOpen((o) => new Set(o).add(date));
     setTimeout(() => {
       const el = document.getElementById(`day-${date}`);
       if (!el) return;
@@ -100,57 +106,56 @@ export function Timesheet(props: {
     <div className="ts-layout">
       <div className="ts-main">
         <div className="ts-bar">
-          <div className="seg" role="tablist">
+          <div className="seg small" role="tablist">
             <button className={mode === "days" ? "on" : ""} onClick={() => setMode("days")}>По дням</button>
             <button className={mode === "tasks" ? "on" : ""} onClick={() => setMode("tasks")}>По задачам</button>
           </div>
-          <span className="muted">
-            {mode === "days"
-              ? "Каждая строка — один рабочий день. Часы можно править, итог дня пересчитается."
-              : "Для Jira: по каждой задаче — в какие дни и сколько часов списать."}
-          </span>
-          <span className="spacer" />
           {mode === "days" && (
             <>
               <span className="legend">
-                <span><i className="lg good" />по данным</span>
-                <span><i className="lg warn" />без данных</span>
+                <span><i className="lg good" />по событиям</span>
+                <span><i className="lg warn" />без событий</span>
                 <span><i className="lg bad" />не заполнен</span>
               </span>
-              <label className="check">
+              <span className="spacer" />
+              <label className="switch">
                 <input type="checkbox" checked={onlyReview} onChange={(e) => setOnlyReview(e.target.checked)} />
-                Только требующие проверки ({review.length})
+                <i />Только для проверки ({review.length})
               </label>
+              <button className="btn small ghost" onClick={() => setOpen(allOpen ? new Set() : new Set(a.days.map((d) => d.date)))}>
+                {allOpen ? "Свернуть все" : "Развернуть все"}
+              </button>
             </>
           )}
+          {mode === "tasks" && <span className="muted">Для Jira: по каждой задаче — в какие дни и сколько часов списать.</span>}
         </div>
-        {mode === "days" ? <Weeks a={a} updateDay={updateDay} onlyReview={onlyReview} /> : <ByTask a={a} />}
+        {mode === "days"
+          ? <Weeks a={a} updateDay={updateDay} onlyReview={onlyReview} open={open} toggle={toggle} />
+          : <ByTask a={a} />}
       </div>
 
       <aside className="ts-rail">
         <section className="card rail-card">
-          <div className="rail-h"><h4>О чём период</h4><button className="linkbtn" onClick={props.onAi}>Подробный разбор →</button></div>
+          <div className="rail-h"><h4>О чём период</h4><button className="linkbtn" onClick={props.onAi}>Подробнее →</button></div>
           <p className="rail-text">{a.narrative}</p>
         </section>
 
-        <section className="card rail-card">
-          <div className="rail-h"><h4>Что проверить</h4><span className="muted">{review.length}</span></div>
-          {review.length === 0 ? (
-            <p className="muted">Всё построено по реальным событиям, суммы дней равны норме.</p>
-          ) : (
+        {review.length > 0 && (
+          <section className="card rail-card">
+            <div className="rail-h"><h4>Что проверить</h4><span className="muted">{review.length}</span></div>
             <ul className="rail-review">
               {review.map((d) => (
                 <li key={d.date}>
                   <button onClick={() => jump(d.date)}>
-                    <i className={`lg ${d.basis === "empty" ? "bad" : d.basis === "inferred" ? "warn" : "bad"}`} />
+                    <i className={`lg ${d.basis === "inferred" ? "warn" : "bad"}`} />
                     <b>{weekdayName(d.date)} {formatRu(d.date).slice(0, 5)}</b>
                     <span>{reviewReason(d)}</span>
                   </button>
                 </li>
               ))}
             </ul>
-          )}
-        </section>
+          </section>
+        )}
 
         <section className="card rail-card">
           <div className="rail-h"><h4>Куда ушло время</h4><span className="muted">за период</span></div>
@@ -183,7 +188,14 @@ function RailTasks({ a }: { a: Analysis }) {
   );
 }
 
-function Weeks({ a, updateDay, onlyReview }: { a: Analysis; updateDay: (date: string, fn: (d: DayPlan) => DayPlan) => void; onlyReview: boolean }) {
+function Weeks(props: {
+  a: Analysis;
+  updateDay: (date: string, fn: (d: DayPlan) => DayPlan) => void;
+  onlyReview: boolean;
+  open: Set<string>;
+  toggle: (date: string) => void;
+}) {
+  const { a, updateDay, onlyReview } = props;
   const weeks = useMemo(() => weeksOf(a.days), [a]);
   return (
     <div>
@@ -196,21 +208,18 @@ function Weeks({ a, updateDay, onlyReview }: { a: Analysis; updateDay: (date: st
         return (
           <section className="week" key={w.monday}>
             <header className="week-h">
-              <h3>Неделя {formatRu(w.monday).slice(0, 5)} – {formatRu(w.sunday).slice(0, 5)}</h3>
-              <span className={`wk-total ${done ? "ok" : "bad"}`}>{fmtH(w.total)} <small>из {fmtH(target)} ч</small></span>
-              <span className="wk-meter"><i style={{ width: `${Math.min(100, target ? (w.total / target) * 100 : 0)}%` }} /></span>
-              {mm > 0 && <span className="muted">📞 {fmtMinutes(mm)} звонков и встреч</span>}
+              <h3>{formatRu(w.monday).slice(0, 5)} – {formatRu(w.sunday).slice(0, 5)}</h3>
+              <span className="wk-meter"><i className={done ? "good" : "bad"} style={{ width: `${Math.min(100, target ? (w.total / target) * 100 : 0)}%` }} /></span>
+              <span className={`wk-total ${done ? "ok" : "bad"}`}>{fmtH(w.total)}<small> / {fmtH(target)} ч</small></span>
+              {mm > 0 && <span className="muted">встречи {fmtMinutes(mm)}</span>}
               <span className="spacer" />
-              <CopyButton label="Копировать итоги дней" text={() => w.days.map((d) => `${formatRu(d.date)}\t${fmtH(dayTotal(d))}`).join("\n")} />
+              <CopyButton label="Копировать итоги" title="Даты и часы дней недели — для системы учёта по дням" text={() => w.days.map((d) => `${formatRu(d.date)}\t${fmtH(dayTotal(d))}`).join("\n")} />
             </header>
-            <div className="cols">
-              <span>День</span>
-              <span>Задачи и часы <em>— для Jira</em></span>
-              <span>Что делали и почему так</span>
-              <span>Звонки и встречи</span>
-              <span className="r">Итого <em>— для системы по дням</em></span>
+            <div className="daylist">
+              {days.map((d) => (
+                <Day key={d.date} a={a} d={d} open={props.open.has(d.date)} onToggle={() => props.toggle(d.date)} update={(fn) => updateDay(d.date, fn)} />
+              ))}
             </div>
-            {days.map((d) => <Day key={d.date} a={a} d={d} update={(fn) => updateDay(d.date, fn)} />)}
           </section>
         );
       })}
@@ -218,93 +227,110 @@ function Weeks({ a, updateDay, onlyReview }: { a: Analysis; updateDay: (date: st
   );
 }
 
-function Day({ a, d, update }: { a: Analysis; d: DayPlan; update: (fn: (d: DayPlan) => DayPlan) => void }) {
+function Day({ a, d, open, onToggle, update }: { a: Analysis; d: DayPlan; open: boolean; onToggle: () => void; update: (fn: (d: DayPlan) => DayPlan) => void }) {
   const total = dayTotal(d);
   const balanced = d.off || Math.abs(total - d.target) < EPS;
   const setHoursFor = (key: string, v: number) =>
     update((x) => ({ ...x, tasks: x.tasks.map((t) => (t.key === key ? { ...t, hours: Math.max(0, v) } : t)) }));
   const srcs = sourceCounts(d);
+  const mm = meetingMinutes(d);
+  const tasks = d.tasks.filter((t) => t.hours > 0 || open);
+  const shown = tasks.slice(0, 3);
+  const status = d.off ? "off" : d.basis;
 
   return (
-    <div id={`day-${d.date}`} className={`dayrow b-${d.off ? "off" : d.basis}`}>
-      <div className="c-date">
-        <span className="dow">{weekdayName(d.date)}</span>
-        <span className="num">{Number(d.date.slice(8))}</span>
-        <span className="mon">{monthShort(d.date)}</span>
-      </div>
-
-      {d.off ? (
-        <div className="c-off">Выходной или отпуск — часы не списываются.</div>
-      ) : (
-        <>
-          <div className="c-tasks">
-            {d.tasks.map((t) => (
-              <div className="t-row" key={t.key}>
-                <span className="dot" style={{ background: keyColor(t.key) }} />
-                <span className="t-key"><IssueLink k={t.key} /></span>
-                <span className="t-hours">
-                  <input type="number" min={0} step={STEP} value={t.hours} onChange={(e) => setHoursFor(t.key, Number(e.target.value))} />
-                  <span className="muted">ч</span>
-                </span>
-                <span className="t-body">
-                  <span className="t-title" title={a.issues[t.key]?.summary}>
-                    {a.issues[t.key]?.summary}
-                    {statusOnDate(a.issues[t.key], d.date) && <span className="t-status" title="Статус задачи в этот день по истории Jira">{statusOnDate(a.issues[t.key], d.date)}</span>}
+    <div id={`day-${d.date}`} className={`day s-${status} ${open ? "open" : ""}`}>
+      <button className="day-sum" onClick={onToggle} aria-expanded={open}>
+        <span className="d-date">
+          <b>{Number(d.date.slice(8))}</b>
+          <span>{weekdayName(d.date)}<br />{monthShort(d.date)}</span>
+        </span>
+        <span className="d-mid">
+          {d.off ? (
+            <span className="d-line muted">Выходной или отпуск — часы не списываются</span>
+          ) : d.tasks.length === 0 ? (
+            <span className="d-line bad">{reviewReason(d)}</span>
+          ) : (
+            <>
+              <span className="d-chips">
+                {shown.map((t) => (
+                  <span key={t.key} className="d-chip" title={a.issues[t.key]?.summary}>
+                    <i style={{ background: keyColor(t.key) }} />{t.key}<b>{fmtH(t.hours)}</b>
                   </span>
-                  {t.notes[0] && <span className="t-note">{t.notes[0]}</span>}
-                </span>
-              </div>
-            ))}
-            {d.tasks.length === 0 && <div className="muted">Задач нет — день пока не заполнен.</div>}
-          </div>
+                ))}
+                {tasks.length > shown.length && <span className="d-more">+{tasks.length - shown.length}</span>}
+              </span>
+              <span className={`d-line ${d.basis === "activity" ? "" : "warn"}`}>
+                {d.basis === "activity" ? (d.summary || a.issues[d.tasks[0].key]?.summary) : reviewReason(d)}
+              </span>
+            </>
+          )}
+        </span>
+        <span className="d-bar" aria-hidden>
+          {!d.off && d.tasks.map((t) => t.hours > 0 && <i key={t.key} style={{ flex: t.hours, background: keyColor(t.key) }} />)}
+        </span>
+        <span className="d-meet">{mm > 0 && <>{fmtMinutes(mm)}<small>встречи</small></>}</span>
+        <span className={`d-total ${balanced ? "" : "bad"}`}>
+          {d.off ? "—" : fmtH(total)}{!d.off && <small> ч</small>}
+          {!balanced && <em>норма {fmtH(d.target)}</em>}
+        </span>
+        <svg className="chev" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" /></svg>
+      </button>
 
-          <div className="c-why">
-            {d.basis === "activity" ? (
-              <>
-                {d.summary && <p className="why-main">{d.summary}</p>}
+      {open && (
+        <div className="day-body">
+          {!d.off && (
+            <div className="db-grid">
+              <div className="db-tasks">
+                <h5>Задачи и часы <span>для Jira</span></h5>
+                {d.tasks.map((t) => (
+                  <div className="dt-row" key={t.key}>
+                    <i className="dot" style={{ background: keyColor(t.key) }} />
+                    <div className="dt-main">
+                      <div className="dt-head">
+                        <IssueLink k={t.key} />
+                        <span className="dt-title" title={a.issues[t.key]?.summary}>{a.issues[t.key]?.summary}</span>
+                        {statusOnDate(a.issues[t.key], d.date) && <span className="t-status" title="Статус задачи в этот день по истории Jira">{statusOnDate(a.issues[t.key], d.date)}</span>}
+                      </div>
+                      {t.notes.length > 0 && <ul className="dt-notes">{t.notes.slice(0, 4).map((n, i) => <li key={i}>{n}</li>)}</ul>}
+                    </div>
+                    <Stepper small value={t.hours} step={STEP} min={0} max={24} suffix="ч" onChange={(v) => setHoursFor(t.key, v)} />
+                  </div>
+                ))}
+                {d.tasks.length === 0 && <p className="muted">Задач нет — день пока не заполнен.</p>}
+              </div>
+              <div className="db-side">
+                <h5>Что делали</h5>
+                {d.summary && <p className="db-text">{d.summary}</p>}
+                {d.reasoning && <p className="db-text muted">{d.reasoning}</p>}
                 {srcs.length > 0 && (
-                  <div className="srcs" title="Из чего собран день">
-                    {srcs.map(([s, n]) => <span key={s} className={`src s-${s}`}>{SRC[s]} {n}</span>)}
+                  <div className="st-srcs" title="Из чего собран день">
+                    {srcs.map(([s, n]) => <span key={s} className={`src s-${s}`}><i />{SRC[s]} <b>{n}</b></span>)}
                   </div>
                 )}
-                {d.reasoning && (
-                  <details className="why-more"><summary>Почему такие доли</summary><p>{d.reasoning}</p></details>
+                {d.meetings.length > 0 && (
+                  <>
+                    <h5>Встречи и звонки <span>{fmtMinutes(mm)}</span></h5>
+                    <ul className="db-meet">
+                      {d.meetings.map((m, i) => (
+                        <li key={i} className={m.isCall ? "call" : ""} title={`${m.title}${m.organizer ? "\nОрганизатор: " + m.organizer : ""}`}>
+                          <b>{meetingRange(m)}</b><span>{m.title}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
                 )}
-              </>
-            ) : (
-              <p className={`why-main ${d.basis === "empty" ? "bad" : "warn"}`}>{d.reasoning || reviewReason(d)}</p>
-            )}
+              </div>
+            </div>
+          )}
+          <div className="db-actions">
+            {!balanced && <button className="btn small" onClick={() => update(rebalance)}>Выровнять до {fmtH(d.target)} ч</button>}
+            <button className="btn small ghost" onClick={() => update((x) => ({ ...x, off: !x.off }))}>{d.off ? "Вернуть рабочий день" : "Сделать выходным"}</button>
+            <span className="spacer" />
+            {!d.off && <CopyButton label="Копировать день" text={() => dayTextShort(a, d)} />}
           </div>
-
-          <div className="c-meet">
-            {d.meetings.length === 0 ? <span className="muted">—</span> : (
-              <>
-                <div className="mt-sum">{fmtMinutes(meetingMinutes(d))}</div>
-                <ul>
-                  {d.meetings.slice(0, 5).map((m, i) => (
-                    <li key={i} className={m.isCall ? "call" : ""} title={`${m.title}\n${meetingRange(m)}${m.organizer ? "\nОрганизатор: " + m.organizer : ""}`}>
-                      <b>{meetingRange(m)}</b> {m.title}
-                    </li>
-                  ))}
-                  {d.meetings.length > 5 && <li className="muted">ещё {d.meetings.length - 5}</li>}
-                </ul>
-              </>
-            )}
-          </div>
-        </>
-      )}
-
-      <div className="c-total">
-        <div className={`d-total ${balanced ? "ok" : "bad"}`}>{fmtH(total)}<small> ч</small></div>
-        {!d.off && !balanced && <div className="d-norm bad">норма {fmtH(d.target)} ч</div>}
-        {!d.off && d.basis === "inferred" && <span className="badge warn">без данных</span>}
-        {!d.off && d.basis === "empty" && <span className="badge bad">не заполнен</span>}
-        <div className="d-actions">
-          {!balanced && <button className="btn small" onClick={() => update(rebalance)}>Выровнять до нормы</button>}
-          <button className="btn small ghost" onClick={() => update((x) => ({ ...x, off: !x.off }))}>{d.off ? "Вернуть день" : "Выходной"}</button>
-          {!d.off && <CopyButton text={() => dayTextShort(a, d)} />}
         </div>
-      </div>
+      )}
     </div>
   );
 }
