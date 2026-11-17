@@ -26,6 +26,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          # Shared with warm-cache.yml: tag builds restore the dependencies compiled on main.
+          shared-key: windows-release
+          # Tags can't share their cache with other tags, so only main (warm-cache.yml) saves it.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: npm ci
       - run: npm test
       - uses: tauri-apps/tauri-action@v0

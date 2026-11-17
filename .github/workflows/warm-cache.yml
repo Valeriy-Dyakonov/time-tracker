@@ -1,0 +1,30 @@
+name: Warm Rust cache
+
+# Release builds run on tags, and a tag can only read caches saved on itself or on the default branch.
+# This job compiles the release dependencies on main and saves them, so tag builds skip that work.
+# It runs only when dependencies change (or by hand); the cache key matches the release job via shared-key.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - src-tauri/Cargo.lock
+      - src-tauri/Cargo.toml
+      - .github/workflows/warm-cache.yml
+
+jobs:
+  warm:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          shared-key: windows-release
+      # tauri::generate_context! needs the frontend folder to exist; an empty page is enough to compile.
+      - run: mkdir dist && echo "<!doctype html>" > dist/index.html
+        shell: bash
+      # Same features `tauri build --features updater` uses, so the cached dependencies match.
+      - run: cargo build --release --features updater,tauri/custom-protocol
+        working-directory: src-tauri
