@@ -36,7 +36,6 @@ export function CopyChip({ text, label, wide, title }: { text: string; label?: s
   );
 }
 
-/** Icon-only copy button placed inside a text field. */
 export function CopyIcon({ text, title }: { text: string; title?: string }) {
   const [ok, copy] = useCopy();
   return (

@@ -20,7 +20,6 @@ export function InfoTip(props: { children: ReactNode; wide?: boolean }) {
   );
 }
 
-/** Collapsible step-by-step instruction. */
 export function Help(props: { title: string; steps: ReactNode[]; note?: ReactNode }) {
   return (
     <details className="help">
@@ -33,7 +32,6 @@ export function Help(props: { title: string; steps: ReactNode[]; note?: ReactNod
   );
 }
 
-/** Card heading with an optional help tip, used for section titles across the report. */
 export function Title(props: { children: ReactNode; tip?: ReactNode; wide?: boolean; as?: "h3" | "h4" }) {
   const H = props.as ?? "h3";
   return <H className="titled">{props.children}{props.tip && <InfoTip wide={props.wide}>{props.tip}</InfoTip>}</H>;

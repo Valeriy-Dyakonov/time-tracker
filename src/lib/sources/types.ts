@@ -4,7 +4,6 @@ import type { RunContext } from "../analysis/types";
 export interface SourceCollector {
   /** Prefix of log lines and warnings: "Git", "Календарь". */
   name: string;
-  /** Title of the pipeline step. */
   step: string;
   enabled(ctx: RunContext): boolean;
   /** Log line when the source is not used. */
