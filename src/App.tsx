@@ -49,16 +49,17 @@ export default function App() {
 
   return (
     <div className="shell">
-    <TitleBar />
+    <TitleBar settingsOpen={tab === "settings"} onToggleSettings={() => setTab(tab === "settings" ? "report" : "settings")} />
     <div className="scroll">
     <div className="app">
-      <header className="topbar">
-        <h1>Worklog Tracker</h1>
-        <nav>
-          <button className={tab === "report" ? "tab active" : "tab"} onClick={() => setTab("report")}>Отчёт</button>
-          <button className={tab === "settings" ? "tab active" : "tab"} onClick={() => setTab("settings")}>Настройки</button>
-        </nav>
-      </header>
+      {tab === "settings" ? (
+        <header className="pagehead">
+          <button className="back" onClick={() => setTab("report")} title="Вернуться к отчёту">
+            <svg viewBox="0 0 16 16"><path d="M10 3L5 8l5 5" /></svg>Отчёт
+          </button>
+          <h2>Настройки</h2>
+        </header>
+      ) : <div className="pagegap" />}
       <JiraUrlContext.Provider value={settings.jiraUrl}>
       <main>
         {tab === "settings" ? (

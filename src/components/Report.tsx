@@ -83,44 +83,61 @@ export default function Report(props: {
   }
 
   const showLive = !!live && (busy || !!error);
-  const src = (label: string, on: boolean, set: (v: boolean) => void, ready: boolean) => (
-    <label className="check">
-      <input type="checkbox" disabled={!ready} checked={on && ready} onChange={(e) => set(e.target.checked)} /> {label}
-      {!ready && <i className="muted"> (не настроен)</i>}
-    </label>
-  );
+  const src = (label: string, on: boolean, set: (v: boolean) => void, ready: boolean) =>
+    ready ? (
+      <button className={`srcbtn ${on ? "on" : ""}`} aria-pressed={on} onClick={() => set(!on)}>
+        <span className="dot" />{label}
+      </button>
+    ) : (
+      <button className="srcbtn na" title="Не настроен — открыть настройки" onClick={props.onOpenSettings}>
+        <span className="dot" />{label}
+      </button>
+    );
+  const presets: [string, number][] = [["Этот месяц", 0], ["Прошлый месяц", -1]];
+  const fills: [FillMode, string, string][] = [
+    ["neighbors", "по соседним", "Заполнить по задачам соседних дней"],
+    ["period", "по периоду", "Распределить по задачам всего периода"],
+    ["none", "оставить", "Оставить такие дни пустыми"],
+  ];
 
   return (
     <div>
-      <section className="card controls">
-        <div className="row wrap">
-          <label className="inline">С <input type="date" value={start} onChange={(e) => setStart(e.target.value)} /></label>
-          <label className="inline">По <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} /></label>
-          <button className="btn small ghost" onClick={() => { const r = monthRange(0); setStart(r.start); setEnd(r.end); }}>Этот месяц</button>
-          <button className="btn small ghost" onClick={() => { const r = monthRange(-1); setStart(r.start); setEnd(r.end); }}>Прошлый месяц</button>
-          <label className="inline">Часов в день <input className="narrow" type="number" min={1} max={24} step={0.25} value={hours} onChange={(e) => setHours(Number(e.target.value) || 8)} /></label>
-        </div>
-        <div className="row wrap">
-          <span className="muted">Источники:</span>
-          <label className="check"><input type="checkbox" checked disabled /> Jira</label>
-          {src("Git", useGit, setUseGit, setup.git)}
-          {src("GitLab", useGitlab, setUseGitlab, setup.gitlab)}
-          {src("Confluence", useConfluence, setUseConfluence, setup.confluence)}
-          {src("Календарь", useCalendar, setUseCalendar, setup.calendar)}
-          {src("Matrix", useMatrix, setUseMatrix, setup.matrix)}
-          {src("Анализ ИИ", useAi, setUseAi, setup.llm)}
-        </div>
-        <div className="row wrap">
-          <label className="inline" title="Что делать с рабочими днями, по которым не нашлось ни одного события">
-            Дни без данных:
-            <select value={fillMode} onChange={(e) => setFillMode(e.target.value as FillMode)}>
-              <option value="neighbors">заполнить по соседним дням</option>
-              <option value="period">распределить по всему периоду</option>
-              <option value="none">оставить пустыми</option>
-            </select>
+      <section className="card filters">
+        <div className="f-row">
+          <div className="seg">
+            {presets.map(([l, off]) => {
+              const r = monthRange(off);
+              return <button key={l} className={start === r.start && end === r.end ? "on" : ""} onClick={() => { setStart(r.start); setEnd(r.end); }}>{l}</button>;
+            })}
+          </div>
+          <div className="daterange" title="Свой период">
+            <input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+            <span>—</span>
+            <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
+          </div>
+          <label className="unit" title="Сколько часов списывать в рабочий день">
+            <input type="number" min={1} max={24} step={0.25} value={hours} onChange={(e) => setHours(Number(e.target.value) || 8)} />
+            <span>ч/день</span>
           </label>
           <span className="spacer" />
-          <button className="btn primary" disabled={busy || !setup.jira} title={setup.jira ? "" : "Сначала настройте Jira"} onClick={run}>{busy ? "Анализирую…" : "Проанализировать"}</button>
+          <button className="btn primary run" disabled={busy || !setup.jira} title={setup.jira ? "" : "Сначала настройте Jira"} onClick={run}>{busy ? "Анализирую…" : "Проанализировать"}</button>
+        </div>
+        <div className="f-row">
+          <span className="f-label">Источники</span>
+          <div className="srcs">
+            <button className="srcbtn on locked" title="Jira используется всегда" disabled><span className="dot" />Jira</button>
+            {src("Git", useGit, setUseGit, setup.git)}
+            {src("GitLab", useGitlab, setUseGitlab, setup.gitlab)}
+            {src("Confluence", useConfluence, setUseConfluence, setup.confluence)}
+            {src("Календарь", useCalendar, setUseCalendar, setup.calendar)}
+            {src("Matrix", useMatrix, setUseMatrix, setup.matrix)}
+            {src("Анализ ИИ", useAi, setUseAi, setup.llm)}
+          </div>
+          <span className="spacer" />
+          <span className="f-label" title="Что делать с рабочими днями, по которым не нашлось ни одного события">Дни без данных</span>
+          <div className="seg small">
+            {fills.map(([v, l, t]) => <button key={v} title={t} className={fillMode === v ? "on" : ""} onClick={() => setFillMode(v)}>{l}</button>)}
+          </div>
         </div>
         {error && <div className="error">{error}</div>}
       </section>

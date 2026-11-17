@@ -7,7 +7,7 @@ type Win = { minimize(): Promise<void>; toggleMaximize(): Promise<void>; close()
 const RECHECK_MS = 4 * 60 * 60 * 1000;
 
 /** Custom window title bar (the native one is off via "decorations": false): app name, version, update button, window controls. */
-export default function TitleBar() {
+export default function TitleBar(props: { settingsOpen: boolean; onToggleSettings: () => void }) {
   const [win, setWin] = useState<Win | null>(null);
   const [maximized, setMaximized] = useState(false);
   const [version, setVersion] = useState("");
@@ -76,6 +76,10 @@ export default function TitleBar() {
         </div>
       )}
       <div className="tb-fill" data-tauri-drag-region />
+      <button className={`tb-btn tb-gear ${props.settingsOpen ? "on" : ""}`} aria-label="Настройки" title={props.settingsOpen ? "Закрыть настройки" : "Настройки"} onClick={props.onToggleSettings}>
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
+      </button>
+      {win && <span className="tb-sep" />}
       {win && (
         <div className="tb-controls">
           <button className="tb-btn" aria-label="Свернуть" onClick={() => win.minimize()}>
