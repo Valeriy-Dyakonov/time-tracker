@@ -79,6 +79,9 @@ pub struct Event {
     pub context: Option<String>,
     /// Rough size of the work: changed lines for git, 1 otherwise.
     pub weight: f64,
+    /// Who a chat message was addressed to (mentions, reply target or the other person in a DM).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub to: Option<String>,
 }
 
 /// One status change from the issue history (by anyone: QA moving a task to "Testing" matters too).

@@ -85,6 +85,7 @@ export function buildUserPrompt(
       key: e.issueKey,
       text: e.text.slice(0, 200),
       ctx: e.context ?? undefined,
+      to: e.to ?? undefined,
     })),
   });
 }

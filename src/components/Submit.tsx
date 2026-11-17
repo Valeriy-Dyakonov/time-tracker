@@ -87,7 +87,7 @@ export default function Submit({ a, canAi }: { a: Analysis; canAi: boolean }) {
   const line = (r: WorklogRow, showKey: boolean) => {
     const ro = done[rowId(r)];
     return (
-      <div className={`wl-row ${ro ? "done" : ""}`} key={rowId(r)}>
+      <div className={`wl-row ${showKey ? "by-key" : "by-date"} ${ro ? "done" : ""}`} key={rowId(r)}>
         <button className={`wl-check ${ro ? "on" : ""}`} aria-pressed={!!ro} onClick={() => toggle(r)} title={ro ? "Отмечено как внесённое — снять отметку" : "Отметить, что внёс в Tempo"}>
           <svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-6.5" /></svg>
         </button>

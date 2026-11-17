@@ -183,6 +183,7 @@ pub async fn fetch(
                     if ts >= start_ms && ts < end_ms {
                         touched = true;
                         events.push(Event {
+                            to: None,
                             source: "jira".into(),
                             ts,
                             issue_key: Some(key.clone()),
@@ -224,6 +225,7 @@ pub async fn fetch(
                     }
                     touched = true;
                     events.push(Event {
+                        to: None,
                         source: "jira".into(),
                         ts,
                         issue_key: Some(key.clone()),
@@ -246,6 +248,7 @@ pub async fn fetch(
                     }
                     touched = true;
                     events.push(Event {
+                        to: None,
                         source: "jira".into(),
                         ts,
                         issue_key: Some(key.clone()),

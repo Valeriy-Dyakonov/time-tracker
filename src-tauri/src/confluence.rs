@@ -130,6 +130,7 @@ pub async fn fetch(
                 if in_range(ts) {
                     created_event = true;
                     events.push(Event {
+                        to: None,
                         source: "confluence".into(),
                         ts,
                         issue_key: None,
@@ -147,6 +148,7 @@ pub async fn fetch(
                 let first = ver["number"].as_i64().unwrap_or(1) <= 1;
                 if in_range(ts) && !(first && created_event) {
                     events.push(Event {
+                        to: None,
                         source: "confluence".into(),
                         ts,
                         issue_key: None,

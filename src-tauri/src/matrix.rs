@@ -52,6 +52,28 @@ async fn state_str(client: &reqwest::Client, base: &str, token: &str, id: &str, 
     (!s.is_empty()).then(|| s.to_string())
 }
 
+/// user id -> display name of the room's current members (empty on error).
+async fn members(client: &reqwest::Client, base: &str, token: &str, id: &str) -> std::collections::HashMap<String, String> {
+    let path = format!("/_matrix/client/v3/rooms/{}/joined_members", urlencoding::encode(id));
+    let mut out = std::collections::HashMap::new();
+    if let Ok(v) = get(client, base, token, &path, &[]).await {
+        if let Some(joined) = v["joined"].as_object() {
+            for (uid, m) in joined {
+                out.insert(uid.clone(), m["display_name"].as_str().unwrap_or("").trim().to_string());
+            }
+        }
+    }
+    out
+}
+
+/// Display name for a user id, falling back to the localpart: @ivan:server -> ivan.
+fn display(members: &std::collections::HashMap<String, String>, uid: &str) -> String {
+    match members.get(uid) {
+        Some(d) if !d.is_empty() => d.clone(),
+        _ => uid.trim_start_matches('@').split(':').next().unwrap_or(uid).to_string(),
+    }
+}
+
 /// "Иван", "Иван и Мария", "Иван, Мария и ещё 3" — like Element names rooms by their members.
 fn members_label(mut names: Vec<String>) -> Option<String> {
     names.sort_by_key(|n| n.to_lowercase());
@@ -127,6 +149,12 @@ async fn room_events(
     end_ms: i64,
 ) -> Result<Vec<Event>, String> {
     let name = room_name(client, base, token, room_id, user_id).await;
+    let members = members(client, base, token, room_id).await;
+    // In a one-to-one room every message goes to the other person.
+    let dm_peer = {
+        let others: Vec<&String> = members.keys().filter(|u| u.as_str() != user_id).collect();
+        if others.len() == 1 { Some(display(&members, others[0])) } else { None }
+    };
     let filter = serde_json::json!({ "senders": [user_id], "types": ["m.room.message"] }).to_string();
     let path = format!("/_matrix/client/v3/rooms/{}/messages", urlencoding::encode(room_id));
 
@@ -160,6 +188,11 @@ async fn room_events(
             if body.trim().is_empty() {
                 continue;
             }
+            let mentioned: Vec<String> = e["content"]["m.mentions"]["user_ids"]
+                .as_array()
+                .map(|a| a.iter().filter_map(|x| x.as_str()).filter(|u| *u != user_id).map(|u| display(&members, u)).collect())
+                .unwrap_or_default();
+            let to = if mentioned.is_empty() { dm_peer.clone() } else { Some(mentioned.join(", ")) };
             out.push(Event {
                 source: "matrix".into(),
                 ts,
@@ -167,6 +200,7 @@ async fn room_events(
                 text: truncate(body, 240),
                 context: Some(name.clone()),
                 weight: 1.0,
+                to,
             });
         }
         match v["end"].as_str() {

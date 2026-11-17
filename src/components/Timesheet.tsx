@@ -144,7 +144,7 @@ function Overview({ a, review, onJump, onAi }: { a: Analysis; review: DayPlan[];
   const long = a.narrative.length > 360;
   return (
     <div className="overview">
-      <div className={`ov-top ${review.length ? "" : "single"}`}>
+      <div className="ov-left">
         <section className="card ov-card">
           <div className="ov-h"><h4>О чём период</h4><button className="linkbtn" onClick={onAi}>Разбор ИИ →</button></div>
           <p className={`ov-text ${long && !more ? "clamp" : ""}`}>{a.narrative}</p>
@@ -168,19 +168,19 @@ function Overview({ a, review, onJump, onAi }: { a: Analysis; review: DayPlan[];
           </section>
         )}
       </div>
-      <section className="card ov-card">
-        <div className="ov-h"><h4>Куда ушло время</h4><span className="muted">{rows.length} {plural(rows.length, "задача", "задачи", "задач")} · {fmtH(total)} ч</span></div>
-        <div className="dist-bar">
-          {rows.map((r) => <i key={r.key} style={{ flex: r.hours, background: keyColor(r.key) }} title={`${r.key} ${r.summary}: ${fmtH(r.hours)} ч`} />)}
-        </div>
-        <ul className="dist-legend">
+      <section className="card ov-card ov-dist">
+        <div className="ov-h"><h4>Куда ушло время</h4><span className="muted">{rows.length} {plural(rows.length, "задача", "задачи", "задач")} · {fmtH(total)}&nbsp;ч</span></div>
+        <ul className="dist-list">
           {rows.map((r) => (
             <li key={r.key}>
-              <i className="dot" style={{ background: keyColor(r.key) }} />
-              <IssueLink k={r.key} />
-              <span className="dl-title" title={r.summary}>{r.summary}</span>
-              <span className="dl-h">{fmtH(r.hours)}&nbsp;ч</span>
-              <span className="dl-p">{Math.round((r.hours / total) * 100)}%</span>
+              <div className="dl-top">
+                <i className="dot" style={{ background: keyColor(r.key) }} />
+                <IssueLink k={r.key} />
+                <span className="dl-title" title={r.summary}>{r.summary}</span>
+                <span className="dl-h">{fmtH(r.hours)}&nbsp;ч</span>
+                <span className="dl-p">{Math.round((r.hours / total) * 100)}%</span>
+              </div>
+              <div className="dl-bar"><i style={{ width: `${(r.hours / total) * 100}%`, background: keyColor(r.key) }} /></div>
             </li>
           ))}
         </ul>

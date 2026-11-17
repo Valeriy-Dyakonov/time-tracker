@@ -90,6 +90,7 @@ fn event(ts: i64, what: &str, i: &MrInfo, extra: &str, weight: f64) -> Event {
     // Branch and description go into `context`: the key search looks there when the title has none.
     let ctx = [i.branch.as_str(), i.desc.as_str()].iter().filter(|s| !s.is_empty()).cloned().collect::<Vec<_>>().join(" · ");
     Event {
+        to: None,
         source: "gitlab".into(),
         ts,
         issue_key: None,

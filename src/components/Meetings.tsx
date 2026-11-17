@@ -8,20 +8,18 @@ export default function Meetings({ d }: { d: DayPlan }) {
   return (
     <div className="meetings">
       <span className="mt-head">
-        📞 Звонки и встречи: {d.meetings.length} · {fmtMinutes(meetingMinutes(d))}
+        Звонки и встречи: {d.meetings.length} · {fmtMinutes(meetingMinutes(d))}
         {calls > 0 && calls !== d.meetings.length ? ` (звонков: ${calls})` : ""}
       </span>
-      <span className="mt-chips">
+      <ul className="mt-list">
         {d.meetings.map((m, i) => (
-          <span
-            key={i}
-            className={`mt-chip ${m.isCall ? "call" : ""} ${m.tentative ? "tent" : ""}`}
-            title={`${m.title}\n${meetingRange(m)} · ${m.minutes} мин${m.organizer ? "\nОрганизатор: " + m.organizer : ""}${m.location ? "\n" + m.location : ""}`}
-          >
-            <b>{meetingRange(m)}</b> {m.title}
-          </span>
+          <li key={i} className={`${m.isCall ? "call" : ""} ${m.tentative ? "tent" : ""}`} title={`${m.organizer ? "Организатор: " + m.organizer : ""}${m.location ? "\n" + m.location : ""}`}>
+            <b>{meetingRange(m)}</b>
+            <span className="mt-title">{m.isCall && <i className="mt-call">звонок</i>}{m.title}</span>
+            <span className="mt-min">{fmtMinutes(m.minutes)}</span>
+          </li>
         ))}
-      </span>
+      </ul>
     </div>
   );
 }

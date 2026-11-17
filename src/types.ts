@@ -70,6 +70,8 @@ export interface Evt {
   text: string;
   context: string | null;
   weight: number;
+  /** Chat only: who the message was addressed to. */
+  to?: string | null;
 }
 
 /** A Confluence page related to a task (context for the AI). */
@@ -120,6 +122,10 @@ export interface Evidence {
   source: Source;
   key: string | null;
   text: string;
+  /** Where it happened: chat room, git branch, MR branch... */
+  context?: string;
+  /** Chat only: who the message was addressed to. */
+  to?: string;
 }
 
 /** How to fill working days that have no activity at all. */

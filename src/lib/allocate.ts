@@ -205,6 +205,8 @@ export function toEvidence(events: Evt[], max = 200): Evidence[] {
     source: e.source,
     key: e.issueKey,
     text: (e.source === "calendar" && e.context ? `${e.text} (${e.context})` : e.text).slice(0, 180),
+    ...(e.source !== "calendar" && e.context ? { context: e.context.slice(0, 120) } : {}),
+    ...(e.to ? { to: e.to } : {}),
   }));
 }
 

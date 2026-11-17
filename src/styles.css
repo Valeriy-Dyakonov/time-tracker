@@ -569,3 +569,50 @@ a.ilink, .nw { white-space: nowrap; }
 .wk-card { background: var(--card); }
 .wk-card header { align-items: center; }
 @media (max-width: 1250px) { .wl-grid { grid-template-columns: 1fr; } .wl-row { grid-template-columns: 24px minmax(0, 1fr) auto; } .wl-desc { grid-column: 2 / 4; } }
+
+/* ===== round 3 ===== */
+/* AI review: summary over the whole width, one column */
+.narrative.full { max-width: none; }
+
+/* meetings: one per line */
+.meetings { gap: 6px; }
+.mt-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.mt-list li { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 3px 8px; border-radius: 6px; font-size: 13px; }
+.mt-list li:nth-child(odd) { background: color-mix(in srgb, var(--bg) 70%, transparent); }
+.mt-list li b { font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mt-list li.tent { opacity: .7; }
+.mt-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mt-call { font-style: normal; font-size: 11px; font-weight: 600; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 4px; padding: 0 5px; margin-right: 6px; }
+.mt-min { color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+/* evidence grouped by tool */
+.ev-groups { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.ev-group h6 { display: flex; align-items: center; gap: 7px; margin: 0 0 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text); }
+.ev-group h6 i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.ev-group.s-git h6 i { background: #8e63d8; } .ev-group.s-gitlab h6 i { background: #e24329; } .ev-group.s-jira h6 i { background: #2f6fed; }
+.ev-group.s-matrix h6 i { background: #1f9d55; } .ev-group.s-calendar h6 i { background: #c27c0e; } .ev-group.s-confluence h6 i { background: #12a0a8; }
+.ev-group h6 span { font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.ev-group ul { list-style: none; margin: 0; padding: 0 0 0 15px; border-left: 1px solid var(--line); margin-left: 3px; }
+.ev-group li { display: grid; grid-template-columns: 44px 110px minmax(0, 1fr); gap: 10px; align-items: baseline; padding: 3px 0; font-size: 13px; }
+.ev-group time { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12.5px; }
+.ev-key { white-space: nowrap; }
+.ev-body { display: flex; flex-direction: column; min-width: 0; }
+.ev-text { line-height: 1.45; overflow-wrap: anywhere; }
+.ev-ctx { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--muted); }
+.ev-to { color: var(--accent); font-weight: 500; }
+
+/* submit: compact rows, columns sized by content */
+.wl-row.by-date { grid-template-columns: 24px 74px auto minmax(160px, 1fr); }
+.wl-row.by-key { grid-template-columns: 24px minmax(0, 260px) auto minmax(160px, 1fr); }
+.wl-row.by-date .wl-what { gap: 6px; }
+@media (max-width: 1250px) { .wl-row.by-date, .wl-row.by-key { grid-template-columns: 24px minmax(0, 1fr) auto; } }
+
+/* hours overview: story + checks on the left, task list on the right */
+.overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.ov-left { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ov-review ul { max-height: 220px; }
+.dist-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; max-height: 360px; overflow: auto; padding-right: 4px; }
+.dl-top { display: grid; grid-template-columns: 9px auto minmax(0, 1fr) auto 36px; gap: 8px; align-items: center; font-size: 13.5px; }
+.dl-bar { height: 4px; margin: 4px 0 0 17px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.dl-bar i { display: block; height: 100%; border-radius: 4px; }
+@media (max-width: 1100px) { .overview { grid-template-columns: 1fr; } }

@@ -97,6 +97,7 @@ pub fn fetch(
             }
             let branch = p[2].trim_start_matches("refs/heads/").trim_start_matches("refs/remotes/");
             events.push(Event {
+                to: None,
                 source: "git".into(),
                 ts,
                 issue_key: None,
