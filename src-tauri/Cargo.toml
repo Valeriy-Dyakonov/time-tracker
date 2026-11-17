@@ -1,6 +1,6 @@
 [package]
 name = "worklog-tracker"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 [lib]
@@ -20,7 +20,13 @@ futures = "0.3"
 urlencoding = "2"
 roxmltree = "0.20"
 tokio = { version = "1", features = ["net", "time", "io-util"] }
+tauri-plugin-updater = "2"
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
+
+[features]
+# Release builds with auto-update: `tauri build --features updater --config src-tauri/tauri.release.conf.json`.
+# Without it the updater plugin is not started, so dev and plain builds need no keys.
+updater = []
 
 [profile.release]
 opt-level = "s"

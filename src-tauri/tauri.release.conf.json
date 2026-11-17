@@ -1,0 +1,16 @@
+{
+  "bundle": {
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFDRkU5MjdFNjQzQkJGREMKUldUY3Z6dGtmcEwrckpWYklDNEtDRmFJTVdQOXBVcUVFYkVGck40cllPcC9GZW90L3NGQW85VFAK",
+      "endpoints": [
+        "https://github.com/Valeriy-Dyakonov/time-tracker/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}
