@@ -4,6 +4,7 @@ import {
   buildPlan,
   distribute,
   fillerNote,
+  statusOnDate,
   heuristicWeights,
   isPlausibleKey,
   isWorkMessage,
@@ -210,5 +211,24 @@ describe("filler wording follows the task stage", () => {
       issues, 8, "neighbors",
     );
     expect(plan[2].tasks[0].notes[0]).toMatch(QA); // 04.11: status was Testing on 03.11
+  });
+});
+
+describe("status history", () => {
+  const day = (s: string) => new Date(`${s}T12:00:00`).getTime();
+  const issue = { key: "A-1", summary: "Задача", status: "Testing", issueType: "Task", transitions: [
+    { ts: day("2026-11-02"), from: "To Do", to: "In Progress", byMe: true },
+    { ts: day("2026-11-04"), from: "In Progress", to: "Testing", byMe: false },
+  ] };
+  it("knows the status on a given day", () => {
+    expect(statusOnDate(issue, "2026-11-01")).toBe("To Do");
+    expect(statusOnDate(issue, "2026-11-03")).toBe("In Progress");
+    expect(statusOnDate(issue, "2026-11-05")).toBe("Testing");
+    expect(statusOnDate({ ...issue, transitions: [] }, "2026-11-05")).toBeUndefined();
+  });
+  it("a status change made by someone else switches filler wording to QA", () => {
+    const act: DayActivity = { weights: { "A-1": 1 }, notes: {}, summary: "s", reasoning: "r", eventCount: 1, evidence: [{ ts: 0, source: "git", key: "A-1", text: "[r] x" }] };
+    const plan = buildPlan(["2026-11-03", "2026-11-04", "2026-11-05"], { "2026-11-03": act, "2026-11-05": { ...act } }, { "A-1": issue }, 8, "neighbors");
+    expect(plan[1].tasks[0].notes[0]).toMatch(/Тестирован|QA|окружения|стенд|релиз|инфраструктур|Проверка|проверка результата/); // 04.11: moved to Testing, although commits continue after
   });
 });

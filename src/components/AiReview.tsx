@@ -8,7 +8,7 @@ import { clock } from "./live";
 import IssueLink from "./IssueLink";
 import Meetings from "./Meetings";
 
-const SRC: Record<string, string> = { jira: "Jira", git: "Git", matrix: "Matrix", confluence: "Confluence", calendar: "Календарь" };
+const SRC: Record<string, string> = { jira: "Jira", git: "Git", gitlab: "GitLab", matrix: "Matrix", confluence: "Confluence", calendar: "Календарь" };
 
 /** Human-readable explanation: what the AI saw and why hours ended up where they did. */
 export default function AiReview({ a }: { a: Analysis }) {
@@ -52,7 +52,7 @@ export default function AiReview({ a }: { a: Analysis }) {
                 ))}
               </ul>
             )}
-            {d.summary && d.basis === "activity" && <p className="muted">Для табеля: {d.summary}</p>}
+            {d.summary && d.basis === "activity" && <p className="muted">Краткое описание дня: {d.summary}</p>}
             <Meetings d={d} />
             {d.evidence.length > 0 && (
               <details className="evidence">

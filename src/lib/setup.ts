@@ -7,6 +7,7 @@ export interface SetupState {
   calendar: boolean;
   matrix: boolean;
   git: boolean;
+  gitlab: boolean;
 }
 
 /** Which integrations are filled in. `stored` = which tokens exist in the OS keychain. */
@@ -18,5 +19,6 @@ export function setupState(s: Settings, stored: Record<string, boolean>): SetupS
     calendar: !!s.exchangeUrl.trim() && !!s.exchangeUser.trim() && !!stored.exchange_password,
     matrix: !!s.matrixHomeserver.trim() && !!s.matrixUserId.trim() && !!stored.matrix_token,
     git: s.gitRepos.length > 0,
+    gitlab: !!s.gitlabUrl.trim() && !!stored.gitlab_pat,
   };
 }

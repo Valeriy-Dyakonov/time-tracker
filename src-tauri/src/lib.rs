@@ -1,5 +1,6 @@
 mod calendar;
 mod confluence;
+mod gitlab;
 mod gitlog;
 mod jira;
 mod llm;
@@ -14,7 +15,7 @@ use std::fs;
 use std::path::PathBuf;
 use tauri::Manager;
 
-const SECRET_NAMES: [&str; 5] = ["jira_pat", "llm_key", "matrix_token", "confluence_pat", "exchange_password"];
+const SECRET_NAMES: [&str; 6] = ["jira_pat", "llm_key", "matrix_token", "confluence_pat", "exchange_password", "gitlab_pat"];
 
 fn settings_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
@@ -73,6 +74,7 @@ async fn test_connection(app: tauri::AppHandle, service: String) -> Result<Strin
         "calendar" => {
             calendar::test(&client, &s.exchange_url, &s.exchange_user, &need("exchange_password", "Почта")?).await
         }
+        "gitlab" => gitlab::test(&client, &s.gitlab_url, &need("gitlab_pat", "GitLab")?).await,
         "confluence" => {
             confluence::test(&client, &s.confluence_url, &need("confluence_pat", "Confluence")?).await
         }
@@ -179,6 +181,32 @@ async fn fetch_issue_pages(app: tauri::AppHandle, issues: Vec<IssueUrls>) -> Res
     Ok(out.into_iter().filter(|p| !p.pages.is_empty()).collect())
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GitlabOut {
+    me: String,
+    events: Vec<Event>,
+    /// Projects the read was limited to (empty = all projects).
+    scoped: Vec<String>,
+    /// Local-only mode was on, but no local repository points to this GitLab: everything was read.
+    fallback: bool,
+}
+
+/// Merge requests you opened/merged/approved/commented. Limited to the projects of the selected local repositories.
+#[tauri::command]
+async fn fetch_gitlab(app: tauri::AppHandle, start: String, end: String) -> Result<GitlabOut, String> {
+    let s = load(&app)?;
+    let (a, b) = util::range_ms(&start, &end)?;
+    let client = util::client(s.accept_invalid_certs)?;
+    let mut scoped = if s.gitlab_local_only { gitlog::remote_paths(&s.git_repos, &s.gitlab_url) } else { vec![] };
+    let fallback = s.gitlab_local_only && scoped.is_empty();
+    if fallback {
+        scoped = vec![];
+    }
+    let (me, events) = gitlab::fetch(&client, &s.gitlab_url, &need("gitlab_pat", "GitLab")?, a, b, &scoped).await?;
+    Ok(GitlabOut { me, events, scoped, fallback })
+}
+
 #[tauri::command]
 async fn fetch_confluence(app: tauri::AppHandle, start: String, end: String) -> Result<Vec<Event>, String> {
     let s = load(&app)?;
@@ -279,6 +307,7 @@ pub fn run() {
             lookup_issues,
             fetch_git,
             fetch_confluence,
+            fetch_gitlab,
             fetch_issue_pages,
             fetch_calendar,
             scan_git_repos,

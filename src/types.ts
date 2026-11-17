@@ -4,6 +4,8 @@ export interface Settings {
   llmBaseUrl: string;
   llmModel: string;
   confluenceUrl: string;
+  gitlabUrl: string;
+  gitlabLocalOnly: boolean;
   exchangeUrl: string;
   exchangeUser: string;
   calendarOnlyCalls: boolean;
@@ -25,6 +27,8 @@ export const defaultSettings: Settings = {
   llmBaseUrl: "",
   llmModel: "",
   confluenceUrl: "",
+  gitlabUrl: "",
+  gitlabLocalOnly: true,
   exchangeUrl: "",
   exchangeUser: "",
   calendarOnlyCalls: false,
@@ -39,7 +43,7 @@ export const defaultSettings: Settings = {
   acceptInvalidCerts: false,
 };
 
-export type Source = "jira" | "git" | "matrix" | "confluence" | "calendar";
+export type Source = "jira" | "git" | "gitlab" | "matrix" | "confluence" | "calendar";
 
 /** A meeting / call from the corporate calendar. */
 export interface Meeting {
@@ -80,6 +84,8 @@ export interface IssueInfo {
   parent?: string | null;
   epic?: string | null;
   links?: string[];
+  /** Status history from Jira, all authors, oldest first (only for tasks loaded by the period search). */
+  transitions?: { ts: number; from: string; to: string; byMe: boolean }[];
   /** Links from the description (used to find Confluence pages). */
   urls?: string[];
   /** Related Confluence pages: context only. */

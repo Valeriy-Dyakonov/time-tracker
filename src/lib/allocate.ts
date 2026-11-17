@@ -81,6 +81,7 @@ export function attachKeys(events: Evt[]): Evt[] {
 export function eventScore(e: Evt): number {
   if (e.source === "jira") return 2;
   if (e.source === "git") return 1 + 1.5 * Math.log10(1 + e.weight);
+  if (e.source === "gitlab") return Math.max(0.5, e.weight); // MR created/merged/approved/commented: weight set by the reader
   if (e.source === "calendar") return 0.5 + e.weight / 60; // weight = minutes; counts only when the title has a task key
   return 0.5;
 }
@@ -135,6 +136,14 @@ export function autoSummary(tasks: TaskHours[], issues: Record<string, IssueInfo
     .slice(0, 4)
     .map((t) => `${t.key}${issues[t.key] ? " " + issues[t.key].summary : ""}`)
     .join("; ");
+}
+
+/** Status of a task on a given day, from its Jira history; undefined when the history is unknown. */
+export function statusOnDate(issue: IssueInfo | undefined, date: string): string | undefined {
+  const tr = issue?.transitions;
+  if (!tr || tr.length === 0) return undefined;
+  const last = [...tr].reverse().find((t) => localDay(t.ts) <= date);
+  return last ? last.to : tr[0].from || undefined;
 }
 
 const short = (d: string) => formatRu(d).slice(0, 5);
@@ -249,8 +258,9 @@ export function buildPlan(
   const phaseOf = (key: string, date: string): Phase => {
     const before = (gitDays[key] ?? []).some((d) => d < date);
     const after = (gitDays[key] ?? []).some((d) => d > date);
-    const st = [...(statusAt[key] ?? [])].reverse().find((x) => x.d <= date);
-    if (st && QA_STATUS.test(st.to)) return "qa";
+    // The full Jira history (also changes made by QA or a lead) beats what only my own events show.
+    const st = statusOnDate(issues[key], date) ?? [...(statusAt[key] ?? [])].reverse().find((x) => x.d <= date)?.to;
+    if (st && QA_STATUS.test(st)) return "qa";
     if (before && !after) return "qa";
     if (before && after) return "dev";
     return "analysis";

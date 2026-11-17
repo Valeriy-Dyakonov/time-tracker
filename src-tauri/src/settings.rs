@@ -9,6 +9,9 @@ pub struct Settings {
     pub llm_base_url: String,
     pub llm_model: String,
     pub confluence_url: String,
+    pub gitlab_url: String,
+    /// Read merge requests only from projects of the locally selected repositories (matched by `origin`).
+    pub gitlab_local_only: bool,
     /// Exchange (OWA) address, e.g. https://mail.company.ru — EWS path is appended automatically.
     pub exchange_url: String,
     pub exchange_user: String,
@@ -38,6 +41,8 @@ impl Default for Settings {
             llm_base_url: String::new(),
             llm_model: String::new(),
             confluence_url: String::new(),
+            gitlab_url: String::new(),
+            gitlab_local_only: true,
             exchange_url: String::new(),
             exchange_user: String::new(),
             calendar_only_calls: false,
@@ -70,6 +75,16 @@ pub struct Event {
     pub weight: f64,
 }
 
+/// One status change from the issue history (by anyone: QA moving a task to "Testing" matters too).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StatusChange {
+    pub ts: i64,
+    pub from: String,
+    pub to: String,
+    pub by_me: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IssueInfo {
@@ -91,6 +106,9 @@ pub struct IssueInfo {
     /// Links found in the description (used to find related Confluence pages).
     #[serde(default)]
     pub urls: Vec<String>,
+    /// Status history (all authors), oldest first. Only for tasks loaded by the period search.
+    #[serde(default)]
+    pub transitions: Vec<StatusChange>,
     /// Creation / resolution time, ms since epoch: a task cannot be worked on before it exists or after it was resolved.
     #[serde(default)]
     pub created: Option<i64>,

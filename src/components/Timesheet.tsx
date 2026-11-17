@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Analysis, DayPlan, Source } from "../types";
-import { dayTotal, rebalance, STEP } from "../lib/allocate";
+import { dayTotal, rebalance, statusOnDate, STEP } from "../lib/allocate";
 import { formatRu, monthShort, plural, weekdayName } from "../lib/dates";
 import {
   fmtH, fmtMinutes, grandTotal, meetingMinutes, meetingRange, targetTotal, totalsByTask, weeksOf,
@@ -8,7 +8,7 @@ import {
 import IssueLink from "./IssueLink";
 import { CopyButton, keyColor } from "./ui";
 
-const SRC: Record<Source, string> = { jira: "Jira", git: "Git", matrix: "Matrix", confluence: "Confluence", calendar: "Календарь" };
+const SRC: Record<Source, string> = { jira: "Jira", git: "Git", gitlab: "GitLab", matrix: "Matrix", confluence: "Confluence", calendar: "Календарь" };
 const EPS = 0.001;
 
 const needsReview = (d: DayPlan) => !d.off && (d.basis !== "activity" || Math.abs(dayTotal(d) - d.target) > EPS);
@@ -44,7 +44,7 @@ export function Verdict({ a, onReview }: { a: Analysis; onReview: () => void }) 
   return (
     <section className="verdict">
       <div className={`vd ${ok ? "good" : "bad"}`}>
-        <div className="vd-big">{ok ? "Табель сходится" : diff > 0 ? `Лишних ${fmtH(diff)} ч` : `Не хватает ${fmtH(-diff)} ч`}</div>
+        <div className="vd-big">{ok ? "Часы сходятся с нормой" : diff > 0 ? `Лишних ${fmtH(diff)} ч` : `Не хватает ${fmtH(-diff)} ч`}</div>
         <div className="vd-sub">
           Распределено <b>{fmtH(total)} ч</b> из нормы <b>{fmtH(target)} ч</b> — {work.length} {plural(work.length, "рабочий день", "рабочих дня", "рабочих дней")} по {fmtH(a.hoursPerDay)} ч.
         </div>
@@ -247,7 +247,10 @@ function Day({ a, d, update }: { a: Analysis; d: DayPlan; update: (fn: (d: DayPl
                   <span className="muted">ч</span>
                 </span>
                 <span className="t-body">
-                  <span className="t-title" title={a.issues[t.key]?.summary}>{a.issues[t.key]?.summary}</span>
+                  <span className="t-title" title={a.issues[t.key]?.summary}>
+                    {a.issues[t.key]?.summary}
+                    {statusOnDate(a.issues[t.key], d.date) && <span className="t-status" title="Статус задачи в этот день по истории Jira">{statusOnDate(a.issues[t.key], d.date)}</span>}
+                  </span>
                   {t.notes[0] && <span className="t-note">{t.notes[0]}</span>}
                 </span>
               </div>

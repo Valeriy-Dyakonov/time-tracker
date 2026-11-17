@@ -21,7 +21,7 @@ export const api = {
   saveSettings: (settings: Settings) => invoke<void>("save_settings", { settings }),
   setSecret: (name: string, value: string) => invoke<void>("set_secret", { name, value }),
   secretsStatus: () => invoke<Record<string, boolean>>("secrets_status"),
-  testConnection: (service: "jira" | "llm" | "matrix" | "confluence" | "calendar") => invoke<string>("test_connection", { service }),
+  testConnection: (service: "jira" | "llm" | "gitlab" | "matrix" | "confluence" | "calendar") => invoke<string>("test_connection", { service }),
   openIssue: (key: string) => invoke<void>("open_issue", { key }),
   fetchJira: (start: string, end: string) => invoke<JiraResult>("fetch_jira", { start, end }),
   lookupIssues: (keys: string[]) => invoke<IssueInfo[]>("lookup_issues", { keys }),
@@ -33,6 +33,8 @@ export const api = {
   matrixLoginSso: () => invoke<string>("matrix_login_sso"),
   matrixLoginPassword: (user: string, password: string) => invoke<string>("matrix_login_password", { user, password }),
   listMatrixRooms: () => invoke<Room[]>("list_matrix_rooms"),
+  fetchGitlab: (start: string, end: string) =>
+    invoke<{ me: string; events: Evt[]; scoped: string[]; fallback: boolean }>("fetch_gitlab", { start, end }),
   fetchIssuePages: (issues: { key: string; urls: string[] }[]) =>
     invoke<{ key: string; pages: PageCtx[] }[]>("fetch_issue_pages", { issues }),
   llmChat: (system: string, user: string) => invoke<string>("llm_chat", { system, user }),

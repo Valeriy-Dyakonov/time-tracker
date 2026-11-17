@@ -150,3 +150,45 @@ pub fn scan(root: &str) -> Result<Vec<RepoInfo>, String> {
     out.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
     Ok(out)
 }
+
+/// `group/project` paths of the repositories' `origin` remotes that live on the given GitLab host.
+pub fn remote_paths(repos: &[String], gitlab_url: &str) -> Vec<String> {
+    let host = gitlab_url
+        .trim()
+        .trim_start_matches("https://")
+        .trim_start_matches("http://")
+        .split('/')
+        .next()
+        .unwrap_or("")
+        .split(':')
+        .next()
+        .unwrap_or("")
+        .to_lowercase();
+    let mut out: Vec<String> = vec![];
+    for r in repos {
+        let Ok(url) = git(r, &["remote".to_string(), "get-url".to_string(), "origin".to_string()]) else { continue };
+        if let Some(p) = parse_remote(url.trim(), &host) {
+            if !out.contains(&p) {
+                out.push(p);
+            }
+        }
+    }
+    out
+}
+
+/// https://host/a/b.git, ssh://git@host:2222/a/b.git, git@host:a/b.git  ->  a/b (lower case), only for `host`.
+pub fn parse_remote(url: &str, host: &str) -> Option<String> {
+    let (h, path) = if let Some(rest) = url.split_once("://").map(|x| x.1) {
+        let rest = rest.rsplit_once('@').map(|x| x.1).unwrap_or(rest);
+        let (h, p) = rest.split_once('/')?;
+        (h.split(':').next()?.to_string(), p.to_string())
+    } else {
+        let rest = url.rsplit_once('@').map(|x| x.1).unwrap_or(url);
+        let (h, p) = rest.split_once(':')?;
+        (h.to_string(), p.to_string())
+    };
+    if !h.eq_ignore_ascii_case(host) {
+        return None;
+    }
+    Some(path.trim_matches('/').trim_end_matches(".git").to_lowercase())
+}

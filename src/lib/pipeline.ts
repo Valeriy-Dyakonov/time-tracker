@@ -20,6 +20,7 @@ export interface RunOptions {
   hoursPerDay: number;
   useJira: boolean;
   useGit: boolean;
+  useGitlab: boolean;
   useMatrix: boolean;
   useConfluence: boolean;
   useCalendar: boolean;
@@ -96,7 +97,7 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
   log("info", `К заполнению ${dates.length} рабочих дн.${o.end > today ? " (будущие дни не заполняются)" : ""}. Анализ ИИ: ${aiOn ? "включён" : "выключен — будет эвристика"}.`);
 
   // The flow follows how a person would work it out: git -> Jira -> parents/epics -> wiki -> calendar -> chat -> match by time.
-  const STEPS = 7;
+  const STEPS = 8;
   const step = (n: number, title: string) => log("info", `━━ Шаг ${n} из ${STEPS}: ${title}`);
   const contextParents = new Set<string>();
   const pagesTried = new Set<string>();
@@ -179,8 +180,26 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
     log("info", "Git: пропущен (не выбран или нет репозиториев).");
   }
 
+  // ---- 2. GitLab: merge requests you opened, approved, commented
+  step(2, "GitLab: ваши MR и ревью");
+  if (o.useGitlab && settings.gitlabUrl) {
+    log("info", "GitLab: читаю MR, которые вы создали, одобрили или комментировали…");
+    try {
+      const r = await api.fetchGitlab(o.start, o.end);
+      events = events.concat(r.events);
+      const by = countBy(r.events, (e) => /\] (Создал MR|MR смёржен|Одобрил MR|Смёржил MR|Комментарий)/.exec(e.text)?.[1] ?? "другое").map(([k, n]) => `${k} ${n}`).join(", ");
+      const scope = r.scoped.length ? `только проекты ваших локальных репозиториев (${r.scoped.length}): ${r.scoped.slice(0, 4).join(", ")}${r.scoped.length > 4 ? "…" : ""}` : r.fallback ? "ни один локальный репозиторий не указывает на этот GitLab — прочитаны все проекты" : "все проекты";
+      log("ok", `GitLab (${r.me}): ${r.events.length} событий${r.events.length ? ` (${by})` : ""}; ${scope}.`);
+    } catch (e) {
+      warnings.push(`GitLab: ${e}`);
+      log("error", `GitLab: ${e}`);
+    }
+  } else {
+    log("info", "GitLab: пропущен (не настроен или выключен).");
+  }
+
   // ---- 2. Jira for the period
-  step(2, "Jira за период");
+  step(3, "Jira за период");
   try {
     log("info", "Jira: загружаю задачи, где вы исполнитель/автор, и ваши действия за период…");
     const r = await api.fetchJira(o.start, o.end);
@@ -195,15 +214,15 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
   }
 
   // ---- 3. commits <-> Jira
-  step(3, "сопоставление коммитов с задачами Jira");
+  step(4, "сопоставление коммитов с задачами Jira");
   await matchAndLookup("коммитов и Jira");
 
   // ---- 4. parents / epics / links
-  step(4, "родительские задачи, эпики и связанные тикеты — для контекста");
+  step(5, "родительские задачи, эпики и связанные тикеты — для контекста");
   await loadContext();
 
   // ---- 5. Confluence
-  step(5, "Confluence: страницы задач и ваши правки");
+  step(6, "Confluence: страницы задач и ваши правки");
   if (o.useConfluence && settings.confluenceUrl) {
     await loadPages();
     log("info", "Confluence: ищу страницы и комментарии, которые вы создали или правили…");
@@ -220,7 +239,7 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
   }
 
   // ---- 6. calendar
-  step(6, "календарь: встречи и звонки");
+  step(7, "календарь: встречи и звонки");
   if (o.useCalendar && settings.exchangeUrl) {
     log("info", `Календарь (Exchange): читаю встречи и звонки${settings.calendarOnlyCalls ? " (только звонки)" : ""}…`);
     try {
@@ -246,7 +265,7 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
   }
 
   // ---- 7. chat
-  step(7, "чаты Matrix: рабочие сообщения");
+  step(8, "чаты Matrix: рабочие сообщения");
   if (o.useMatrix && settings.matrixHomeserver) {
     log("info", `Matrix: читаю ваши сообщения (${settings.matrixExcludeRooms.length ? `все комнаты, кроме ${settings.matrixExcludeRooms.length} исключённых` : "все комнаты — можно исключить лишние в настройках"})…`);
     try {

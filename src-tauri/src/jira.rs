@@ -1,5 +1,5 @@
 //! Jira Server / Data Center, REST API v2, Personal Access Token. Read-only (GET).
-use crate::settings::{Event, IssueInfo};
+use crate::settings::{Event, IssueInfo, StatusChange};
 use crate::util::{parse_jira_time, trim_url, truncate};
 use serde::Serialize;
 use serde_json::Value;
@@ -112,6 +112,7 @@ fn parse_issue(it: &Value, epic: &Option<String>) -> IssueInfo {
         parent: f["parent"]["key"].as_str().map(String::from),
         epic: epic.as_ref().and_then(|e| f[e.as_str()].as_str()).map(String::from),
         links,
+        transitions: vec![],
         created: f["created"].as_str().and_then(parse_jira_time),
         resolved: f["resolutiondate"].as_str().and_then(parse_jira_time),
     }
@@ -256,7 +257,23 @@ pub async fn fetch(
             }
 
             // Keep every issue we saw: it is a candidate for mapping git/chat activity.
-            issues.push(parse_issue(it, &epic));
+            let mut info = parse_issue(it, &epic);
+            // Full status history, whoever made the change: needed to tell "in development" from "in testing".
+            for h in it["changelog"]["histories"].as_array().cloned().unwrap_or_default() {
+                let Some(ts) = h["created"].as_str().and_then(parse_jira_time) else { continue };
+                for i in h["items"].as_array().cloned().unwrap_or_default() {
+                    if i["field"].as_str() == Some("status") {
+                        info.transitions.push(StatusChange {
+                            ts,
+                            from: i["fromString"].as_str().unwrap_or("").to_string(),
+                            to: i["toString"].as_str().unwrap_or("").to_string(),
+                            by_me: is_me(&h["author"], &me),
+                        });
+                    }
+                }
+            }
+            info.transitions.sort_by_key(|t| t.ts);
+            issues.push(info);
             let _ = touched;
         }
 

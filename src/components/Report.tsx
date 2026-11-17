@@ -18,7 +18,7 @@ import { CopyButton, download, keyColor } from "./ui";
 
 type View = "weeks" | "submit" | "ai" | "log" | "export";
 const TABS: [View, string][] = [
-  ["weeks", "Табель"], ["submit", "Списание"], ["ai", "Разбор ИИ"], ["log", "Журнал"], ["export", "Экспорт"],
+  ["weeks", "Часы"], ["submit", "Списание"], ["ai", "Разбор ИИ"], ["log", "Журнал"], ["export", "Экспорт"],
 ];
 
 export default function Report(props: {
@@ -35,6 +35,7 @@ export default function Report(props: {
   const [hours, setHours] = useState(settings.hoursPerDay);
   const [useGit, setUseGit] = useState(true);
   const [useMatrix, setUseMatrix] = useState(true);
+  const [useGitlab, setUseGitlab] = useState(true);
   const [useConfluence, setUseConfluence] = useState(true);
   const [useCalendar, setUseCalendar] = useState(true);
   const [useAi, setUseAi] = useState(true);
@@ -56,6 +57,7 @@ export default function Report(props: {
           start, end, hoursPerDay: hours, useJira: true, fillMode,
           useGit: useGit && setup.git,
           useMatrix: useMatrix && setup.matrix,
+          useGitlab: useGitlab && setup.gitlab,
           useConfluence: useConfluence && setup.confluence,
           useCalendar: useCalendar && setup.calendar,
           useAi: useAi && setup.llm,
@@ -102,6 +104,7 @@ export default function Report(props: {
           <span className="muted">Источники:</span>
           <label className="check"><input type="checkbox" checked disabled /> Jira</label>
           {src("Git", useGit, setUseGit, setup.git)}
+          {src("GitLab", useGitlab, setUseGitlab, setup.gitlab)}
           {src("Confluence", useConfluence, setUseConfluence, setup.confluence)}
           {src("Календарь", useCalendar, setUseCalendar, setup.calendar)}
           {src("Matrix", useMatrix, setUseMatrix, setup.matrix)}
@@ -157,7 +160,7 @@ export default function Report(props: {
           {setup.jira ? (
             <>
               <h3>Всё готово</h3>
-              <p className="muted">Выберите период и нажмите «Проанализировать». Вы увидите, как день за днём идёт анализ, а затем получите табель по неделям и человеческий разбор от ИИ.</p>
+              <p className="muted">Выберите период и нажмите «Проанализировать». Вы увидите, как день за днём идёт анализ, а затем получите часы по дням и неделям, готовые значения для списания и человеческий разбор от ИИ.</p>
             </>
           ) : (
             <>

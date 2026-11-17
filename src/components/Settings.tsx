@@ -6,9 +6,9 @@ import Help from "./Help";
 import { Field } from "./ui";
 
 const DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
-type Section = "jira" | "llm" | "git" | "matrix" | "confluence" | "calendar" | "work";
-type Svc = "jira" | "llm" | "matrix" | "confluence" | "calendar";
-const EMPTY_TOK = { jira_pat: "", llm_key: "", matrix_token: "", confluence_pat: "", exchange_password: "" };
+type Section = "jira" | "llm" | "git" | "gitlab" | "matrix" | "confluence" | "calendar" | "work";
+type Svc = "jira" | "llm" | "gitlab" | "matrix" | "confluence" | "calendar";
+const EMPTY_TOK = { jira_pat: "", llm_key: "", matrix_token: "", confluence_pat: "", exchange_password: "", gitlab_pat: "" };
 
 function Status({ text }: { text?: string }) {
   if (!text) return null;
@@ -140,6 +140,7 @@ export default function Settings(props: { settings: S; onSaved: (s: S) => void }
     { id: "jira", label: "Jira", sub: ready.jira ? "подключена" : "обязательно", ok: ready.jira, req: true },
     { id: "llm", label: "Корпоративный ИИ", sub: ready.llm ? s.llmModel : "рекомендуется", ok: ready.llm },
     { id: "git", label: "Git", sub: ready.git ? `репозиториев: ${s.gitRepos.length}` : "необязательно", ok: ready.git },
+    { id: "gitlab", label: "GitLab", sub: ready.gitlab ? (s.gitlabLocalOnly ? "MR ваших репозиториев" : "все проекты") : "необязательно", ok: ready.gitlab },
     { id: "matrix", label: "Matrix", sub: ready.matrix ? (s.matrixExcludeRooms.length ? `исключено: ${s.matrixExcludeRooms.length}` : "все комнаты") : "необязательно", ok: ready.matrix },
     { id: "confluence", label: "Confluence", sub: ready.confluence ? "подключён" : "необязательно", ok: ready.confluence },
     { id: "calendar", label: "Почта и календарь", sub: ready.calendar ? (s.calendarOnlyCalls ? "только звонки" : "звонки и встречи") : "необязательно", ok: ready.calendar },
@@ -309,6 +310,32 @@ export default function Settings(props: { settings: S; onSaved: (s: S) => void }
       </section>
       )}
 
+      {section === "gitlab" && (
+      <section className="card">
+        <h3>GitLab <span className="badge opt">необязательно</span></h3>
+        <Field label="Адрес GitLab" hint="MR, которые вы создали, одобрили или комментировали при ревью. В названии или ветке MR обычно есть ключ задачи, так ревью попадает в нужный день и на нужную задачу.">
+          <input value={s.gitlabUrl} placeholder="https://gitlab.company.ru" onChange={(e) => set("gitlabUrl", e.target.value)} />
+        </Field>
+        {tokenField("gitlab_pat", "Personal Access Token")}
+        <label className="check" style={{ margin: "4px 0 12px" }}>
+          <input type="checkbox" checked={s.gitlabLocalOnly} onChange={(e) => set("gitlabLocalOnly", e.target.checked)} />
+          Читать только проекты выбранных локальных репозиториев (по адресу origin)
+        </label>
+        <Help
+          title="Где взять токен GitLab"
+          steps={[
+            "Откройте GitLab в браузере и войдите.",
+            "Нажмите на аватар → «Edit profile» (Preferences) → слева «Access Tokens».",
+            "Нажмите «Add new token», задайте имя и срок действия.",
+            "Отметьте только право read_api (чтение) и создайте токен.",
+            "Скопируйте токен сразу (потом его не показать) и вставьте сюда.",
+          ]}
+          note="Токен нужен только для чтения. Если у вас в GitLab нельзя создавать личные токены, попросите администратора."
+        />
+        <div className="row"><button className="btn small" onClick={() => test("gitlab")}>Проверить подключение</button><Status text={msg.gitlab} /></div>
+      </section>
+      )}
+
       {section === "confluence" && (
       <section className="card">
         <h3>Confluence <span className="badge opt">необязательно</span></h3>
@@ -350,7 +377,7 @@ export default function Settings(props: { settings: S; onSaved: (s: S) => void }
             "Читаются только время, тема, организатор и место встреч за период. Текст приглашений и список участников не запрашиваются.",
             "Пропускаются отменённые и отклонённые встречи, события со статусом «Свободен» и «Нет на месте», события на весь день и блоки длиннее 10 часов.",
             "Время звонков остаётся внутри рабочего дня и не вычитается. Тема встречи уходит ИИ как контекст (по ней он может понять, к какой задаче относится день). Если в теме есть ключ вроде PAY-123, встреча слегка добавит вес этой задаче.",
-            "В табеле звонки и встречи отмечены отдельной строкой под каждым днём; их же можно выгрузить в CSV и Markdown.",
+            "В отчёте звонки и встречи отмечены отдельной строкой под каждым днём; их же можно выгрузить в CSV и Markdown.",
           ]}
           note="Если «Проверить подключение» отвечает 401, хотя пароль верный: либо нужен другой формат логина, либо на сервере включена двухфакторная защита или только NTLM/Kerberos. Тогда напишите мне текст ошибки — подберём вариант."
         />
