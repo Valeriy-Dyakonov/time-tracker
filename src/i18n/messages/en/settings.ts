@@ -206,8 +206,8 @@ const en: typeof ru = {
     insecureTlsHint: "Turn on only if Test connection shows a certificate error (company services often use self-signed ones).",
   },
   language: {
-    title: "Язык · Language",
-    tip: "Язык интерфейса, отчётов и текстов от ИИ. Interface, report and AI text language.",
+    title: "Language",
+    tip: "Language of the interface, reports and AI texts. Applied immediately. A report built earlier keeps its language — run the analysis again.",
   },
   appearance: {
     title: "Appearance",

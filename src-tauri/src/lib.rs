@@ -9,6 +9,11 @@ mod settings;
 mod sources;
 mod util;
 
+// The updater plugin must stay a regular dependency: capabilities/default.json grants `updater:default`,
+// which tauri-build validates in every build. It is only started with the `updater` feature.
+#[cfg(not(feature = "updater"))]
+use tauri_plugin_updater as _;
+
 use commands::{atlassian, calendar, code, connection, llm, matrix, settings as config};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
