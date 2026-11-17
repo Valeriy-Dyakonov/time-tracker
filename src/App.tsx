@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api, inTauri } from "./api";
 import { JiraUrlContext } from "./components/IssueLink";
 import Report from "./components/Report";
-import UpdateBanner from "./components/UpdateBanner";
+import TitleBar from "./components/TitleBar";
 import Settings from "./components/Settings";
 import { setupState } from "./lib/setup";
 import { defaultSettings, type Analysis, type Settings as S } from "./types";
@@ -48,6 +48,9 @@ export default function App() {
   if (!ready) return null;
 
   return (
+    <div className="shell">
+    <TitleBar />
+    <div className="scroll">
     <div className="app">
       <header className="topbar">
         <h1>Worklog Tracker</h1>
@@ -56,7 +59,6 @@ export default function App() {
           <button className={tab === "settings" ? "tab active" : "tab"} onClick={() => setTab("settings")}>Настройки</button>
         </nav>
       </header>
-      <UpdateBanner />
       <JiraUrlContext.Provider value={settings.jiraUrl}>
       <main>
         {tab === "settings" ? (
@@ -66,6 +68,8 @@ export default function App() {
         )}
       </main>
       </JiraUrlContext.Provider>
+    </div>
+    </div>
     </div>
   );
 }
