@@ -13,7 +13,7 @@ export const matrixSource: SourceCollector = {
   enabled: ({ o, settings }) => o.useMatrix && !!settings.matrixHomeserver,
   async collect(ctx) {
     ctx.log("info", m().reading(ctx.settings.matrixExcludeRooms.length));
-    const all = await api.fetchMatrix(ctx.o.start, ctx.o.end);
+    const all = await api.fetchMatrix(ctx.range.start, ctx.range.end);
     const work = all.filter((e) => isWorkMessage(e.text));
     ctx.events = ctx.events.concat(work);
     const rooms = joinCounts(countBy(work, (e) => e.context ?? "?").slice(0, 5));

@@ -115,6 +115,9 @@ const en: typeof ru = {
   },
 
   tempo: {
+    step: "reading days already filled in Jira Tempo",
+    allFilled: "Every working day of the period is already filled in Tempo: no collection or analysis needed.",
+    narrowed: (start: string, end: string, n: number) => `Jira, GitLab, chat, calendar and Confluence are read only for ${start} – ${end}: ${n} working days there are not filled. Git covers the whole period to show the tasks of neighbouring days.`,
     filled: (n: number, total: number, list: string) =>
       `Already filled in Tempo: ${n} of ${total} working days (${list}); taken from there as is, without analysis or AI.`,
     none: "No fully filled days in Tempo for the period: every day is analysed.",

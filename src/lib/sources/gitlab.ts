@@ -12,7 +12,7 @@ export const gitlabSource: SourceCollector = {
   enabled: ({ o, settings }) => o.useGitlab && !!settings.gitlabUrl,
   async collect(ctx) {
     ctx.log("info", m().reading);
-    const r = await api.fetchGitlab(ctx.o.start, ctx.o.end);
+    const r = await api.fetchGitlab(ctx.range.start, ctx.range.end);
     ctx.events = ctx.events.concat(r.events);
     const by = joinCounts(countBy(r.events, (e) => m().kinds[e.kind as keyof ReturnType<typeof m>["kinds"]] ?? m().other));
     const scope = r.scoped.length ? m().scoped(r.scoped.length, listHead(r.scoped, 4)) : r.fallback ? m().fallback : m().all;

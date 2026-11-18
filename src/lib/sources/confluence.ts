@@ -12,7 +12,7 @@ export const confluenceSource: SourceCollector = {
   async collect(ctx) {
     await ctx.enrich.loadPages(ctx);
     ctx.log("info", m().reading);
-    const c = await api.fetchConfluence(ctx.o.start, ctx.o.end);
+    const c = await api.fetchConfluence(ctx.range.start, ctx.range.end);
     ctx.events = ctx.events.concat(c);
     ctx.log("ok", m().done(nEv(c.length)));
   },

@@ -12,6 +12,8 @@ export const gitSource: SourceCollector = {
   enabled: ({ o, settings }) => o.useGit && settings.gitRepos.length > 0,
   async collect(ctx) {
     ctx.log("info", m().reading(ctx.settings.gitRepos.length));
+    // The whole period, not just the unfilled days: local history is cheap, and commits on days already filled in
+    // Tempo still tell which tasks the neighbouring empty days are likely about.
     const g = await api.fetchGit(ctx.o.start, ctx.o.end);
     ctx.events = ctx.events.concat(g);
     const perRepo = joinCounts(countBy(g, (e) => /^\[([^\]]+)\]/.exec(e.text)?.[1] ?? "?"));

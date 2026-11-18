@@ -29,6 +29,7 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
   const cal = await loadWorkCalendar(settings, o.start, o.end, o.hoursPerDay, log);
   const ctx: RunContext = {
     settings, o, log,
+    range: { start: o.start, end: o.end },
     issues: {}, events: [], meetings: [],
     warnings: cal.warning ? [cal.warning] : [],
     targets: cal.targets,
@@ -44,19 +45,30 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
   if (ctxProjects.size) log("info", m.contextProjects([...ctxProjects].join(", ")));
   log("info", m.toFill(dates.length, o.end > localDate(new Date()), ctx.aiOn));
 
-  for (const [i, step] of COLLECT_STEPS.entries()) {
-    log("info", m.step(i + 1, COLLECT_STEPS.length, step.title));
-    await step.run(ctx);
-  }
-  await ctx.enrich.secondPass(ctx);
-  ctx.enrich.dropUnknownKeys(ctx);
-  const notMine = [...new Set(ctx.events.map((e) => e.issueKey).filter((k): k is string => !!k && ctx.issues[k]?.assignedToMe === false))];
-  if (notMine.length) log("info", m.notAssigned(notMine.length, notMine.slice(0, 8).join(", ")));
+  // Step 1 is Tempo: days already filled there are taken as they are, everything after works only on the rest.
+  const steps = COLLECT_STEPS.length + 1;
+  log("info", m.step(1, steps, msg().tempo.step));
   const tempo = await loadTempoDays(ctx, dates);
+  const todo = dates.filter((d) => !tempo.has(d));
+
+  if (todo.length === 0) {
+    log("ok", msg().tempo.allFilled);
+  } else {
+    ctx.range = { start: todo[0], end: todo[todo.length - 1] };
+    if (ctx.range.start !== o.start || ctx.range.end !== o.end) log("info", msg().tempo.narrowed(formatDate(ctx.range.start), formatDate(ctx.range.end), todo.length));
+    for (const [i, step] of COLLECT_STEPS.entries()) {
+      log("info", m.step(i + 2, steps, step.title));
+      await step.run(ctx);
+    }
+    await ctx.enrich.secondPass(ctx);
+    ctx.enrich.dropUnknownKeys(ctx);
+    const notMine = [...new Set(ctx.events.map((e) => e.issueKey).filter((k): k is string => !!k && ctx.issues[k]?.assignedToMe === false))];
+    if (notMine.length) log("info", m.notAssigned(notMine.length, notMine.slice(0, 8).join(", ")));
+  }
   await loadTempoIssues(ctx, tempo);
   log("info", m.daysStage);
 
-  const r = await analyseDays(ctx, dates.filter((d) => !tempo.has(d)), h.onDays);
+  const r = await analyseDays(ctx, todo, h.onDays);
   for (const [d, ws] of tempo) r.activity[d] = tempoActivity(ws);
   const planned = buildPlan(dates, r.activity, ctx.issues, o.hoursPerDay, o.fillMode, r.meetingsByDay, ctx.targets)
     .map((d) => (tempo.has(d.date) ? tempoDay(d, tempo.get(d.date)!, ctx) : d));

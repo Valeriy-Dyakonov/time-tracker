@@ -115,6 +115,9 @@ export default {
   },
 
   tempo: {
+    step: "чтение уже заполненных дней из Jira Tempo",
+    allFilled: "Все рабочие дни периода уже заполнены в Tempo — сбор данных и анализ не нужны.",
+    narrowed: (start: string, end: string, n: number) => `Jira, GitLab, чат, календарь и Confluence читаются только за ${start} – ${end}: там ${n} незаполненных рабочих дн. Git — за весь период, чтобы видеть задачи соседних дней.`,
     filled: (n: number, total: number, list: string) =>
       `Уже заполнено в Tempo: ${n} из ${total} рабочих дн. (${list}) — берутся оттуда как есть, без анализа и ИИ.`,
     none: "В Tempo за период нет полностью заполненных дней — анализируются все дни.",

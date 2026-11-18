@@ -24,6 +24,8 @@ export interface RunHandlers {
 export interface RunContext {
   settings: Settings;
   o: RunOptions;
+  /** Dates the remote sources are read for: the period minus the days already filled in Tempo at its edges (git reads the whole period). */
+  range: { start: string; end: string };
   issues: Record<string, IssueInfo>;
   events: Evt[];
   meetings: Meeting[];

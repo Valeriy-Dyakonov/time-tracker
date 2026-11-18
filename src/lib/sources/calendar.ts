@@ -23,7 +23,7 @@ export const calendarSource: SourceCollector = {
   enabled: ({ o, settings }) => o.useCalendar && !!settings.exchangeUrl,
   async collect(ctx) {
     ctx.log("info", m().reading(ctx.settings.calendarOnlyCalls));
-    const meetings = await api.fetchCalendar(ctx.o.start, ctx.o.end);
+    const meetings = await api.fetchCalendar(ctx.range.start, ctx.range.end);
     ctx.meetings = meetings;
     const calls = meetings.filter((x) => x.isCall).length;
     ctx.log("ok", m().done(count(meetings.length, m().meetings), calls, fmtMinutes(meetings.reduce((s, x) => s + x.minutes, 0))));

@@ -14,7 +14,7 @@ export const jiraSource: SourceCollector = {
   enabled: () => true,
   async collect(ctx) {
     ctx.log("info", m().reading);
-    const r = await api.fetchJira(ctx.o.start, ctx.o.end);
+    const r = await api.fetchJira(ctx.range.start, ctx.range.end);
     for (const i of r.issues) ctx.issues[i.key] = i;
     ctx.events = ctx.events.concat(r.events);
     const comments = r.events.filter((e) => e.kind === "comment").length;
