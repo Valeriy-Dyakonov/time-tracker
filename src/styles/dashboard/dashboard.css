@@ -118,8 +118,11 @@
 .drawer-body { overflow: auto; padding: 20px 24px 32px; display: flex; flex-direction: column; gap: 16px; }
 .drawer-title { margin: 0; font-size: 21px; line-height: 1.35; font-weight: 650; }
 .drawer-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: -6px; }
-.chip { font-size: 12px; padding: 3px 10px; border-radius: var(--r-pill); background: var(--card); border: 1px solid var(--line); color: var(--text); }
-.chip.soft { color: var(--muted); }
+.chip { --c: var(--muted); font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: var(--r-pill); color: var(--c); background: color-mix(in srgb, var(--c) 12%, var(--card)); border: 1px solid color-mix(in srgb, var(--c) 30%, transparent); }
+.chip.prio-top { --c: var(--bad); } .chip.prio-high { --c: var(--warn); } .chip.prio-mid { --c: var(--accent); } .chip.prio-low { --c: var(--muted); }
+.chip.c-project { --c: var(--text); font-weight: 500; }
+.chip.c-release { --c: var(--good); }
+.chip.c-component { --c: var(--stage-review); }
 .drawer-parents { display: flex; flex-direction: column; gap: 6px; }
 .parent { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--card); font: inherit; font-size: 13px; color: var(--text); cursor: pointer; text-align: left; }
 .parent:hover { border-color: var(--accent); }

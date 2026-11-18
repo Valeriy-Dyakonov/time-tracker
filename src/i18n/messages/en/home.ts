@@ -7,10 +7,12 @@ const home: typeof ru = {
     worklog: {
       name: "Worklog Tracker",
       desc: "Collects a period's activity from Jira, git, chat and calendar and splits the hours by task for Tempo and your own system.",
+      points: ["Hours per day and task, explained by AI", "Logging to Tempo, checked against Jira", "Weekly text for your own system"],
     },
     dashboard: {
       name: "Work Dashboard",
-      desc: "Your Jira tasks by status: what is in progress, what is waiting, what is overdue and what was just closed.",
+      desc: "Your Jira tasks on one board: in progress, in review, in testing and on the way to release.",
+      points: ["Developer, QA and lead profiles", "Tasks grouped under their epics", "Read a task right in the app"],
     },
   },
   needsJira: "Needs Jira: set up the connection",

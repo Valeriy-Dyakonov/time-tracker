@@ -4,7 +4,8 @@ import { api } from "@/shared/api";
 import { useStored } from "@/shared/hooks/useStored";
 import { localDate } from "@/shared/lib/dates";
 import type { DashIssue, DashPerson, DashRelated, IssueDetail } from "@/shared/types";
-import { Button } from "@/shared/ui";
+import { Button, keyColor } from "@/shared/ui";
+import { priorityLevel } from "../lib/priority";
 import { stageOf } from "../lib/stages";
 import { Avatar } from "./Avatar";
 import { ago } from "./IssueCard";
@@ -87,11 +88,11 @@ export function IssueDrawer(props: { issueKey: string; context: Map<string, Dash
             <>
               <h2 className="drawer-title">{data.summary}</h2>
               <div className="drawer-chips">
-                {data.priority && <span className="chip">{data.priority}</span>}
-                <span className="chip">{data.projectName}</span>
-                {data.fixVersions.map((v) => <span key={v} className="chip">{d.release}: {v}</span>)}
-                {data.components.map((c) => <span key={c} className="chip">{c}</span>)}
-                {data.labels.map((l) => <span key={l} className="chip soft">#{l}</span>)}
+                {data.priority && <span className={`chip prio-${priorityLevel(data.priority)}`}>{data.priority}</span>}
+                <span className="chip c-project">{data.projectName}</span>
+                {data.fixVersions.map((v) => <span key={v} className="chip c-release">{d.release}: {v}</span>)}
+                {data.components.map((c) => <span key={c} className="chip c-component">{c}</span>)}
+                {data.labels.map((l) => <span key={l} className="chip c-label" style={{ ["--c" as string]: keyColor(l) }}>#{l}</span>)}
               </div>
 
               {(data.epic || (data.parent && data.parent !== data.epic)) && (
