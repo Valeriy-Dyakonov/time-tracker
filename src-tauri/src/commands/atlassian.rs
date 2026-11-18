@@ -23,6 +23,13 @@ pub async fn lookup_issues(app: tauri::AppHandle, keys: Vec<String>) -> AppResul
     jira::lookup(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &keys).await
 }
 
+/// "Work dashboard": the user's open tasks and the ones resolved recently.
+#[tauri::command]
+pub async fn jira_my_issues(app: tauri::AppHandle) -> AppResult<Vec<jira::dashboard::DashIssue>> {
+    let c = Ctx::load(&app)?;
+    jira::dashboard::my_issues(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?).await
+}
+
 /// The user's own worklogs in the period, to compare with the plan in the "Списание" tab.
 #[tauri::command]
 pub async fn jira_worklogs(app: tauri::AppHandle, start: String, end: String) -> AppResult<Vec<Worklog>> {

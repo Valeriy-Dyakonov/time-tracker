@@ -1,6 +1,6 @@
 # Worklog Tracker — notes for agents and contributors
 
-Desktop app (Tauri 2 + React/TypeScript, Rust backend) that collects a person's activity (Jira, git, GitLab, Matrix, Confluence, Exchange calendar) for a period and turns it into hours per day/task for Jira Tempo and a weekly text report. The UI is localized (Russian and English); code, comments and commit messages are English.
+Desktop app (Tauri 2 + React/TypeScript, Rust backend). The start screen offers several tools sharing one settings screen (`components/products.tsx`): **Worklog Tracker** collects a person's activity (Jira, git, GitLab, Matrix, Confluence, Exchange calendar) for a period and turns it into hours per day/task for Jira Tempo and a weekly text report; **Work Dashboard** shows the user's Jira tasks by status. The UI is localized (Russian and English); code, comments and commit messages are English.
 
 ## Commands
 
@@ -32,6 +32,7 @@ Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests
   - `allocate.ts` — re-exports for old import paths; add new code to the modules above, not here.
   - `report.ts` (totals, CSV/Markdown), `submit.ts` (Tempo rows, weekly text), `submitEdits.ts` (user edits of the rows), `limits.ts` (day/period norms), `worklogSync.ts` (plan vs Jira), `tempoWeek.ts` (weekly text from Tempo), `prompt.ts` (LLM prompts), `setup.ts` (which sources are configured), `dates.ts`.
 - `components/`:
+  - `products.tsx` — tools on the start screen (`home/Home.tsx`); `dashboard/` — "Work Dashboard": the user's Jira tasks by status (`lib/dashboard.ts`, Rust `sources/jira/dashboard.rs`).
   - `ui/` — UI kit: `kit.tsx` (Button, Card, Segmented, Switch, Badge), `basics.tsx` (Field, InfoTip, Help, Title, keyColor, download), `Copy.tsx`, `Stepper.tsx`; import from `components/ui`.
   - `report/` — report screen, filters, view tabs, export; `analysisSources.ts` is the registry of toggleable sources.
   - `hours/` — "Часы" tab: stats, overview, weeks, day accordion, by-task; shared helpers in `review.ts`.

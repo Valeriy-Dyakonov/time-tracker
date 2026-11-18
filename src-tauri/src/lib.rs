@@ -32,6 +32,7 @@ pub fn run() {
             atlassian::open_issue,
             atlassian::lookup_issues,
             atlassian::jira_worklogs,
+            atlassian::jira_my_issues,
             atlassian::jira_add_worklog,
             atlassian::jira_update_worklog,
             atlassian::jira_delete_worklog,

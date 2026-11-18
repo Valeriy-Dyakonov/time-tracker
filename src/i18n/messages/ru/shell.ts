@@ -1,7 +1,5 @@
 export default {
   app: {
-    backToReport: "Вернуться к отчёту",
-    report: "Отчёт",
     settings: "Настройки",
     desktopOnly: "Настройки доступны только в десктопном приложении.",
   },

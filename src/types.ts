@@ -109,6 +109,24 @@ export interface IssueInfo {
   assignedToMe?: boolean;
 }
 
+/** A task of the user for the "Work dashboard" (open, or resolved recently). */
+export interface DashIssue {
+  key: string;
+  summary: string;
+  status: string;
+  /** Jira status category: "new", "indeterminate" or "done". */
+  category: string;
+  priority: string;
+  issueType: string;
+  project: string;
+  projectName: string;
+  parent: string | null;
+  updated: number | null;
+  resolved: number | null;
+  /** YYYY-MM-DD */
+  due: string | null;
+}
+
 /** A worklog of the user in Jira (Tempo on Server/DC keeps its worklogs there). */
 export interface JiraWorklog {
   id: string;

@@ -7,5 +7,7 @@ import review from "./ru/review";
 import settings from "./ru/settings";
 import analysis from "./ru/analysis";
 import errors from "./ru/errors";
+import home from "./ru/home";
+import dashboard from "./ru/dashboard";
 
-export const ru = { common, shell, report, hours, submit, review, settings, analysis, errors };
+export const ru = { common, shell, report, hours, submit, review, settings, analysis, errors, home, dashboard };

@@ -1,0 +1,13 @@
+/* Start screen: one tile per tool */
+.home { max-width: 980px; margin: 24px auto 0; }
+.home h2 { margin: 0 0 4px; font-size: 22px; }
+.home > p { margin: 0 0 20px; }
+.home-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.home-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left; padding: 22px 22px 18px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--card); color: var(--text); font: inherit; cursor: pointer; transition: border-color var(--ease), transform var(--ease), box-shadow var(--ease); }
+.home-tile:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 12%, transparent); }
+.home-tile b { font-size: 17px; }
+.home-ic { width: 44px; height: 44px; border-radius: var(--r-lg); display: grid; place-items: center; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.home-ic svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.home-desc { color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+.home-warn { font-size: 12px; font-weight: 600; color: var(--warn); }
+.home-open { margin-top: auto; padding-top: 6px; font-size: 13px; font-weight: 600; color: var(--accent); }

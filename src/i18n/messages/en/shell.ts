@@ -2,8 +2,6 @@ import type ru from "../ru/shell";
 
 const en: typeof ru = {
   app: {
-    backToReport: "Back to the report",
-    report: "Report",
     settings: "Settings",
     desktopOnly: "Settings are available in the desktop app only.",
   },

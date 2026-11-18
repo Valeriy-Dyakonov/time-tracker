@@ -19,3 +19,7 @@
 .tb-gear svg { width: 16px; height: 16px; stroke-width: 1.6; }
 .tb-gear:hover, .tb-gear.on { color: var(--accent); }
 .tb-gear.on { background: var(--bg); }
+.tb-home { width: 40px; color: var(--muted); cursor: pointer !important; }
+.tb-home svg { width: 15px; height: 15px; stroke-width: 1.6; }
+.tb-home:hover { color: var(--accent); }
+.tb-home + .tb-title { padding-left: 2px; }

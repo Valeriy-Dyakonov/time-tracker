@@ -8,8 +8,17 @@ type Win = { minimize(): Promise<void>; toggleMaximize(): Promise<void>; close()
 const RECHECK_MS = 4 * 60 * 60 * 1000;
 
 /** Custom window title bar (the native one is off via "decorations": false): app name, version, update button, window controls. */
-export default function TitleBar(props: { settingsOpen: boolean; onToggleSettings: () => void }) {
-  const t = useT().shell.titlebar;
+export default function TitleBar(props: {
+  /** Current tool; the bare app name on the start screen. */
+  title?: string;
+  /** Back to the start screen; absent when already there. */
+  onHome?: () => void;
+  settingsOpen: boolean;
+  onToggleSettings: () => void;
+}) {
+  const all = useT();
+  const t = all.shell.titlebar;
+  const home = all.home;
   const [win, setWin] = useState<Win | null>(null);
   const [maximized, setMaximized] = useState(false);
   const [version, setVersion] = useState("");
@@ -64,8 +73,13 @@ export default function TitleBar(props: { settingsOpen: boolean; onToggleSetting
 
   return (
     <div className="titlebar" data-tauri-drag-region>
+      {props.onHome && (
+        <button className="tb-btn tb-home" aria-label={home.home} title={home.home} onClick={props.onHome}>
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
+        </button>
+      )}
       <div className="tb-title" data-tauri-drag-region>
-        Worklog Tracker{version && <span className="tb-ver" data-tauri-drag-region>v{version}</span>}
+        {props.title ?? home.title}{version && <span className="tb-ver" data-tauri-drag-region>v{version}</span>}
       </div>
       {upd && (
         <div className="tb-update">
