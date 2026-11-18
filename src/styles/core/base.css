@@ -32,3 +32,4 @@ summary:hover { color: var(--accent); }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes unfold { from { opacity: 0; transform: translateY(-4px); } }
+.crash pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12.5px; padding: 10px; border-radius: var(--r-md); background: var(--bg); }

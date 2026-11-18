@@ -4,6 +4,7 @@ import { JiraUrlContext } from "@/shared/components/IssueLink";
 import Report from "@/products/worklog/components/report/Report";
 import Dashboard from "@/products/dashboard/components/Dashboard";
 import { asProfile } from "@/products/dashboard/lib/stages";
+import { ErrorBoundary } from "./ErrorBoundary";
 import Home from "./Home";
 import type { ProductId } from "./products";
 import TitleBar from "./TitleBar";
@@ -82,6 +83,7 @@ export default function App() {
       ) : <div className="pagegap" />}
       <JiraUrlContext.Provider value={settings.jiraUrl}>
       <main>
+      <ErrorBoundary key={settingsOpen ? "settings" : view} onHome={() => { setSettingsOpen(false); setView("home"); }}>
         {settingsOpen ? (
           inTauri ? <Settings settings={settings} onSaved={(s) => { setSettings(s); refreshStored(); }} /> : <p className="muted">{t.desktopOnly}</p>
         ) : view === "home" ? (
@@ -91,6 +93,7 @@ export default function App() {
         ) : (
           <Report settings={settings} setup={setup} onOpenSettings={openSettings} analysis={analysis} onChange={setAnalysis} />
         )}
+      </ErrorBoundary>
       </main>
       </JiraUrlContext.Provider>
     </div>

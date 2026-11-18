@@ -50,5 +50,5 @@ export function setTheme(id: ThemeId) {
 }
 
 export function useTheme(): ThemeId {
-  return useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, readTheme);
+  return useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, readTheme, readTheme);
 }

@@ -6,6 +6,7 @@ import { localDate } from "@/shared/lib/dates";
 import type { DashData } from "@/shared/types";
 import { Button, InfoTip, Segmented, Switch } from "@/shared/ui";
 import { containerCandidates, containerTypes } from "../lib/containers";
+import { normalizeData } from "../lib/normalize";
 import { filterIssues, GROUPINGS, lanes, projectsOf, sortForProfile, splitFolded, visibleColumns, type Grouping } from "../lib/groups";
 import { flagsOf, PROFILE, PROFILE_FLAGS, STALE_DAYS, stageOf, type Flag, type Profile, type Stage } from "../lib/stages";
 import { Board } from "./Board";
@@ -14,12 +15,15 @@ import { IssueCard } from "./IssueCard";
 import { IssueDrawer } from "./IssueDrawer";
 
 type Cached = { at: number; data: DashData };
-const cacheKey = (p: Profile) => `worklog.dashboard.v2.${p}`;
+// v3: tasks carry links; older caches lack them and are not read.
+const cacheKey = (p: Profile) => `worklog.dashboard.v3.${p}`;
 
 function readCache(p: Profile): Cached | null {
   try {
     const s = localStorage.getItem(cacheKey(p));
-    return s ? (JSON.parse(s) as Cached) : null;
+    if (!s) return null;
+    const c = JSON.parse(s) as Partial<Cached>;
+    return { at: Number(c.at) || 0, data: normalizeData(c.data) };
   } catch {
     return null;
   }
@@ -47,7 +51,7 @@ export default function Dashboard({ jiraReady, profile, onOpenSettings }: { jira
     setLoading(true);
     setError("");
     try {
-      const next = { at: Date.now(), data: await api.jiraDashboard(p) };
+      const next = { at: Date.now(), data: normalizeData(await api.jiraDashboard(p)) };
       setCached(next);
       try { localStorage.setItem(cacheKey(p), JSON.stringify(next)); } catch { /* storage unavailable */ }
     } catch (e) {

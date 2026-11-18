@@ -38,5 +38,5 @@ export function setLocale(l: Locale) {
 }
 
 export function useLocale(): Locale {
-  return useSyncExternalStore((f) => { listeners.add(f); return () => listeners.delete(f); }, getLocale);
+  return useSyncExternalStore((f) => { listeners.add(f); return () => listeners.delete(f); }, getLocale, getLocale);
 }

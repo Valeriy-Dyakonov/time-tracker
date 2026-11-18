@@ -5,6 +5,12 @@ const en: typeof ru = {
     settings: "Settings",
     desktopOnly: "Settings are available in the desktop app only.",
   },
+  crash: {
+    title: "This screen could not open",
+    hint: "Something failed while drawing it. The rest of the app works: go back home or reload the window.",
+    home: "Home",
+    reload: "Reload",
+  },
   titlebar: {
     downloading: "Downloading…",
     downloaded: (pct: number) => `Downloaded ${pct}%`,
