@@ -23,11 +23,19 @@ pub async fn lookup_issues(app: tauri::AppHandle, keys: Vec<String>) -> AppResul
     jira::lookup(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &keys).await
 }
 
-/// "Work dashboard": the user's open tasks and the ones resolved recently.
+/// "Work dashboard": tasks for a profile ("dev", "qa", "lead") with their epics/parents.
 #[tauri::command]
-pub async fn jira_my_issues(app: tauri::AppHandle) -> AppResult<Vec<jira::dashboard::DashIssue>> {
+pub async fn jira_dashboard(app: tauri::AppHandle, profile: String) -> AppResult<jira::dashboard::Dashboard> {
     let c = Ctx::load(&app)?;
-    jira::dashboard::my_issues(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?).await
+    jira::dashboard::load(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &profile).await
+}
+
+/// One task in full for the dashboard's task view.
+#[tauri::command]
+pub async fn jira_issue_detail(app: tauri::AppHandle, key: String) -> AppResult<jira::detail::IssueDetail> {
+    valid_key(&key)?;
+    let c = Ctx::load(&app)?;
+    jira::detail::load(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &key).await
 }
 
 /// The user's own worklogs in the period, to compare with the plan in the "Списание" tab.

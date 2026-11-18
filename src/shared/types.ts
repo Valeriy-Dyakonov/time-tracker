@@ -109,7 +109,13 @@ export interface IssueInfo {
   assignedToMe?: boolean;
 }
 
-/** A task of the user for the "Work dashboard" (open, or resolved recently). */
+export interface DashPerson {
+  name: string;
+  display: string;
+  me: boolean;
+}
+
+/** A task on the "Work dashboard". */
 export interface DashIssue {
   key: string;
   summary: string;
@@ -121,10 +127,44 @@ export interface DashIssue {
   project: string;
   projectName: string;
   parent: string | null;
+  epic: string | null;
+  fixVersions: string[];
+  assignee: DashPerson | null;
+  /** User-type custom fields of the installation (Responsible, QA...) with who is in them. */
+  people: { field: string; person: DashPerson }[];
+  /** The user is the assignee or in one of the people fields. */
+  mine: boolean;
   updated: number | null;
   resolved: number | null;
   /** YYYY-MM-DD */
   due: string | null;
+}
+
+export interface DashData {
+  issues: DashIssue[];
+  /** Epics and parents of the issues: group headers, never tasks. */
+  context: DashIssue[];
+  projects: string[];
+}
+
+export interface DashRelated {
+  key: string;
+  summary: string;
+  status: string;
+  relation: string;
+}
+
+export interface IssueDetail extends DashIssue {
+  reporter: DashPerson | null;
+  created: number | null;
+  labels: string[];
+  components: string[];
+  /** Jira wiki markup, shown as plain text. */
+  description: string;
+  comments: { author: string; created: number | null; body: string }[];
+  commentTotal: number;
+  subtasks: DashRelated[];
+  links: DashRelated[];
 }
 
 /** A worklog of the user in Jira (Tempo on Server/DC keeps its worklogs there). */

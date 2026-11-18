@@ -41,7 +41,7 @@ One folder per area; no loose files in folder roots. Inside an area imports are 
     - `components/report/` — report screen, filters, date range, live progress, export; `analysisSources.ts` is the registry of toggleable sources.
     - `components/hours/` — "Часы" tab; `components/review/` — "Разбор ИИ" + evidence; `components/common/` — meetings and source labels (`sources.ts`, single place).
     - `components/submit/` — "Списание" tab: `Submit.tsx`, `useJiraSync.ts` (reads/writes the user's Jira worklogs), `tempo/` (step 1: rows, Jira comparison, log all, limits), `weekly/` (step 2: own system, by week or by day).
-  - `dashboard/` — Work Dashboard: `components/Dashboard.tsx`, `lib/dashboard.ts` (stats, board columns), Rust `sources/jira/dashboard.rs`.
+  - `dashboard/` — Work Dashboard: profiles (developer / QA / lead) decide whose tasks are loaded and which stages come first. `lib/stages.ts` (stage of a task from status category + name, profiles, flags), `lib/groups.ts` (filter, sort, group by epic / release / stage, backlog folded); `components/` (dashboard, cards, groups, `IssueDrawer.tsx` to read a task). Rust: `sources/jira/dashboard.rs` (people fields = user-type custom fields, per-profile JQL, epics/parents as context), `sources/jira/detail.rs` (one task in full).
 - `i18n/` — localization: `locale.ts` (current language, persisted, default from the OS), `format.ts` (plural forms, dates, hours), `index.ts` (`useT()` in components, `t()` elsewhere), `messages/{ru,en}/<namespace>.ts` (one file per area).
 - `styles/` — all CSS via `styles/index.css`, one folder per area like the code: `core/` (`tokens.css`, `themes.css`, `base.css`, `kit.css`), `app/`, `worklog/`, `dashboard/`. No hardcoded colors outside `tokens.css`/`themes.css`.
 

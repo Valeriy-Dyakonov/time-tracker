@@ -2,6 +2,7 @@
 mod parse;
 pub mod worklog;
 pub mod dashboard;
+pub mod detail;
 
 use crate::http::{Auth, JsonApi};
 use crate::model::{Event, IssueInfo};

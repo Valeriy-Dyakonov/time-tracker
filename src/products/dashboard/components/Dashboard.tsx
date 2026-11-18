@@ -1,45 +1,50 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useT } from "@/i18n";
 import { api } from "@/shared/api";
-import { dateShort, useT } from "@/i18n";
+import { useStored } from "@/shared/hooks/useStored";
 import { localDate } from "@/shared/lib/dates";
-import { boardColumns, CATEGORIES, dashStats, filterIssues, isOverdue, projectsOf, type Category } from "../lib/dashboard";
-import type { DashIssue } from "@/shared/types";
-import IssueLink from "@/shared/components/IssueLink";
-import { Button, InfoTip, keyColor } from "@/shared/ui";
+import type { DashData } from "@/shared/types";
+import { Button, InfoTip, Segmented, Switch } from "@/shared/ui";
+import { filterIssues, GROUPINGS, groupIssues, projectsOf, sortForProfile, splitFolded, type Grouping } from "../lib/groups";
+import { flagsOf, PROFILE, PROFILE_FLAGS, PROFILES, STALE_DAYS, stageOf, type Flag, type Profile, type Stage } from "../lib/stages";
+import { GroupList } from "./GroupList";
+import { IssueCard } from "./IssueCard";
+import { IssueDrawer } from "./IssueDrawer";
 
-const CACHE = "worklog.dashboard.v1";
-/** Must match RECENT_DAYS in src-tauri/src/sources/jira/dashboard.rs. */
-const RECENT_DAYS = 14;
+type Cached = { at: number; data: DashData };
+const cacheKey = (p: Profile) => `worklog.dashboard.v2.${p}`;
 
-type Cached = { at: number; list: DashIssue[] };
-
-function readCache(): Cached | null {
+function readCache(p: Profile): Cached | null {
   try {
-    const s = localStorage.getItem(CACHE);
+    const s = localStorage.getItem(cacheKey(p));
     return s ? (JSON.parse(s) as Cached) : null;
   } catch {
     return null;
   }
 }
 
-/** "Work dashboard": the user's Jira tasks by status, for a quick look at where things stand. Read-only. */
+/** "Work dashboard": tasks for a role, grouped by epic, release or stage; a task opens in a side panel. Read-only. */
 export default function Dashboard({ jiraReady, onOpenSettings }: { jiraReady: boolean; onOpenSettings: () => void }) {
-  const t = useT();
-  const m = t.dashboard;
-  const [data, setData] = useState<Cached | null>(readCache);
+  const m = useT().dashboard;
+  const [profile, setProfile] = useStored<Profile>("worklog.dashboard.profile", "dev");
+  const [by, setBy] = useStored<Grouping>("worklog.dashboard.grouping", "epic");
+  const [onlyMine, setOnlyMine] = useStored("worklog.dashboard.onlyMine", false);
+  const [cached, setCached] = useState<Cached | null>(() => readCache(profile));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [project, setProject] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [focus, setFocus] = useState<{ stage: Stage | null; flag: Flag | null }>({ stage: null, flag: null });
+  const [opened, setOpened] = useState<string | null>(null);
   const today = localDate(new Date());
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (p: Profile) => {
     setLoading(true);
     setError("");
     try {
-      const next = { at: Date.now(), list: await api.jiraMyIssues() };
-      setData(next);
-      try { localStorage.setItem(CACHE, JSON.stringify(next)); } catch { /* storage unavailable */ }
+      const next = { at: Date.now(), data: await api.jiraDashboard(p) };
+      setCached(next);
+      try { localStorage.setItem(cacheKey(p), JSON.stringify(next)); } catch { /* storage unavailable */ }
     } catch (e) {
       setError(String(e));
     } finally {
@@ -47,13 +52,25 @@ export default function Dashboard({ jiraReady, onOpenSettings }: { jiraReady: bo
     }
   }, []);
 
-  useEffect(() => { if (jiraReady) void load(); }, [jiraReady, load]);
+  useEffect(() => {
+    setCached(readCache(profile));
+    setFocus({ stage: null, flag: null });
+    if (jiraReady) void load(profile);
+  }, [profile, jiraReady, load]);
 
-  const list = data?.list ?? [];
-  const shown = useMemo(() => filterIssues(list, { project, query }), [list, project, query]);
-  const stats = dashStats(shown, today);
-  const cols = useMemo(() => boardColumns(shown, today), [shown, today]);
-  const projects = useMemo(() => projectsOf(list), [list]);
+  const data = cached?.data;
+  // "Now" of the loaded data: flags such as "stuck" stay stable between renders.
+  const now = useMemo(() => Date.now(), [cached]);
+  const all = useMemo(() => data?.issues ?? [], [data]);
+  const context = useMemo(() => new Map([...(data?.context ?? []), ...all].map((i) => [i.key, i])), [data, all]);
+  const scoped = useMemo(() => filterIssues(all, { profile, project, query, stage: null, flag: null, onlyMine }, today, now), [all, profile, project, query, onlyMine, today, now]);
+  const shown = useMemo(
+    () => sortForProfile(filterIssues(scoped, { profile, project: null, query: "", ...focus, onlyMine: false }, today, now), profile, today, now),
+    [scoped, focus, profile, today, now],
+  );
+  const { main, folded } = useMemo(() => splitFolded(shown, profile), [shown, profile]);
+  const groups = useMemo(() => groupIssues(main, by, data?.context ?? [], profile), [main, by, data, profile]);
+  const projects = useMemo(() => projectsOf(all), [all]);
 
   if (!jiraReady) {
     return (
@@ -64,80 +81,65 @@ export default function Dashboard({ jiraReady, onOpenSettings }: { jiraReady: bo
     );
   }
 
-  const ago = (ms: number | null) => {
-    if (!ms) return "";
-    const min = Math.round((Date.now() - ms) / 60000);
-    if (min < 1) return m.ago.now;
-    if (min < 60) return m.ago.min(min);
-    if (min < 48 * 60) return m.ago.hours(Math.round(min / 60));
-    return m.ago.days(Math.round(min / 1440));
-  };
-  const colTitle = (c: Category) => (c === "done" ? m.columns.done(RECENT_DAYS) : m.columns[c]);
+  const spec = PROFILE[profile];
+  const stageCount = (s: Stage) => scoped.filter((i) => stageOf(i) === s).length;
+  const flagCount = (f: Flag) => scoped.filter((i) => flagsOf(i, today, now).includes(f)).length;
+  const pick = (next: { stage: Stage | null; flag: Flag | null }) =>
+    setFocus((cur) => (cur.stage === next.stage && cur.flag === next.flag ? { stage: null, flag: null } : next));
 
   return (
     <div className="dash">
+      <div className="dash-bar">
+        <Segmented value={profile} onChange={setProfile} options={PROFILES.map((p) => ({ value: p, label: m.profiles[p] }))} />
+        <InfoTip>{m.profileTip}</InfoTip>
+        <span className="spacer" />
+        {loading ? <span className="muted">{m.loading}</span> : cached && <span className="muted">{m.updatedAt(new Date(cached.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))}</span>}
+        <Button size="small" disabled={loading} onClick={() => void load(profile)}>{m.refresh}</Button>
+      </div>
+
       <div className="dash-stats">
-        <Stat label={m.stats.open} tip={m.stats.openTip} value={stats.open} />
-        <Stat label={m.stats.inProgress} tip={m.stats.inProgressTip} value={stats.inProgress} tone="accent" />
-        <Stat label={m.stats.overdue} tip={m.stats.overdueTip} value={stats.overdue} tone={stats.overdue ? "bad" : undefined} />
-        <Stat label={m.stats.done(RECENT_DAYS)} tip={m.stats.doneTip} value={stats.done} tone="good" />
+        {spec.focus.map((s) => (
+          <Tile key={s} label={m.stages[s]} value={stageCount(s)} on={focus.stage === s} tone={`s-${s}`} onClick={() => pick({ stage: s, flag: null })} />
+        ))}
+        {PROFILE_FLAGS[profile].map((f) => (
+          <Tile key={f} label={m.flags[f]} value={flagCount(f)} on={focus.flag === f} tone={flagCount(f) ? `f-${f}` : ""}
+            tip={f === "stale" ? m.flagTips.stale(STALE_DAYS) : m.flagTips[f]} onClick={() => pick({ stage: null, flag: f })} />
+        ))}
       </div>
 
       <div className="dash-bar">
+        <Segmented size="small" value={by} onChange={setBy} options={GROUPINGS.map((g) => ({ value: g, label: m.groupings[g] }))} />
         <select value={project ?? ""} onChange={(e) => setProject(e.target.value || null)}>
-          <option value="">{m.allProjects} ({list.length})</option>
+          <option value="">{m.allProjects} ({all.length})</option>
           {projects.map((p) => <option key={p.key} value={p.key}>{p.key} — {p.name} ({p.count})</option>)}
         </select>
         <input type="search" value={query} placeholder={m.search} onChange={(e) => setQuery(e.target.value)} />
-        <span className="spacer" />
-        {loading ? <span className="muted">{m.loading}</span> : data && <span className="muted">{m.updatedAt(new Date(data.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))}</span>}
-        <Button size="small" disabled={loading} onClick={() => void load()}>{m.refresh}</Button>
+        {!spec.mineOnly && <Switch checked={onlyMine} onChange={setOnlyMine} title={m.onlyMineTip}>{m.onlyMine}</Switch>}
+        {(focus.stage || focus.flag) && <Button variant="ghost" size="small" onClick={() => setFocus({ stage: null, flag: null })}>{m.clearFilter}</Button>}
       </div>
       {error && <div className="error">{m.failed(error)}</div>}
-      {data && shown.length === 0 && <p className="muted">{list.length ? m.nothing : m.empty}</p>}
+      {data && shown.length === 0 && <p className="muted">{all.length ? m.nothing : m.empty}</p>}
 
-      <div className="dash-board">
-        {CATEGORIES.map((c) => (
-          <section key={c} className={`dash-col c-${c}`}>
-            <header><b>{colTitle(c)}</b><span className="dash-n">{cols[c].reduce((s, g) => s + g.issues.length, 0)}</span></header>
-            {cols[c].map((g) => (
-              <div key={g.status} className="dash-group">
-                <h5>{g.status}<span className="dash-n">{g.issues.length}</span></h5>
-                {g.issues.map((i) => {
-                  const late = isOverdue(i, today);
-                  return (
-                    <article key={i.key} className={`dash-card ${late ? "late" : ""}`}>
-                      <div className="dash-card-h">
-                        <span className="dot" style={{ background: keyColor(i.key) }} />
-                        <b><IssueLink k={i.key} /></b>
-                        <span className="muted dash-type">{i.issueType}</span>
-                        <span className="spacer" />
-                        {i.due && <span className={`dash-due ${late ? "late" : ""}`}>{late ? m.overdue(dateShort(i.due)) : m.due(dateShort(i.due))}</span>}
-                      </div>
-                      <div className="dash-sum" title={i.summary}>{i.summary}</div>
-                      <div className="dash-meta muted">
-                        {i.priority && <span>{i.priority}</span>}
-                        {i.parent && <span>↑ {i.parent}</span>}
-                        <span className="spacer" />
-                        <span title={m.updatedTitle}>{ago(c === "done" ? i.resolved : i.updated)}</span>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            ))}
-          </section>
-        ))}
-      </div>
+      <GroupList groups={groups} by={by} today={today} now={now} onOpen={setOpened} />
+
+      {folded.length > 0 && (
+        <details className="dash-folded">
+          <summary>{m.folded(folded.length)}<InfoTip>{m.foldedTip}</InfoTip></summary>
+          <div className="dash-cards">{folded.map((i) => <IssueCard key={i.key} i={i} today={today} now={now} onOpen={setOpened} />)}</div>
+        </details>
+      )}
+
+      {opened && <IssueDrawer issueKey={opened} context={context} onClose={() => setOpened(null)} />}
     </div>
   );
 }
 
-function Stat({ label, tip, value, tone }: { label: string; tip: string; value: number; tone?: "accent" | "good" | "bad" }) {
+function Tile(props: { label: string; value: number; on: boolean; tone: string; tip?: string; onClick: () => void }) {
+  const m = useT().dashboard;
   return (
-    <div className={`dash-stat ${tone ?? ""}`}>
-      <span className="dash-stat-l">{label}<InfoTip>{tip}</InfoTip></span>
-      <b>{value}</b>
-    </div>
+    <button className={`dash-stat ${props.tone} ${props.on ? "on" : ""}`} title={props.tip ?? m.tileTip} onClick={props.onClick}>
+      <span className="dash-stat-l">{props.label}</span>
+      <b>{props.value}</b>
+    </button>
   );
 }

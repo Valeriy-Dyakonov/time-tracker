@@ -20,6 +20,13 @@
   --src-calendar: #c27c0e;
   --src-confluence: #12a0a8;
 
+  /* Dashboard stages (to do / dev / done use --muted, --accent, --good) */
+  --stage-review: #8e63d8;
+  --stage-test: #12a0a8;
+  /* Dim layer under side panels: dark in every theme */
+  --overlay: rgb(0 0 0 / .32);
+  --overlay-shadow: rgb(0 0 0 / .18);
+
   --grad-from: #7c3aed;
   --grad-to: #06b6d4;
   --win-close: #e81123;
