@@ -1,12 +1,13 @@
-@import "./tokens.css";
-@import "./themes.css";
-@import "./base.css";
-@import "./kit.css";
-@import "./titlebar.css";
-@import "./report.css";
-@import "./hours.css";
-@import "./submit.css";
-@import "./review.css";
-@import "./settings.css";
-@import "./home.css";
-@import "./dashboard.css";
+/* One folder per area, like the code: core (tokens, themes, kit), app shell, then each product. */
+@import "./core/tokens.css";
+@import "./core/themes.css";
+@import "./core/base.css";
+@import "./core/kit.css";
+@import "./app/titlebar.css";
+@import "./app/home.css";
+@import "./app/settings.css";
+@import "./worklog/report.css";
+@import "./worklog/hours.css";
+@import "./worklog/submit.css";
+@import "./worklog/review.css";
+@import "./dashboard/dashboard.css";

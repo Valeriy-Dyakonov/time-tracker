@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
-import { applyTheme, readTheme } from "./theme";
+import App from "./app/App";
+import { applyTheme, readTheme } from "./shared/theme";
 import { applyLocale } from "./i18n";
 import "./styles/index.css";
 

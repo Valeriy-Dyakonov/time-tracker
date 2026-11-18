@@ -1,6 +1,6 @@
 # Worklog Tracker — notes for agents and contributors
 
-Desktop app (Tauri 2 + React/TypeScript, Rust backend). The start screen offers several tools sharing one settings screen (`components/products.tsx`): **Worklog Tracker** collects a person's activity (Jira, git, GitLab, Matrix, Confluence, Exchange calendar) for a period and turns it into hours per day/task for Jira Tempo and a weekly text report; **Work Dashboard** shows the user's Jira tasks by status. The UI is localized (Russian and English); code, comments and commit messages are English.
+Desktop app (Tauri 2 + React/TypeScript, Rust backend). The start screen offers several tools sharing one settings screen (`app/products.tsx`): **Worklog Tracker** collects a person's activity (Jira, git, GitLab, Matrix, Confluence, Exchange calendar) for a period and turns it into hours per day/task for Jira Tempo and a weekly text report; **Work Dashboard** shows the user's Jira tasks by status. The UI is localized (Russian and English); code, comments and commit messages are English.
 
 ## Commands
 
@@ -8,7 +8,7 @@ Desktop app (Tauri 2 + React/TypeScript, Rust backend). The start screen offers 
 |---|---|
 | Dev app | `npm run tauri dev` |
 | Typecheck | `npx tsc --noEmit -p .` |
-| Frontend tests | `npm test` (vitest, `src/lib/*.test.ts`) |
+| Frontend tests | `npm test` (vitest, `*.test.ts` next to the code) |
 | Frontend build | `npx vite build` |
 | Rust tests | `cargo test` in `src-tauri/` |
 | Rust with updater | `cargo check --features updater` in `src-tauri/` |
@@ -19,27 +19,33 @@ Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests
 ## Layout
 
 ### Frontend `src/`
-- `api.ts` — the only place that calls Tauri `invoke`; one function per Rust command.
-- `types.ts` — shared types (`Settings`, `Analysis`, `DayPlan`, `Evt`, `Evidence`...). `Settings` must mirror `src-tauri/src/settings.rs`.
-- `theme.ts` — theme list, read/apply/persist (localStorage). The early apply script lives in `index.html`.
-- `i18n/` — localization: `locale.ts` (current language, persisted, default from the OS), `format.ts` (plural forms, dates, hours), `index.ts` (`useT()` in components, `t()` elsewhere), `messages/{ru,en}/<namespace>.ts` (one file per area: common, shell, report, hours, submit, review, settings, analysis, errors).
-- `lib/` — pure logic, no React:
-  - `pipeline.ts` — `runAnalysis()`: orchestrates the stages only.
-  - `sources/*.ts` — one `SourceCollector` per source (`sources/types.ts`); registered as steps in `analysis/steps.ts` (`COLLECT_STEPS`).
-  - `analysis/` — run context and options, work calendar, issue enrichment, day allocators (`HeuristicAllocator` / `AiAllocator`), progress, period summary.
-  - `plan/` — hour distribution, heuristic weights, task phase notes, gap fillers (`GapFiller` per fill mode), `buildPlan`.
-  - `events/` — issue-key detection, grouping events by day, `toEvidence`.
-  - `allocate.ts` — re-exports for old import paths; add new code to the modules above, not here.
-  - `report.ts` (totals, CSV/Markdown), `submit.ts` (Tempo rows, weekly text), `submitEdits.ts` (user edits of the rows), `limits.ts` (day/period norms), `worklogSync.ts` (plan vs Jira), `tempoWeek.ts` (weekly text from Tempo), `prompt.ts` (LLM prompts), `setup.ts` (which sources are configured), `dates.ts`.
-- `components/`:
-  - `products.tsx` — tools on the start screen (`home/Home.tsx`); `dashboard/` — "Work Dashboard": the user's Jira tasks by status (`lib/dashboard.ts`, Rust `sources/jira/dashboard.rs`).
-  - `ui/` — UI kit: `kit.tsx` (Button, Card, Segmented, Switch, Badge), `basics.tsx` (Field, InfoTip, Help, Title, keyColor, download), `Copy.tsx`, `Stepper.tsx`; import from `components/ui`.
-  - `report/` — report screen, filters, view tabs, export; `analysisSources.ts` is the registry of toggleable sources.
-  - `hours/` — "Часы" tab: stats, overview, weeks, day accordion, by-task; shared helpers in `review.ts`.
-  - `submit/` — "Списание" tab; `useJiraSync.ts` reads/writes the user's Jira worklogs, comparison logic in `lib/worklogSync.ts`. `review/` — "Разбор ИИ" + evidence. `settings/` — settings screen.
-  - `settings/registry.ts` — list of settings sections (nav + content); one component per section in `settings/sections/`.
-  - `sources.ts` — source labels/order for display (single place, don't duplicate).
-- `styles/` — all CSS, imported via `styles/index.css`: `tokens.css`, `themes.css`, `base.css`, `kit.css`, one file per screen. No hardcoded colors outside `tokens.css`/`themes.css`.
+One folder per area; no loose files in folder roots. Inside an area imports are relative; between areas they use the `@/` alias (`@/shared/types`, `@/i18n`), configured in `vite.config.ts` and `tsconfig.json`.
+
+- `main.tsx` — entry point only.
+- `app/` — the shell shared by all tools: `App.tsx` (start screen / tool / settings), `TitleBar.tsx`, `Home.tsx` (tiles), `products.tsx` (registry of tools), `settings/` (settings screen: `registry.ts` lists the sections, one component per section in `settings/sections/`).
+- `shared/` — used by more than one tool:
+  - `api.ts` — the only place that calls Tauri `invoke`; one function per Rust command.
+  - `types.ts` — shared types (`Settings`, `Analysis`, `DayPlan`, `DashIssue`...). `Settings` must mirror `src-tauri/src/settings.rs`.
+  - `theme.ts` — theme list, read/apply/persist (localStorage). The early apply script lives in `index.html`.
+  - `ui/` — UI kit: `kit.tsx` (Button, Card, Segmented, Switch, Badge), `basics.tsx` (Field, InfoTip, Help, Title, keyColor, download), `Copy.tsx`, `Stepper.tsx`; import from `@/shared/ui`.
+  - `components/IssueLink.tsx`, `hooks/useStored.ts`, `lib/dates.ts`, `lib/setup.ts` (which sources are configured).
+- `products/<tool>/` — one folder per tool, each with `components/` (React) and `lib/` (pure logic, no React, tests next to the code):
+  - `worklog/` — Worklog Tracker.
+    - `lib/analysis/` — `pipeline.ts` (`runAnalysis()`: orchestrates the stages only), run context and options, work calendar, Tempo-filled days, issue enrichment, day allocators (`HeuristicAllocator` / `AiAllocator`), progress, period summary.
+    - `lib/sources/` — one `SourceCollector` per source (`sources/types.ts`), registered as steps in `analysis/steps.ts` (`COLLECT_STEPS`).
+    - `lib/ai/` — LLM prompts and parsing (`prompt.ts`), rewriting worklog descriptions (`polish.ts`).
+    - `lib/plan/` — hour distribution, heuristic weights, task phase notes, gap fillers (`GapFiller` per fill mode), `buildPlan`.
+    - `lib/events/` — issue-key detection, grouping events by day, `toEvidence`.
+    - `lib/report/` — totals, CSV/Markdown (`report.ts`), demo data.
+    - `lib/submit/` — Tempo rows and weekly text (`rows.ts`), user edits of the rows (`edits.ts`), plan vs Jira (`sync.ts`), day/period norms (`limits.ts`), weekly text from Tempo (`tempoWeek.ts`).
+    - `components/report/` — report screen, filters, date range, live progress, export; `analysisSources.ts` is the registry of toggleable sources.
+    - `components/hours/` — "Часы" tab; `components/review/` — "Разбор ИИ" + evidence; `components/common/` — meetings and source labels (`sources.ts`, single place).
+    - `components/submit/` — "Списание" tab: `Submit.tsx`, `useJiraSync.ts` (reads/writes the user's Jira worklogs), `tempo/` (step 1: rows, Jira comparison, log all, limits), `weekly/` (step 2: own system, by week or by day).
+  - `dashboard/` — Work Dashboard: `components/Dashboard.tsx`, `lib/dashboard.ts` (stats, board columns), Rust `sources/jira/dashboard.rs`.
+- `i18n/` — localization: `locale.ts` (current language, persisted, default from the OS), `format.ts` (plural forms, dates, hours), `index.ts` (`useT()` in components, `t()` elsewhere), `messages/{ru,en}/<namespace>.ts` (one file per area).
+- `styles/` — all CSS via `styles/index.css`, one folder per area like the code: `core/` (`tokens.css`, `themes.css`, `base.css`, `kit.css`), `app/`, `worklog/`, `dashboard/`. No hardcoded colors outside `tokens.css`/`themes.css`.
+
+**New tool**: an entry in `app/products.tsx`, its texts in `messages/{ru,en}/home.ts` (+ its own namespace), a folder `products/<tool>/` and `styles/<tool>/`, and its screen in `app/App.tsx`.
 
 ### Backend `src-tauri/src/`
 - `lib.rs` — module list and `run()` (plugins, command registration) only.
@@ -54,15 +60,15 @@ Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests
 
 **New data source** (e.g. another chat):
 1. Rust: client/parser in `sources/<name>`, command in `commands/<area>.rs`, register in `lib.rs`, probe in `commands/connection.rs`, secret constant in `secrets.rs` if it needs a token, fields in `settings.rs`.
-2. Frontend: fields in `types.ts` `Settings` (+ defaults), wrapper in `api.ts`, collector in `lib/sources/` + add to `COLLECT_STEPS`, `setup.ts` readiness, option flag in `analysis/types.ts` `RunOptions`, entry in `report/analysisSources.ts`, label in `components/sources.ts`, settings section in `settings/sections/` + `registry.ts`, source color token in `styles/tokens.css`.
+2. Frontend: fields in `shared/types.ts` `Settings` (+ defaults), wrapper in `shared/api.ts`, collector in `products/worklog/lib/sources/` + add to `COLLECT_STEPS`, `shared/lib/setup.ts` readiness, option flag in `lib/analysis/types.ts` `RunOptions`, entry in `components/report/analysisSources.ts`, label in `components/common/sources.ts`, settings section in `app/settings/sections/` + `registry.ts`, source color token in `styles/core/tokens.css`.
 
-**New setting**: `settings.rs` + `types.ts` (same camelCase name, default in both) + the settings section UI + its texts in `messages/{ru,en}/settings.ts`.
+**New setting**: `settings.rs` + `shared/types.ts` (same camelCase name, default in both) + the settings section UI + its texts in `messages/{ru,en}/settings.ts`.
 
 **New language**: add the id to `Locale`/`LOCALES` in `i18n/locale.ts`, tables in `i18n/format.ts`, a `messages/<lang>/` folder typed against `ru`, and a `Lang` variant in `src-tauri/src/texts.rs`.
 
-**New theme**: tokens block in `styles/themes.css` (all color tokens incl. `--on-accent` and `color-scheme`) + entry in `theme.ts`.
+**New theme**: tokens block in `styles/core/themes.css` (all color tokens incl. `--on-accent` and `color-scheme`) + entry in `shared/theme.ts`.
 
-**New UI element**: reuse `components/ui` first; styles go into the screen's file in `styles/`, shared patterns into `kit.css`.
+**New UI element**: reuse `@/shared/ui` first; styles go into the screen's file in `styles/<area>/`, shared patterns into `styles/core/kit.css`.
 
 ## Contracts that must not break
 - Tauri command names, arguments and returned JSON shapes (see `api.ts`).
