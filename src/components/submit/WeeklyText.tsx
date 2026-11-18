@@ -5,16 +5,18 @@ import { dayTotal } from "../../lib/allocate";
 import { formatDate } from "../../lib/dates";
 import { parseNarrative } from "../../lib/prompt";
 import { fmtH, weeksOf, type Week } from "../../lib/report";
-import { weekHours, weekPrompt, weekSystemPrompt, weekText, weekTitle } from "../../lib/submit";
+import { planDayBlocks, weekHours, weekPrompt, weekSystemPrompt, weekText, weekTitle } from "../../lib/submit";
+import { DayBlocks } from "./DayBlocks";
 import { useStored } from "../hooks/useStored";
 import { Button, Card, CopyChip, InfoTip } from "../ui";
 import { StepHeader } from "./StepHeader";
 import { useT } from "../../i18n";
-import { tempoDayHours, tempoReadiness, tempoWeekText } from "../../lib/tempoWeek";
+import { tempoDayBlocks, tempoDayHours, tempoReadiness, tempoWeekText } from "../../lib/tempoWeek";
 import type { JiraSync } from "./useJiraSync";
 import { Segmented } from "../ui";
 
 type Source = "plan" | "tempo";
+type Layout = "weeks" | "days";
 
 /** Step 2: a ready text per week for a time system that wants a weekly description. */
 export function WeeklyText({ a, storeId, canAi, jira }: { a: Analysis; storeId: string; canAi: boolean; jira: JiraSync }) {
@@ -24,6 +26,8 @@ export function WeeklyText({ a, storeId, canAi, jira }: { a: Analysis; storeId: 
   /** Per week: build the text from the plan or from what is logged in Tempo. */
   const [sources, setSources] = useStored<Record<string, Source>>(`${storeId}.weekSource`, {});
   const [err, setErr] = useState("");
+  const [layout, setLayout] = useStored<Layout>("worklog.submit.layout", "weeks");
+  const [dayTexts, setDayTexts] = useStored<Record<string, string>>(`${storeId}.days`, {});
   const t = useT();
   const m = t.submit.weekly;
 
@@ -38,7 +42,8 @@ export function WeeklyText({ a, storeId, canAi, jira }: { a: Analysis; storeId: 
     const dayHours = src === "tempo"
       ? tempoDayHours(w, jira.list)
       : w.days.filter((d) => !d.off).map((d) => `${formatDate(d.date)}\t${fmtH(dayTotal(d))}`).join("\n");
-    return { ready, src, id, base, hours, dayHours };
+    const blocks = src === "tempo" ? tempoDayBlocks(a, w, jira.list) : planDayBlocks(a, w);
+    return { ready, src, id, base, hours, dayHours, blocks };
   };
 
   async function rewrite(w: Week) {
@@ -62,16 +67,21 @@ export function WeeklyText({ a, storeId, canAi, jira }: { a: Analysis; storeId: 
     <Card className="step">
       <StepHeader n={2} title={m.title} tip={m.tip}>{m.intro}</StepHeader>
       {err && <div className="error">{err}</div>}
+      <div className="row wrap wk-tempo">
+        <Segmented size="small" value={layout} onChange={setLayout}
+          options={[{ value: "weeks", label: m.byWeek }, { value: "days", label: m.byDay, title: m.byDayTitle }]} />
+        <InfoTip>{m.layoutTip}</InfoTip>
       {jira.load.kind !== "off" && (
-        <div className="row wrap wk-tempo">
+        <>
           {jira.load.kind === "error" && <span className="wl-err">{t.submit.jira.loadFailed(jira.load.error)}</span>}
           <span className="spacer" />
           <Button variant="ghost" size="small" disabled={jira.load.kind === "loading" || Object.values(jira.actions).some((x) => x.busy)} onClick={() => void jira.reload()}>
             {jira.load.kind === "loading" ? t.submit.jira.loading : m.tempoRefresh}
           </Button>
           <InfoTip>{m.sourceTip}</InfoTip>
-        </div>
+        </>
       )}
+      </div>
       <div className="wk-grid">
         {weeks.map((w) => {
           const v = view(w);
@@ -83,7 +93,7 @@ export function WeeklyText({ a, storeId, canAi, jira }: { a: Analysis; storeId: 
                 <b>{m.week(weekTitle(w))}</b>
                 <span className="wl-sum sm">{fmtH(v.hours)}&nbsp;<small>{t.common.h}</small></span>
                 <span className="spacer" />
-                {edited && <Button variant="link" title={m.revertTitle} onClick={() => reset(v.id)}>{m.revert}</Button>}
+                {layout === "weeks" && edited && <Button variant="link" title={m.revertTitle} onClick={() => reset(v.id)}>{m.revert}</Button>}
                 {v.ready && (
                   <span title={v.ready.ready ? m.sourceTip : m.tempoNotReady(fmtH(v.ready.logged / 60), fmtH(v.ready.norm / 60))}>
                     <Segmented size="small" value={v.src} onChange={(s) => v.ready?.ready && setSources((p) => ({ ...p, [w.monday]: s }))}
@@ -91,6 +101,9 @@ export function WeeklyText({ a, storeId, canAi, jira }: { a: Analysis; storeId: 
                   </span>
                 )}
               </header>
+              {layout === "days" ? (
+                <DayBlocks blocks={v.blocks} source={v.src} texts={dayTexts} setTexts={setDayTexts} />
+              ) : (<>
               <textarea rows={Math.min(12, Math.max(4, text.split("\n").length + 1))} value={text} onChange={(e) => setTexts((p) => ({ ...p, [v.id]: e.target.value }))} />
               <div className="row wrap">
                 <CopyChip text={text} label={m.copyText} wide />
@@ -109,6 +122,7 @@ export function WeeklyText({ a, storeId, canAi, jira }: { a: Analysis; storeId: 
                   </>
                 )}
               </div>
+              </>)}
             </article>
           );
         })}

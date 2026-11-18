@@ -2,6 +2,7 @@ import type { Analysis, JiraWorklog } from "../types";
 import { t } from "../i18n";
 import { formatDate } from "./dates";
 import { fmtH, type Week } from "./report";
+import type { DayBlock } from "./submit";
 import { minutes } from "./worklogSync";
 
 /** The week as it ended up in Tempo: the source for the user's own system once Tempo is filled. */
@@ -35,9 +36,11 @@ export interface TempoTask {
   said: string[];
 }
 
-export function tempoWeekTasks(w: Week, list: JiraWorklog[]): TempoTask[] {
+export const tempoWeekTasks = (w: Week, list: JiraWorklog[]): TempoTask[] => tasksOf(inWeek(w, list));
+
+function tasksOf(list: JiraWorklog[]): TempoTask[] {
   const by = new Map<string, TempoTask>();
-  for (const x of [...inWeek(w, list)].sort((a, b) => a.date.localeCompare(b.date))) {
+  for (const x of [...list].sort((a, b) => a.date.localeCompare(b.date))) {
     const cur = by.get(x.key) ?? { key: x.key, minutes: 0, said: [] };
     cur.minutes += mins(x);
     const c = x.comment.trim();
@@ -47,15 +50,25 @@ export function tempoWeekTasks(w: Week, list: JiraWorklog[]): TempoTask[] {
   return [...by.values()].sort((a, b) => b.minutes - a.minutes || a.key.localeCompare(b.key));
 }
 
-/** Same layout as the plan-based weekly text, built from Tempo worklogs. */
-export function tempoWeekText(a: Analysis, w: Week, list: JiraWorklog[]): string {
-  return tempoWeekTasks(w, list)
+const linesOf = (a: Analysis, tasks: TempoTask[]): string =>
+  tasks
     .map((x) => {
       const title = a.issues[x.key]?.summary ?? "";
       const said = x.said.filter((s) => s !== title).slice(0, 2).join("; ");
       return t().analysis.submit.line(x.key, title, fmtH(x.minutes / 60), said);
     })
     .join("\n");
+
+/** Same layout as the plan-based weekly text, built from Tempo worklogs. */
+export const tempoWeekText = (a: Analysis, w: Week, list: JiraWorklog[]): string => linesOf(a, tempoWeekTasks(w, list));
+
+/** Every day of the week that has worklogs in Tempo, days off included: that is what Tempo holds. */
+export function tempoDayBlocks(a: Analysis, w: Week, list: JiraWorklog[]): DayBlock[] {
+  const by = new Map<string, JiraWorklog[]>();
+  for (const x of inWeek(w, list)) by.set(x.date, [...(by.get(x.date) ?? []), x]);
+  return [...by.entries()]
+    .sort((x, y) => x[0].localeCompare(y[0]))
+    .map(([date, ws]) => ({ date, hours: ws.reduce((s, x) => s + mins(x), 0) / 60, text: linesOf(a, tasksOf(ws)) }));
 }
 
 /** Date and hours per day as logged in Tempo, one line per day that has worklogs. */

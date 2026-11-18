@@ -69,6 +69,30 @@ export function weekText(a: Analysis, w: Week): string {
   return lines.join("\n");
 }
 
+/** One day for a system that wants daily entries: total and one line per task. */
+export interface DayBlock {
+  date: string;
+  hours: number;
+  text: string;
+}
+
+export function planDayBlocks(a: Analysis, w: Week): DayBlock[] {
+  return w.days
+    .filter((d) => !d.off && d.tasks.some((x) => x.hours > 0))
+    .map((d) => ({
+      date: d.date,
+      hours: dayTotal(d),
+      text: d.tasks
+        .filter((x) => x.hours > 0)
+        .map((x) => {
+          const title = a.issues[x.key]?.summary ?? "";
+          const said = worklogComment(a, d, x.key);
+          return t().analysis.submit.line(x.key, title, fmtH(x.hours), said === title ? "" : said);
+        })
+        .join("\n"),
+    }));
+}
+
 export const weekTitle = (w: Week): string => `${dateShort(w.monday)} – ${dateShort(w.sunday)}`;
 export const weekHours = (w: Week): number => w.days.reduce((s, d) => s + (d.off ? 0 : dayTotal(d)), 0);
 
