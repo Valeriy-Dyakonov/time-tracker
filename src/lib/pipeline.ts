@@ -2,6 +2,7 @@ import type { Analysis, LogEntry, LogLevel, Settings } from "../types";
 import { analyseDays } from "./analysis/days";
 import { IssueEnricher } from "./analysis/enrich";
 import { logProjects, periodNarrative, reportGaps } from "./analysis/period";
+import { polishNotes } from "./analysis/polish";
 import { COLLECT_STEPS } from "./analysis/steps";
 import type { RunContext, RunHandlers, RunOptions } from "./analysis/types";
 import { loadWorkCalendar } from "./analysis/workCalendar";
@@ -50,8 +51,9 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
   log("info", m.daysStage);
 
   const r = await analyseDays(ctx, dates, h.onDays);
-  const days = buildPlan(dates, r.activity, ctx.issues, o.hoursPerDay, o.fillMode, r.meetingsByDay, ctx.targets);
-  reportGaps(ctx, days, r.board);
+  const planned = buildPlan(dates, r.activity, ctx.issues, o.hoursPerDay, o.fillMode, r.meetingsByDay, ctx.targets);
+  reportGaps(ctx, planned, r.board);
+  const days = await polishNotes(ctx, planned);
 
   const totals = totalsOf(days, ctx.issues);
   logProjects(ctx, totals);

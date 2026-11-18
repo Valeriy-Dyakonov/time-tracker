@@ -57,3 +57,23 @@ describe("system prompts follow the interface language", () => {
     setLocale("ru");
   });
 });
+
+import { buildNotesPrompt, parseNotes } from "./prompt";
+describe("parseNotes", () => {
+  const ids = new Set(["2026-11-10|ABC-1", "2026-11-11|ABC-1"]);
+
+  it("keeps known ids with non-empty text", () => {
+    const raw = '```json\n{"items":[{"id":"2026-11-10|ABC-1","text":" Исправил расчёт "},{"id":"X|Y","text":"чужой"},{"id":"2026-11-11|ABC-1","text":""}]}\n```';
+    expect([...parseNotes(raw, ids)!]).toEqual([["2026-11-10|ABC-1", "Исправил расчёт"]]);
+  });
+
+  it("returns null for an unusable answer", () => {
+    expect(parseNotes("нет JSON", ids)).toBeNull();
+    expect(parseNotes('{"text":"x"}', ids)).toBeNull();
+  });
+
+  it("omits an empty draft from the prompt", () => {
+    const p = JSON.parse(buildNotesPrompt([{ id: "a", date: "2026-11-10", key: "ABC-1", task: "T", draft: "", facts: [] }]));
+    expect(p.items[0]).not.toHaveProperty("draft");
+  });
+});

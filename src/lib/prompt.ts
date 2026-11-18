@@ -115,6 +115,43 @@ export function parseAiDay(raw: string, allowed: Set<string>): AiDay | null {
   return { weights, notes, summary, reasoning };
 }
 
+/** System prompt for rewriting worklog descriptions, in the current language. */
+export const notesSystemPrompt = (): string => t().analysis.prompt.notes;
+
+/** One worklog row to rewrite: the AI's draft plus the day's events on that task. */
+export interface NoteItem {
+  id: string;
+  date: string;
+  key: string;
+  task: string;
+  draft: string;
+  facts: { src: string; text: string; ctx?: string }[];
+}
+
+export const buildNotesPrompt = (items: NoteItem[]): string =>
+  JSON.stringify({ items: items.map(({ id, date, key, task, draft, facts }) => ({ id, date, key, task, draft: draft || undefined, facts })) });
+
+/** id -> rewritten text, only for known ids; null when the answer is not usable at all. */
+export function parseNotes(raw: string, allowed: Set<string>): Map<string, string> | null {
+  const a = raw.indexOf("{");
+  const b = raw.lastIndexOf("}");
+  if (a < 0 || b <= a) return null;
+  let items: unknown;
+  try {
+    items = (JSON.parse(raw.slice(a, b + 1)) as { items?: unknown }).items;
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(items)) return null;
+  const out = new Map<string, string>();
+  for (const it of items) {
+    const id = typeof it?.id === "string" ? it.id : "";
+    const text = typeof it?.text === "string" ? it.text.trim() : "";
+    if (allowed.has(id) && text) out.set(id, text);
+  }
+  return out;
+}
+
 export function buildNarrativePrompt(input: {
   start: string;
   end: string;
