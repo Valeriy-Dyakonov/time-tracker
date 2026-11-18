@@ -22,9 +22,9 @@ describe("parseInline", () => {
 
   it("reads emphasis, mono, mentions, images and only real task keys", () => {
     expect(parseInline("*done* _soon_ {{x.y}} [~ivanov] !shot.png|thumbnail! ABC-12 UTF-8 snake_case_name", isKey)).toEqual([
-      { t: "b", v: "done" },
+      { t: "b", v: [{ t: "text", v: "done" }] },
       { t: "text", v: " " },
-      { t: "i", v: "soon" },
+      { t: "i", v: [{ t: "text", v: "soon" }] },
       { t: "text", v: " " },
       { t: "code", v: "x.y" },
       { t: "text", v: " " },
@@ -32,6 +32,29 @@ describe("parseInline", () => {
       { t: "text", v: " [shot.png] " },
       { t: "key", v: "ABC-12" },
       { t: "text", v: " UTF-8 snake_case_name" },
+    ]);
+  });
+});
+
+describe("visual editor markup", () => {
+  const T = (v: string) => ({ t: "text", v });
+
+  it("drops the empty {} separator around formatted words", () => {
+    expect(parseInline("{}Где искать{}")).toEqual([T("Где искать")]);
+    expect(parseInline("*{}Где искать{}*:")).toEqual([{ t: "b", v: [T("Где искать")] }, T(":")]);
+    expect(parseWiki("h3. {}Где искать{}")).toEqual([{ t: "h", level: 3, v: [T("Где искать")] }]);
+  });
+
+  it("reads braced emphasis next to letters, nested formatting and the rest", () => {
+    expect(parseInline("слово{*}жирно{*}слово {_}курсив{_} {-}старое{-} +важно+")).toEqual([
+      T("слово"), { t: "b", v: [T("жирно")] }, T("слово "), { t: "i", v: [T("курсив")] }, T(" "),
+      { t: "s", v: [T("старое")] }, T(" "), { t: "u", v: [T("важно")] },
+    ]);
+    expect(parseInline("*см. [спека|https://w/x] и _это_*")).toEqual([
+      { t: "b", v: [T("см. "), { t: "link", href: "https://w/x", v: "спека" }, T(" и "), { t: "i", v: [T("это")] }] },
+    ]);
+    expect(parseInline("a\\\\b (/) готово (x) нет [^log.txt] 1 + 2 C++")).toEqual([
+      T("a"), { t: "br" }, T("b ✓ готово ✗ нет [log.txt] 1 + 2 C++"),
     ]);
   });
 });

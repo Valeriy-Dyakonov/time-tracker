@@ -1,16 +1,19 @@
-import { Fragment, useMemo } from "react";
+import { Fragment, useMemo, type ReactNode } from "react";
 import { api } from "@/shared/api";
 import { parseWiki, type Inline } from "../lib/wiki";
 
 /** Jira wiki markup rendered as React elements (never as HTML); links open in the system browser. */
 export function WikiText({ text, isKey, onKey }: { text: string; isKey: (k: string) => boolean; onKey: (k: string) => void }) {
   const blocks = useMemo(() => parseWiki(text, isKey), [text, isKey]);
-  const line = (parts: Inline[]) =>
+  const line = (parts: Inline[]): ReactNode[] =>
     parts.map((x, n) => {
       switch (x.t) {
         case "text": return <Fragment key={n}>{x.v}</Fragment>;
-        case "b": return <strong key={n}>{x.v}</strong>;
-        case "i": return <em key={n}>{x.v}</em>;
+        case "b": return <strong key={n}>{line(x.v)}</strong>;
+        case "i": return <em key={n}>{line(x.v)}</em>;
+        case "u": return <u key={n}>{line(x.v)}</u>;
+        case "s": return <s key={n}>{line(x.v)}</s>;
+        case "br": return <br key={n} />;
         case "code": return <code key={n}>{x.v}</code>;
         case "mention": return <span key={n} className="wiki-mention">@{x.v}</span>;
         case "key": return <button key={n} className="wiki-key" onClick={() => onKey(x.v)}>{x.v}</button>;

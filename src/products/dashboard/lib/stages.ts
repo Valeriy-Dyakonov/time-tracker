@@ -17,7 +17,7 @@ const REVIEW = ["review", "ревью", "code check"];
 const SHIP = ["approv", "соглас", "merge", "мерж", "deploy", "деплой", "release", "релиз", "выкат", "install", "установ", "prod"];
 const BACKLOG = ["backlog", "бэклог", "беклог", "icebox", "someday", "later", "отлож"];
 
-export function stageOf(i: DashIssue): Stage {
+export function stageOf(i: Pick<DashIssue, "status" | "category">): Stage {
   if (i.category === "done") return "done";
   if (has(i.status, SHIP)) return "ship";
   if (has(i.status, TEST)) return "test";

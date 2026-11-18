@@ -150,11 +150,12 @@
 .related { display: flex; flex-direction: column; gap: 10px; }
 .related-group { display: flex; flex-direction: column; gap: 6px; }
 .related-rel { font-size: 11.5px; color: var(--muted); }
-.related-item { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--card); font: inherit; font-size: 13px; color: var(--text); cursor: pointer; text-align: left; }
-.related-item:hover { border-color: var(--accent); }
+.related-item { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 8px 12px; border: 1px solid var(--line); border-left: 3px solid var(--s, var(--line)); border-radius: var(--r-lg); background: var(--card); font: inherit; font-size: 13px; color: var(--text); cursor: pointer; text-align: left; }
+.related-item:hover { border-color: var(--s, var(--accent)); }
+.related-item.s-done .related-sum { color: var(--muted); }
+.related-item .dash-stage { flex: none; max-width: 40%; }
 .related-item b { color: var(--accent); white-space: nowrap; }
 .related-sum { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
-.related-status { flex: none; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: var(--r-pill); background: var(--bg); color: var(--muted); }
 
 /* Comments */
 .comments { display: flex; flex-direction: column; gap: 12px; }
@@ -178,6 +179,8 @@
 .wiki a { color: var(--accent); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); cursor: pointer; }
 .wiki a:hover { border-bottom-color: var(--accent); }
 .wiki-mention { color: var(--accent); font-weight: 600; }
+.wiki u { text-decoration-color: color-mix(in srgb, currentColor 50%, transparent); }
+.wiki s { color: var(--muted); }
 .wiki-key { border: 0; background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); font: inherit; font-weight: 600; padding: 0 5px; border-radius: var(--r-xs); cursor: pointer; }
 .wiki-key:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
 

@@ -178,10 +178,10 @@ function Related({ items, onOpen, grouped }: { items: DashRelated[]; onOpen: (k:
         <div key={relation} className="related-group">
           {relation && <small className="related-rel">{relation}</small>}
           {rs.map((r) => (
-            <button key={r.key} className="related-item" onClick={() => onOpen(r.key)}>
+            <button key={r.key} className={`related-item s-${stageOf(r)}`} onClick={() => onOpen(r.key)}>
               <b>{r.key}</b>
               <span className="related-sum">{r.summary}</span>
-              <span className="related-status">{r.status}</span>
+              <span className={`dash-stage s-${stageOf(r)}`}>{r.status}</span>
             </button>
           ))}
         </div>

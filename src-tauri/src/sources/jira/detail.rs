@@ -24,6 +24,8 @@ pub struct Related {
     pub key: String,
     pub summary: String,
     pub status: String,
+    /// Jira status category ("new", "indeterminate", "done"), to colour the status like the board does.
+    pub category: String,
     /// Link wording from the issue's side ("blocks", "is blocked by"...); empty for subtasks.
     pub relation: String,
 }
@@ -52,6 +54,7 @@ fn related(v: &Value, relation: String) -> Option<Related> {
         key: v["key"].as_str()?.to_string(),
         summary: v["fields"]["summary"].as_str().unwrap_or("").to_string(),
         status: v["fields"]["status"]["name"].as_str().unwrap_or("").to_string(),
+        category: v["fields"]["status"]["statusCategory"]["key"].as_str().unwrap_or("").to_string(),
         relation,
     })
 }
@@ -113,9 +116,9 @@ mod tests {
 
     #[test]
     fn reads_link_wording_from_the_issue_side() {
-        let l = json!({ "key": "B-2", "fields": { "summary": "Other", "status": { "name": "Done" } } });
+        let l = json!({ "key": "B-2", "fields": { "summary": "Other", "status": { "name": "Done", "statusCategory": { "key": "done" } } } });
         let r = related(&l, "blocks".into()).unwrap();
-        assert_eq!((r.key.as_str(), r.status.as_str(), r.relation.as_str()), ("B-2", "Done", "blocks"));
+        assert_eq!((r.key.as_str(), r.status.as_str(), r.category.as_str(), r.relation.as_str()), ("B-2", "Done", "done", "blocks"));
         assert_eq!(names(&json!([{ "name": "api" }, "ui"])), vec!["api", "ui"]);
     }
 }

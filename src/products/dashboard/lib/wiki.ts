@@ -1,16 +1,20 @@
 /**
  * Jira wiki markup (Server/DC descriptions and comments) -> plain blocks for safe rendering:
  * nothing becomes HTML, links are data the UI opens through the backend's http(s)-only command.
- * Covers what people actually write: paragraphs, headings, lists, code/noformat/quote blocks,
- * [text|url] and bare links, *bold*, _italic_, {{mono}}, [~mentions], images, tables.
+ * Covers what people actually write: paragraphs, headings, lists, code/noformat/quote blocks, tables,
+ * [text|url] and bare links, *bold*, _italic_, +underline+, {{mono}}, [~mentions], images, attachments,
+ * \\ line breaks, (/) (x) (!) (i) icons, and the braced forms the visual editor writes when formatting
+ * touches other characters: {*}bold{*}, {_}italic{_}, {+}..{+}, {-}strike{-}, and the empty {} separator.
  */
 
 export type Inline =
   | { t: "text"; v: string }
-  | { t: "b" | "i" | "code"; v: string }
+  | { t: "b" | "i" | "u" | "s"; v: Inline[] }
+  | { t: "code"; v: string }
   | { t: "link"; href: string; v: string }
   | { t: "mention"; v: string }
-  | { t: "key"; v: string };
+  | { t: "key"; v: string }
+  | { t: "br" };
 
 export type Block =
   | { t: "p"; lines: Inline[][] }
@@ -22,18 +26,25 @@ export type Block =
 
 const isWeb = (s: string) => /^https?:\/\//i.test(s);
 const KEY = /^[A-Z][A-Z0-9_]+-\d+$/;
+const ICONS: Record<string, string> = { "/": "✓", x: "✗", "!": "⚠", i: "ℹ", "?": "?", y: "✓", n: "✗", "+": "+", "-": "−" };
+const BRACED: Record<string, "b" | "i" | "u" | "s" | null> = { "*": "b", _: "i", "+": "u", "-": "s", "^": null, "~": null, "?": null };
 
 const INLINE = new RegExp(
   [
-    String.raw`\[([^\]|\n]+)\|([^\]\n]+)\]`, // 1,2 [text|url]
-    String.raw`\[(https?:\/\/[^\]\s]+)\]`, // 3 [url]
-    String.raw`\[~([^\]\n]+)\]`, // 4 [~user]
-    String.raw`(https?:\/\/[^\s<>\]"|]+)`, // 5 bare url
-    String.raw`\{\{(.+?)\}\}`, // 6 {{mono}}
-    String.raw`(?<![\w*])\*(?!\s)([^*\n]+?)\*(?![\w*])`, // 7 *bold*
-    String.raw`(?<![\w_])_(?!\s)([^_\n]+?)_(?![\w_])`, // 8 _italic_
-    String.raw`!([^!\s|]+\.[a-zA-Z0-9]{2,5})(?:\|[^!\n]*)?!`, // 9 !image.png!
-    String.raw`\b([A-Z][A-Z0-9_]+-\d+)\b`, // 10 issue key
+    String.raw`\{(?<bt>[*_+\-^~?])\}(?<bv>.+?)\{\k<bt>\}`, // {*}bold{*} and friends
+    String.raw`\[(?<lt>[^\]|\n]+)\|(?<lu>[^\]\n]+)\]`, // [text|url]
+    String.raw`\[(?<bl>https?:\/\/[^\]\s]+)\]`, // [url]
+    String.raw`\[~(?<mn>[^\]\n]+)\]`, // [~user]
+    String.raw`\[\^(?<att>[^\]\n]+)\]`, // [^attachment.pdf]
+    String.raw`(?<url>https?:\/\/[^\s<>\]"|]+)`, // bare url
+    String.raw`\{\{(?<mono>.+?)\}\}`, // {{mono}}
+    String.raw`(?<![\w*])\*(?!\s)(?<b>[^*\n]+?)\*(?![\w*])`, // *bold*
+    String.raw`(?<![\w_])_(?!\s)(?<i>[^_\n]+?)_(?![\w_])`, // _italic_
+    String.raw`(?<![\w+])\+(?!\s)(?<u>[^+\n]+?)\+(?![\w+])`, // +underline+
+    String.raw`!(?<img>[^!\s|]+\.[a-zA-Z0-9]{2,5})(?:\|[^!\n]*)?!`, // !image.png!
+    String.raw`\((?<icon>\/|x|!|i|\?|y|n|\+|-)\)`, // (/) (x) (!) (i)...
+    String.raw`(?<br>\\\\)`, // \\ forced line break
+    String.raw`\b(?<key>[A-Z][A-Z0-9_]+-\d+)\b`, // issue key
   ].join("|"),
   "g",
 );
@@ -46,28 +57,39 @@ export function parseInline(text: string, isKey: (k: string) => boolean = () => 
     if (x.t === "text" && last?.t === "text") last.v += x.v;
     else if (x.t !== "text" || x.v) out.push(x);
   };
+  // The empty {} only separates markup from adjacent text: *{}Where{}* is *Where*.
+  const src = text.replace(/\{\}/g, "");
   let at = 0;
-  for (const m of text.matchAll(INLINE)) {
-    push({ t: "text", v: text.slice(at, m.index) });
+  for (const m of src.matchAll(INLINE)) {
+    const g = m.groups!;
+    push({ t: "text", v: src.slice(at, m.index) });
     at = m.index! + m[0].length;
-    if (m[1] !== undefined) {
-      const href = m[2].trim();
-      if (isWeb(href)) push({ t: "link", href, v: m[1].trim() });
+    if (g.bt !== undefined) {
+      const kind = BRACED[g.bt];
+      if (kind) push({ t: kind, v: parseInline(g.bv, isKey) });
+      else for (const x of parseInline(g.bv, isKey)) push(x);
+    } else if (g.lt !== undefined) {
+      const href = g.lu.trim();
+      if (isWeb(href)) push({ t: "link", href, v: g.lt.trim() });
       else if (KEY.test(href) && isKey(href)) push({ t: "key", v: href });
-      else push({ t: "text", v: m[1] });
-    } else if (m[3] !== undefined) push({ t: "link", href: m[3], v: m[3] });
-    else if (m[4] !== undefined) push({ t: "mention", v: m[4] });
-    else if (m[5] !== undefined) {
-      const url = m[5].replace(/[.,;:!?)]+$/, "");
+      else push({ t: "text", v: g.lt });
+    } else if (g.bl !== undefined) push({ t: "link", href: g.bl, v: g.bl });
+    else if (g.mn !== undefined) push({ t: "mention", v: g.mn });
+    else if (g.att !== undefined) push({ t: "text", v: `[${g.att}]` });
+    else if (g.url !== undefined) {
+      const url = g.url.replace(/[.,;:!?)]+$/, "");
       push({ t: "link", href: url, v: url });
-      push({ t: "text", v: m[5].slice(url.length) });
-    } else if (m[6] !== undefined) push({ t: "code", v: m[6] });
-    else if (m[7] !== undefined) push({ t: "b", v: m[7] });
-    else if (m[8] !== undefined) push({ t: "i", v: m[8] });
-    else if (m[9] !== undefined) push({ t: "text", v: `[${m[9]}]` });
-    else if (m[10] !== undefined) push(isKey(m[10]) ? { t: "key", v: m[10] } : { t: "text", v: m[10] });
+      push({ t: "text", v: g.url.slice(url.length) });
+    } else if (g.mono !== undefined) push({ t: "code", v: g.mono });
+    else if (g.b !== undefined) push({ t: "b", v: parseInline(g.b, isKey) });
+    else if (g.i !== undefined) push({ t: "i", v: parseInline(g.i, isKey) });
+    else if (g.u !== undefined) push({ t: "u", v: parseInline(g.u, isKey) });
+    else if (g.img !== undefined) push({ t: "text", v: `[${g.img}]` });
+    else if (g.icon !== undefined) push({ t: "text", v: ICONS[g.icon] ?? m[0] });
+    else if (g.br !== undefined) push({ t: "br" });
+    else if (g.key !== undefined) push(isKey(g.key) ? { t: "key", v: g.key } : { t: "text", v: g.key });
   }
-  push({ t: "text", v: text.slice(at) });
+  push({ t: "text", v: src.slice(at) });
   return out;
 }
 

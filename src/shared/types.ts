@@ -159,6 +159,8 @@ export interface DashRelated {
   key: string;
   summary: string;
   status: string;
+  /** Jira status category: "new", "indeterminate" or "done". */
+  category: string;
   relation: string;
 }
 
