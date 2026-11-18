@@ -1,4 +1,4 @@
-import type { DashIssue } from "@/shared/types";
+import type { DashIssue, DashProfile } from "@/shared/types";
 
 /**
  * Where a task stands, independent of how an installation names its statuses:
@@ -23,8 +23,10 @@ export function stageOf(i: DashIssue): Stage {
   return "dev";
 }
 
-export type Profile = "dev" | "qa" | "lead";
+export type Profile = DashProfile;
 export const PROFILES: Profile[] = ["dev", "qa", "lead"];
+/** A value from settings.json that this version does not know falls back to the developer view. */
+export const asProfile = (v: string | undefined): Profile => (PROFILES.includes(v as Profile) ? (v as Profile) : "dev");
 
 export interface ProfileSpec {
   /** Stages in the order they matter to this role; the first ones are brought forward. */

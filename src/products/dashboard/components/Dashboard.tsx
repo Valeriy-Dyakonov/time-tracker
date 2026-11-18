@@ -7,7 +7,7 @@ import type { DashData } from "@/shared/types";
 import { Button, InfoTip, Segmented, Switch } from "@/shared/ui";
 import { containerCandidates, containerTypes } from "../lib/containers";
 import { filterIssues, GROUPINGS, lanes, projectsOf, sortForProfile, splitFolded, visibleColumns, type Grouping } from "../lib/groups";
-import { flagsOf, PROFILE, PROFILE_FLAGS, PROFILES, STALE_DAYS, stageOf, type Flag, type Profile, type Stage } from "../lib/stages";
+import { flagsOf, PROFILE, PROFILE_FLAGS, STALE_DAYS, stageOf, type Flag, type Profile, type Stage } from "../lib/stages";
 import { Board } from "./Board";
 import { ContainerPicker } from "./ContainerPicker";
 import { IssueCard } from "./IssueCard";
@@ -26,9 +26,8 @@ function readCache(p: Profile): Cached | null {
 }
 
 /** "Work dashboard": tasks for a role, grouped by epic, release or stage; a task opens in a side panel. Read-only. */
-export default function Dashboard({ jiraReady, onOpenSettings }: { jiraReady: boolean; onOpenSettings: () => void }) {
+export default function Dashboard({ jiraReady, profile, onOpenSettings }: { jiraReady: boolean; profile: Profile; onOpenSettings: () => void }) {
   const m = useT().dashboard;
-  const [profile, setProfile] = useStored<Profile>("worklog.dashboard.profile", "dev");
   const [byStored, setBy] = useStored<Grouping>("worklog.dashboard.grouping", "epic");
   const by: Grouping = GROUPINGS.includes(byStored) ? byStored : "epic";
   const [doneFolded, setDoneFolded] = useStored("worklog.dashboard.doneFolded", false);
@@ -99,8 +98,9 @@ export default function Dashboard({ jiraReady, onOpenSettings }: { jiraReady: bo
   return (
     <div className="dash">
       <div className="dash-bar">
-        <Segmented value={profile} onChange={setProfile} options={PROFILES.map((p) => ({ value: p, label: m.profiles[p] }))} />
+        <span className="dash-profile">{m.profileLabel}: <b>{m.profiles[profile]}</b></span>
         <InfoTip>{m.profileTip}</InfoTip>
+        <Button variant="link" title={m.changeProfileTitle} onClick={onOpenSettings}>{m.changeProfile}</Button>
         <span className="spacer" />
         {loading ? <span className="muted">{m.loading}</span> : cached && <span className="muted">{m.updatedAt(new Date(cached.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))}</span>}
         <Button size="small" disabled={loading} onClick={() => void load(profile)}>{m.refresh}</Button>

@@ -10,6 +10,8 @@ pub struct Settings {
     pub jira_url: String,
     /// Jira project keys used only as context for the AI: no hours are assigned to them.
     pub context_projects: Vec<String>,
+    /// Work Dashboard role: "dev", "qa" or "lead" (whose tasks are loaded and which statuses come first).
+    pub dashboard_profile: String,
     pub llm_base_url: String,
     pub llm_model: String,
     /// Requests to the AI per minute; 0 = no limit. Corporate gateways reject bursts with 429.
@@ -47,6 +49,7 @@ impl Default for Settings {
         Self {
             jira_url: String::new(),
             context_projects: vec![],
+            dashboard_profile: "dev".into(),
             llm_base_url: String::new(),
             llm_model: String::new(),
             llm_rpm: 30,

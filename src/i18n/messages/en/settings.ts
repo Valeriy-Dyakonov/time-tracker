@@ -53,6 +53,8 @@ const en: typeof ru = {
     urlHint: "The address you open Jira at in the browser.",
     context: "Context-only projects",
     contextHint: "Project keys separated by commas, e.g. ABC, XYZ. Their events (commits, chat, calls) still serve as hints for the AI, but no hours are booked on those tasks. Useful for other teams' projects and tasks you can't log time on.",
+    profile: "Work Dashboard profile",
+    profileHint: "Your role: it decides whose tasks the dashboard shows and which statuses come first.",
     helpTitle: "Where to get a Jira token",
     helpSteps: [
       "Open Jira in the browser and sign in with your account.",

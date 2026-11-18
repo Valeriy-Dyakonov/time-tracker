@@ -1,6 +1,8 @@
 export interface Settings {
   jiraUrl: string;
   contextProjects: string[];
+  /** Work Dashboard role. */
+  dashboardProfile: DashProfile;
   llmBaseUrl: string;
   llmModel: string;
   /** Requests to the AI per minute; 0 = no limit. */
@@ -30,6 +32,7 @@ export interface Settings {
 export const defaultSettings: Settings = {
   jiraUrl: "",
   contextProjects: [],
+  dashboardProfile: "dev",
   llmBaseUrl: "",
   llmModel: "",
   llmRpm: 30,
@@ -108,6 +111,9 @@ export interface IssueInfo {
   /** The user is or was the assignee; tasks with `false` are context only and never get hours. */
   assignedToMe?: boolean;
 }
+
+/** Work Dashboard role: developer, QA or lead. */
+export type DashProfile = "dev" | "qa" | "lead";
 
 export interface DashPerson {
   name: string;

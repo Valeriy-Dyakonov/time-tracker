@@ -2,6 +2,9 @@ import type ru from "../ru/dashboard";
 
 const dashboard: typeof ru = {
   profiles: { dev: "Developer", qa: "QA", lead: "Lead" },
+  profileLabel: "Profile",
+  changeProfile: "change",
+  changeProfileTitle: "The profile is set in the settings, Jira section",
   profileTip:
     "The profile decides whose tasks you see and which statuses come first. Developer: your tasks (assignee or in fields like Responsible/QA), development and review first. QA: also every task in a testing status in your projects. Lead: all tasks of your projects, marked stuck or unassigned.",
   stages: { backlog: "Backlog", todo: "To do", dev: "In development", review: "Review", test: "Testing", done: "Closed recently" },

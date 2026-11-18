@@ -3,6 +3,7 @@ import { api, inTauri } from "@/shared/api";
 import { JiraUrlContext } from "@/shared/components/IssueLink";
 import Report from "@/products/worklog/components/report/Report";
 import Dashboard from "@/products/dashboard/components/Dashboard";
+import { asProfile } from "@/products/dashboard/lib/stages";
 import Home from "./Home";
 import type { ProductId } from "./products";
 import TitleBar from "./TitleBar";
@@ -86,7 +87,7 @@ export default function App() {
         ) : view === "home" ? (
           <Home jiraReady={setup.jira} onOpen={setView} />
         ) : view === "dashboard" ? (
-          <Dashboard jiraReady={setup.jira} onOpenSettings={openSettings} />
+          <Dashboard jiraReady={setup.jira} profile={asProfile(settings.dashboardProfile)} onOpenSettings={openSettings} />
         ) : (
           <Report settings={settings} setup={setup} onOpenSettings={openSettings} analysis={analysis} onChange={setAnalysis} />
         )}
