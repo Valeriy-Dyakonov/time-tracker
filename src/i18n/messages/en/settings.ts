@@ -69,6 +69,9 @@ const en: typeof ru = {
     baseUrlTip: "The AI reads each day's events, decides which tasks you worked on and in what proportion, and writes the worklog descriptions. Any OpenAI-compatible gateway works.",
     model: "Model",
     modelHint: "The exact model name as the API expects it.",
+    rpm: "Requests per minute",
+    rpmHint: "0 means no limit.",
+    rpmTip: "AI gateways usually limit the request rate and answer 429 when it is exceeded. The app spreads requests evenly and, on 429 or a temporarily unavailable gateway, waits and retries. Lower the value if analysis still fails with 429.",
     keyHint: "Leave empty if the gateway doesn't need a key.",
     helpTitle: "Where to get the address, model and key",
     helpSteps: [

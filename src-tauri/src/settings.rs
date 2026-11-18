@@ -12,6 +12,8 @@ pub struct Settings {
     pub context_projects: Vec<String>,
     pub llm_base_url: String,
     pub llm_model: String,
+    /// Requests to the AI per minute; 0 = no limit. Corporate gateways reject bursts with 429.
+    pub llm_rpm: u32,
     pub confluence_url: String,
     pub gitlab_url: String,
     /// Production calendar country (ru, by, kz, ua, uz, us); empty = weekdays only.
@@ -47,6 +49,7 @@ impl Default for Settings {
             context_projects: vec![],
             llm_base_url: String::new(),
             llm_model: String::new(),
+            llm_rpm: 30,
             confluence_url: String::new(),
             gitlab_url: String::new(),
             holiday_country: "ru".into(),

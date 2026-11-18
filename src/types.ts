@@ -3,6 +3,8 @@ export interface Settings {
   contextProjects: string[];
   llmBaseUrl: string;
   llmModel: string;
+  /** Requests to the AI per minute; 0 = no limit. */
+  llmRpm: number;
   confluenceUrl: string;
   gitlabUrl: string;
   gitlabLocalOnly: boolean;
@@ -30,6 +32,7 @@ export const defaultSettings: Settings = {
   contextProjects: [],
   llmBaseUrl: "",
   llmModel: "",
+  llmRpm: 30,
   confluenceUrl: "",
   gitlabUrl: "",
   gitlabLocalOnly: true,

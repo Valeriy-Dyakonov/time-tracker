@@ -55,6 +55,7 @@ async fn probe_llm(c: &Ctx) -> AppResult<ProbeOk> {
         &s.llm_base_url,
         key.as_deref(),
         &s.llm_model,
+        s.llm_rpm,
         "Reply with a JSON object.",
         "{\"ping\": true} -> reply {\"pong\": true}",
     )
