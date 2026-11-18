@@ -124,12 +124,13 @@ export interface NoteItem {
   date: string;
   key: string;
   task: string;
+  hours: number;
   draft: string;
   facts: { src: string; text: string; ctx?: string }[];
 }
 
 export const buildNotesPrompt = (items: NoteItem[]): string =>
-  JSON.stringify({ items: items.map(({ id, date, key, task, draft, facts }) => ({ id, date, key, task, draft: draft || undefined, facts })) });
+  JSON.stringify({ items: items.map(({ id, date, key, task, hours, draft, facts }) => ({ id, date, key, task, hours, draft: draft || undefined, facts })) });
 
 /** id -> rewritten text, only for known ids; null when the answer is not usable at all. */
 export function parseNotes(raw: string, allowed: Set<string>): Map<string, string> | null {

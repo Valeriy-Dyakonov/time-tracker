@@ -72,8 +72,9 @@ describe("parseNotes", () => {
     expect(parseNotes('{"text":"x"}', ids)).toBeNull();
   });
 
-  it("omits an empty draft from the prompt", () => {
-    const p = JSON.parse(buildNotesPrompt([{ id: "a", date: "2026-11-10", key: "ABC-1", task: "T", draft: "", facts: [] }]));
+  it("omits an empty draft from the prompt and passes the hours", () => {
+    const p = JSON.parse(buildNotesPrompt([{ id: "a", date: "2026-11-10", key: "ABC-1", task: "T", hours: 8, draft: "", facts: [] }]));
     expect(p.items[0]).not.toHaveProperty("draft");
+    expect(p.items[0].hours).toBe(8);
   });
 });

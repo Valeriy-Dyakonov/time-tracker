@@ -24,7 +24,7 @@ function collect(days: DayPlan[], ctx: RunContext): NoteItem[] {
         .map((e) => ({ src: e.source, text: e.text.slice(0, 160), ctx: e.context?.slice(0, 80) }));
       const draft = t.notes[0]?.trim() ?? "";
       if (!draft && facts.length === 0) continue;
-      items.push({ id: rowId(d.date, t.key), date: d.date, key: t.key, task: ctx.issues[t.key]?.summary ?? "", draft, facts });
+      items.push({ id: rowId(d.date, t.key), date: d.date, key: t.key, task: ctx.issues[t.key]?.summary ?? "", hours: t.hours, draft, facts });
     }
   }
   return items;
