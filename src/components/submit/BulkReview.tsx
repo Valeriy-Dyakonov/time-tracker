@@ -7,11 +7,15 @@ import { rowId } from "../../lib/submit";
 import type { PlannedWrite } from "../../lib/worklogSync";
 import IssueLink from "../IssueLink";
 import { Button, keyColor } from "../ui";
+import type { LimitReport } from "../../lib/limits";
+import { LimitWarnings } from "./LimitWarnings";
 
 /** "Log all": the exact list of worklogs to be created, reviewed and confirmed by the user before anything is sent. */
 export function BulkReview(props: {
   a: Analysis;
   plan: PlannedWrite[];
+  /** Jira after these writes against day and period norms. */
+  limits: (chosen: PlannedWrite[]) => LimitReport;
   onConfirm: (plan: PlannedWrite[], onStep: (done: number) => void) => Promise<number>;
   onClose: () => void;
 }) {
@@ -24,6 +28,9 @@ export function BulkReview(props: {
   const chosen = props.plan.filter((p) => !skip.has(rowId(p.row)));
   const hours = fmtH(chosen.reduce((s, p) => s + p.minutes, 0) / 60);
   const running = progress !== null && result === null;
+  const [ack, setAck] = useState(false);
+  const lim = props.limits(chosen);
+  const blocked = lim.outside.length > 0 || (!lim.ok && !ack);
 
   const toggle = (id: string) => setSkip((p) => {
     const n = new Set(p);
@@ -58,6 +65,12 @@ export function BulkReview(props: {
           );
         })}
       </div>
+      {result === null && <LimitWarnings r={lim} />}
+      {result === null && !lim.ok && (
+        lim.outside.length > 0
+          ? <p className="wl-err">{t.submit.limits.outsideBlock}</p>
+          : <label className="limits-ack"><input type="checkbox" checked={ack} disabled={running} onChange={(e) => setAck(e.target.checked)} /> {t.submit.limits.ack}</label>
+      )}
       <div className="bulk-bar">
         {running && <span className="muted">{m.progress(progress, chosen.length)}</span>}
         {result && <span>{result}</span>}
@@ -65,7 +78,7 @@ export function BulkReview(props: {
         {result === null && (
           <>
             <Button variant="ghost" size="small" disabled={running} onClick={props.onClose}>{t.submit.row.cancel}</Button>
-            <Button variant="primary" size="small" disabled={running || chosen.length === 0} onClick={go}>
+            <Button variant="primary" size="small" disabled={running || chosen.length === 0 || blocked} onClick={go}>
               {m.confirm(count(chosen.length, m.rows), hours)}
             </Button>
           </>

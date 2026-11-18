@@ -1,16 +1,20 @@
 import { useMemo, useState } from "react";
 import type { Analysis } from "../../types";
 import { isoWeekday } from "../../lib/dates";
-import { dateFull, useT, weekdayShort } from "../../i18n";
+import { count, dateFull, dateShort, useT, weekdayShort } from "../../i18n";
 import { fmtH } from "../../lib/report";
-import { rowId, worklogRows, type HoursFormat, type WorklogRow as Row } from "../../lib/submit";
+import { rowId, worklogRows, type HoursFormat, type WorklogRow as PlanRow } from "../../lib/submit";
+import { applyEdits, editCount, NO_EDITS, removeRow, restoreRow, setHours, type EditedRow as Row, type RowEdits } from "../../lib/submitEdits";
+import { checkLimits, perDay } from "../../lib/limits";
+import { AddRow } from "./AddRow";
+import { LimitWarnings, limitText } from "./LimitWarnings";
 import { useStored } from "../hooks/useStored";
 import IssueLink from "../IssueLink";
 import { Button, Card, InfoTip, keyColor, Segmented } from "../ui";
 import { BulkReview } from "./BulkReview";
 import { StepHeader } from "./StepHeader";
 import { useJiraSync } from "./useJiraSync";
-import { bulkPlan, dayMatches, indexWorklogs, mismatchedDays, unplanned } from "../../lib/worklogSync";
+import { bulkPlan, dayMatches, indexWorklogs, minutes, mismatchedDays, unplanned, type PlannedWrite } from "../../lib/worklogSync";
 import { DayMatchChip, PeriodMatch, Unplanned } from "./JiraCompare";
 import { WorklogRow, type RowLabel } from "./WorklogRow";
 
@@ -33,12 +37,16 @@ export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
   const t = useT();
   const m = t.submit.tempo;
 
-  const rows = useMemo(() => worklogRows(a), [a]);
+  const [edits, setEdits] = useStored<RowEdits>(`${storeId}.edits`, NO_EDITS);
+  const [adding, setAdding] = useState(false);
+  const planRows = useMemo(() => worklogRows(a), [a]);
+  const rows = useMemo(() => applyEdits(planRows, edits), [planRows, edits]);
+  const removed = planRows.filter((r) => edits.removed[rowId(r)]);
   const byTask = useMemo(() => groupBy(rows, (r) => r.key).sort((x, y) => sumHours(y[1]) - sumHours(x[1])), [rows]);
   const byDay = useMemo(() => groupBy(rows, (r) => r.date).sort((x, y) => x[0].localeCompare(y[0])), [rows]);
   const jira = useJiraSync(a);
   const [reviewing, setReviewing] = useState(false);
-  const comment = (r: Row) => comments[rowId(r)] ?? r.comment;
+  const comment = (r: PlanRow) => comments[rowId(r)] ?? r.comment;
   /** Filled in Jira counts as done; the manual tick still works for rows logged elsewhere. */
   const isDone = (r: Row) => !!done[rowId(r)] || ["full", "over"].includes(jira.sync(r)?.state ?? "");
   const doneRows = rows.filter(isDone);
@@ -49,6 +57,12 @@ export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
   const days = useMemo(() => dayMatches(rows, jira.list), [rows, jira.list]);
   const extra = useMemo(() => unplanned(rows, jira.list), [rows, jira.list]);
   const missingMin = rows.reduce((s, r) => s + (jira.sync(r)?.missing ?? 0), 0);
+
+  // Limits: the plan as edited, and Jira after a write (everything already logged plus what is about to be sent).
+  const planLimits = checkLimits(perDay(rows.map((r) => ({ date: r.date, minutes: minutes(r.hours) }))), a.days, a.start, a.end);
+  const jiraMinutes = jira.list.map((w) => ({ date: w.date, minutes: Math.round(w.seconds / 60) }));
+  const limitsAfter = (writes: PlannedWrite[]) =>
+    checkLimits(perDay([...jiraMinutes, ...writes.map((p) => ({ date: p.row.date, minutes: p.minutes }))]), a.days, a.start, a.end);
 
   const jiraBar = (
     <div className="ts-bar jira-bar">
@@ -78,10 +92,13 @@ export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
       comment={comment(r)}
       onToggle={() => setDone((p) => ({ ...p, [rowId(r)]: !p[rowId(r)] }))}
       onComment={(text) => setComments((p) => ({ ...p, [rowId(r)]: text }))}
+      onHours={(h) => setEdits((e) => setHours(e, r, h))}
+      onRemove={() => setEdits((e) => removeRow(e, r))}
       jira={(() => {
         const s = jira.sync(r);
         return s && {
           sync: s,
+          limitWarning: s.missing > 0 ? limitText(limitsAfter([{ row: r, minutes: s.missing, comment: "", topUp: false }]), t.submit.limits) : undefined,
           action: jira.actions[rowId(r)],
           onSubmit: () => void jira.submit(r, comment(r)),
           onOverwrite: () => void jira.overwrite(r, comment(r)),
@@ -107,12 +124,32 @@ export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
         </span>
         <span className="spacer" />
         {doneRows.length > 0 && <Button variant="ghost" size="small" title={m.resetTitle} onClick={() => setDone({})}>{m.reset}</Button>}
+        {editCount(edits) > 0 && <Button variant="ghost" size="small" title={m.resetEditsTitle} onClick={() => setEdits(NO_EDITS)}>{m.resetEdits}</Button>}
+        <Button size="small" title={m.addRowTitle} disabled={adding} onClick={() => setAdding(true)}>{m.addRow}</Button>
       </div>
 
+      <LimitWarnings r={planLimits} />
       {jira.load.kind !== "off" && jiraBar}
+      {adding && <AddRow a={a} rows={rows} onAdd={(r) => setEdits((e) => ({ ...e, added: [...e.added, r] }))} onClose={() => setAdding(false)} />}
+      {removed.length > 0 && (
+        <details className="unplanned removed">
+          <summary>{m.removed(count(removed.length, m.rows))}</summary>
+          <div className="bulk-list">
+            {removed.map((r) => (
+              <div key={rowId(r)} className="bulk-row">
+                <span />
+                <span className="nw">{weekdayShort(isoWeekday(r.date))} {dateShort(r.date)}</span>
+                <span className="nw"><span className="dot" style={{ background: keyColor(r.key) }} /> <IssueLink k={r.key} /></span>
+                <b className="nw">{fmtH(r.hours)}</b>
+                <span className="bulk-desc"><Button size="small" variant="ghost" onClick={() => setEdits((e) => restoreRow(e, rowId(r)))}>{m.restore}</Button> {r.comment}</span>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
       {jira.load.kind === "ok" && <Unplanned list={extra} />}
       {reviewing && (
-        <BulkReview a={a} plan={plan()} onConfirm={jira.submitMany} onClose={() => { setReviewing(false); void jira.reload(); }} />
+        <BulkReview a={a} plan={plan()} limits={limitsAfter} onConfirm={jira.submitMany} onClose={() => { setReviewing(false); void jira.reload(); }} />
       )}
 
       <div className="wl-grid">

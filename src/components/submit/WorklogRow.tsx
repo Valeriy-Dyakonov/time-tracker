@@ -1,9 +1,11 @@
 import type { Analysis } from "../../types";
 import { isoWeekday } from "../../lib/dates";
 import { dateShort, useT, weekdayShort } from "../../i18n";
-import { fmtTempo, type HoursFormat, type WorklogRow as Row } from "../../lib/submit";
+import type { HoursFormat } from "../../lib/submit";
+import type { EditedRow as Row } from "../../lib/submitEdits";
 import IssueLink from "../IssueLink";
-import { CopyChip, CopyIcon, keyColor } from "../ui";
+import { CopyIcon, keyColor } from "../ui";
+import { HoursField } from "./HoursField";
 import { JiraLine } from "./JiraLine";
 
 /** "By task" groups rows under a task, so each row shows its date; "by day" is the other way round. */
@@ -20,6 +22,8 @@ export function WorklogRow(props: {
   comment: string;
   onToggle: () => void;
   onComment: (text: string) => void;
+  onHours: (hours: number) => void;
+  onRemove: () => void;
   /** Present when the period's worklogs were read from Jira. */
   jira?: Omit<Parameters<typeof JiraLine>[0], "comment">;
 }) {
@@ -39,7 +43,11 @@ export function WorklogRow(props: {
       ) : (
         <span className="wl-what"><b className="nw">{weekdayShort(isoWeekday(r.date))}&nbsp;{dateShort(r.date)}</b>{r.inferred && <Estimated title={m.estimated} />}</span>
       )}
-      <CopyChip text={fmtTempo(r.hours, props.fmt)} title={m.copyHours} />
+      <span className="wl-tools">
+        {r.origin === "added" && <span className="wl-added" title={m.addedTitle}>{m.added}</span>}
+        <HoursField hours={r.hours} planHours={r.planHours} fmt={props.fmt} onChange={props.onHours} />
+        <button className="wl-mini wl-del" title={m.remove} onClick={props.onRemove}>×</button>
+      </span>
       <span className="wl-desc">
         <textarea rows={1} value={props.comment} onChange={(e) => props.onComment(e.target.value)} placeholder={m.descPlaceholder} title={m.descTitle} />
         <CopyIcon text={props.comment} title={m.copyDesc} />
