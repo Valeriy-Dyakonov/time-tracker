@@ -4,6 +4,8 @@ import type { Analysis, JiraWorklog } from "../../types";
 import { rowId, type WorklogRow } from "../../lib/submit";
 import { indexWorklogs, rowSync, type PlannedWrite, type RowSync } from "../../lib/worklogSync";
 
+const NONE: JiraWorklog[] = [];
+
 export type LoadState = { kind: "off" } | { kind: "loading" } | { kind: "ok" } | { kind: "error"; error: string };
 
 /** Per-row action state: sending, or the last error. */
@@ -11,6 +13,8 @@ export type RowAction = { busy: true } | { busy: false; error: string };
 
 export interface JiraSync {
   load: LoadState;
+  /** The user's worklogs in the period; empty until loaded. */
+  list: JiraWorklog[];
   sync: (r: WorklogRow) => RowSync | undefined;
   actions: Record<string, RowAction>;
   reload: () => Promise<void>;
@@ -90,5 +94,5 @@ export function useJiraSync(a: Analysis): JiraSync {
     return failed;
   };
 
-  return { load, sync, actions, reload, submit, overwrite, submitMany };
+  return { load, list: load.kind === "ok" ? list : NONE, sync, actions, reload, submit, overwrite, submitMany };
 }

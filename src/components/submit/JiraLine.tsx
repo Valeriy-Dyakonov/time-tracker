@@ -18,6 +18,7 @@ export function JiraLine(props: { sync: RowSync; comment: string; action?: RowAc
   return (
     <div className="wl-jira">
       {s.state === "full" && <Badge tone="good" title={m.inJiraTitle(s.entries.length)}>{m.filled} · {h(s.logged)}</Badge>}
+      {s.state === "over" && <Badge tone="warn" title={m.overTitle}>{m.over(h(s.logged), h(s.planned))}</Badge>}
       {s.state === "partial" && <Badge tone="warn" title={m.inJiraTitle(s.entries.length)}>{m.inJira(h(s.logged))}</Badge>}
       <span className="spacer" />
       {busy && <span className="muted">{m.busy}</span>}

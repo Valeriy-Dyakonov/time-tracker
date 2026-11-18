@@ -10,7 +10,8 @@ import { Button, Card, InfoTip, keyColor, Segmented } from "../ui";
 import { BulkReview } from "./BulkReview";
 import { StepHeader } from "./StepHeader";
 import { useJiraSync } from "./useJiraSync";
-import { bulkPlan, indexWorklogs } from "../../lib/worklogSync";
+import { bulkPlan, dayMatches, indexWorklogs, mismatchedDays, unplanned } from "../../lib/worklogSync";
+import { DayMatchChip, PeriodMatch, Unplanned } from "./JiraCompare";
 import { WorklogRow, type RowLabel } from "./WorklogRow";
 
 type Group = "tasks" | "days";
@@ -39,22 +40,21 @@ export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
   const [reviewing, setReviewing] = useState(false);
   const comment = (r: Row) => comments[rowId(r)] ?? r.comment;
   /** Filled in Jira counts as done; the manual tick still works for rows logged elsewhere. */
-  const isDone = (r: Row) => !!done[rowId(r)] || jira.sync(r)?.state === "full";
+  const isDone = (r: Row) => !!done[rowId(r)] || ["full", "over"].includes(jira.sync(r)?.state ?? "");
   const doneRows = rows.filter(isDone);
   const pct = rows.length ? (doneRows.length / rows.length) * 100 : 0;
 
   // Built on demand: the review keeps its own copy, so later edits do not change what is being sent.
   const plan = () => bulkPlan(rows, indexWorklogs(rows.flatMap((r) => jira.sync(r)?.entries ?? [])), comment);
-  const loggedMin = rows.reduce((s, r) => s + Math.min(jira.sync(r)?.logged ?? 0, jira.sync(r)?.planned ?? 0), 0);
+  const days = useMemo(() => dayMatches(rows, jira.list), [rows, jira.list]);
+  const extra = useMemo(() => unplanned(rows, jira.list), [rows, jira.list]);
   const missingMin = rows.reduce((s, r) => s + (jira.sync(r)?.missing ?? 0), 0);
 
   const jiraBar = (
     <div className="ts-bar jira-bar">
       {jira.load.kind === "loading" && <span className="muted">{t.submit.jira.loading}</span>}
       {jira.load.kind === "error" && <span className="wl-err">{t.submit.jira.loadFailed(jira.load.error)}</span>}
-      {jira.load.kind === "ok" && (
-        <span className="progress" title={t.submit.jira.summaryTitle}>{t.submit.jira.summary(fmtH(loggedMin / 60), fmtH(sumHours(rows)))}</span>
-      )}
+      {jira.load.kind === "ok" && <PeriodMatch days={days} mismatched={mismatchedDays(days)} />}
       <span className="spacer" />
       <Button variant="ghost" size="small" title={t.submit.jira.refreshTitle} disabled={jira.load.kind === "loading" || reviewing} onClick={() => void jira.reload()}>
         {t.submit.jira.refresh}
@@ -110,6 +110,7 @@ export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
       </div>
 
       {jira.load.kind !== "off" && jiraBar}
+      {jira.load.kind === "ok" && <Unplanned list={extra} />}
       {reviewing && (
         <BulkReview a={a} plan={plan()} onConfirm={jira.submitMany} onClose={() => { setReviewing(false); void jira.reload(); }} />
       )}
@@ -137,6 +138,7 @@ export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
                 <header>
                   <b className="nw">{weekdayShort(isoWeekday(date))}, {dateFull(date)}</b>
                   <span className="spacer" />
+                  <DayMatchChip d={jira.load.kind === "ok" ? days.get(date) : undefined} />
                   <span className="wl-sum">{fmtH(sumHours(rs))}&nbsp;<small>{t.common.h}</small></span>
                 </header>
                 {rs.map((r) => line(r, "task"))}

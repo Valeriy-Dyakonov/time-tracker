@@ -10,7 +10,8 @@ export interface RowSync {
   planned: number;
   /** Minutes an automatic submit would add: the difference, never a replacement. */
   missing: number;
-  state: "none" | "partial" | "full";
+  /** full: exactly the plan; over: Jira has more than planned. */
+  state: "none" | "partial" | "full" | "over";
 }
 
 /** Jira stores seconds, Tempo works in minutes: compare in whole minutes so 2.33 h does not look "partial". */
@@ -29,7 +30,32 @@ export function rowSync(row: WorklogRow, entries: JiraWorklog[] = []): RowSync {
   const logged = Math.round(entries.reduce((s, w) => s + w.seconds, 0) / 60);
   const planned = minutes(row.hours);
   const missing = Math.max(0, planned - logged);
-  return { entries, logged, planned, missing, state: logged === 0 ? "none" : missing > 0 ? "partial" : "full" };
+  const state = logged === 0 ? "none" : missing > 0 ? "partial" : logged > planned ? "over" : "full";
+  return { entries, logged, planned, missing, state };
+}
+
+/** Planned and logged minutes of one day; logged counts every worklog of the user that day, planned or not. */
+export interface DayMatch {
+  planned: number;
+  logged: number;
+}
+
+export function dayMatches(rows: WorklogRow[], list: JiraWorklog[]): Map<string, DayMatch> {
+  const m = new Map<string, DayMatch>();
+  const at = (date: string) => m.get(date) ?? m.set(date, { planned: 0, logged: 0 }).get(date)!;
+  for (const r of rows) at(r.date).planned += minutes(r.hours);
+  for (const w of list) at(w.date).logged += Math.round(w.seconds / 60);
+  return m;
+}
+
+/** Days where Jira and the plan disagree, sorted by date. */
+export const mismatchedDays = (days: Map<string, DayMatch>): string[] =>
+  [...days.entries()].filter(([, d]) => d.logged !== d.planned).map(([date]) => date).sort();
+
+/** Worklogs on a task/day the plan does not have: the usual reason why totals differ. */
+export function unplanned(rows: WorklogRow[], list: JiraWorklog[]): JiraWorklog[] {
+  const planned = new Set(rows.map(rowId));
+  return list.filter((w) => !planned.has(rowId(w))).sort((a, b) => a.date.localeCompare(b.date) || a.key.localeCompare(b.key));
 }
 
 export interface PlannedWrite {

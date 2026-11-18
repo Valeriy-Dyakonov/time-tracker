@@ -73,3 +73,12 @@
   .bulk-row { grid-template-columns: 22px auto auto auto; }
   .bulk-desc { grid-column: 2 / -1; }
 }
+
+/* Tempo vs plan */
+.jm { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: var(--r-pill); white-space: nowrap; }
+.jm.ok { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+.jm.under, .jm.over { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.unplanned { border: 1px solid var(--line); border-radius: var(--r-lg); padding: 10px 14px; margin-bottom: 14px; background: var(--card); font-size: 13px; }
+.unplanned summary { cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--warn); }
+.unplanned .bulk-list { margin-top: 10px; }
+.unplanned .bulk-row { cursor: default; }
