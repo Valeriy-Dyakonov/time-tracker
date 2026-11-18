@@ -5,9 +5,11 @@ import { useStored } from "@/shared/hooks/useStored";
 import { localDate } from "@/shared/lib/dates";
 import type { DashData } from "@/shared/types";
 import { Button, InfoTip, Segmented, Switch } from "@/shared/ui";
-import { filterIssues, GROUPINGS, groupIssues, projectsOf, sortForProfile, splitFolded, type Grouping } from "../lib/groups";
+import { containerCandidates, containerTypes } from "../lib/containers";
+import { filterIssues, GROUPINGS, lanes, projectsOf, sortForProfile, splitFolded, visibleColumns, type Grouping } from "../lib/groups";
 import { flagsOf, PROFILE, PROFILE_FLAGS, PROFILES, STALE_DAYS, stageOf, type Flag, type Profile, type Stage } from "../lib/stages";
-import { GroupList } from "./GroupList";
+import { Board } from "./Board";
+import { ContainerPicker } from "./ContainerPicker";
 import { IssueCard } from "./IssueCard";
 import { IssueDrawer } from "./IssueDrawer";
 
@@ -27,7 +29,11 @@ function readCache(p: Profile): Cached | null {
 export default function Dashboard({ jiraReady, onOpenSettings }: { jiraReady: boolean; onOpenSettings: () => void }) {
   const m = useT().dashboard;
   const [profile, setProfile] = useStored<Profile>("worklog.dashboard.profile", "dev");
-  const [by, setBy] = useStored<Grouping>("worklog.dashboard.grouping", "epic");
+  const [byStored, setBy] = useStored<Grouping>("worklog.dashboard.grouping", "epic");
+  const by: Grouping = GROUPINGS.includes(byStored) ? byStored : "epic";
+  const [doneFolded, setDoneFolded] = useStored("worklog.dashboard.doneFolded", false);
+  /** Issue types that count as an epic; null = guessed from the type names. */
+  const [chosenTypes, setChosenTypes] = useStored<string[] | null>("worklog.dashboard.containerTypes", null);
   const [onlyMine, setOnlyMine] = useStored("worklog.dashboard.onlyMine", false);
   const [cached, setCached] = useState<Cached | null>(() => readCache(profile));
   const [loading, setLoading] = useState(false);
@@ -69,7 +75,10 @@ export default function Dashboard({ jiraReady, onOpenSettings }: { jiraReady: bo
     [scoped, focus, profile, today, now],
   );
   const { main, folded } = useMemo(() => splitFolded(shown, profile), [shown, profile]);
-  const groups = useMemo(() => groupIssues(main, by, data?.context ?? [], profile), [main, by, data, profile]);
+  const candidates = useMemo(() => containerCandidates(all, context), [all, context]);
+  const types = useMemo(() => containerTypes(chosenTypes, candidates), [chosenTypes, candidates]);
+  const boardLanes = useMemo(() => lanes(main, by, context, types), [main, by, context, types]);
+  const columns = useMemo(() => visibleColumns(main), [main]);
   const projects = useMemo(() => projectsOf(all), [all]);
 
   if (!jiraReady) {
@@ -109,6 +118,7 @@ export default function Dashboard({ jiraReady, onOpenSettings }: { jiraReady: bo
 
       <div className="dash-bar">
         <Segmented size="small" value={by} onChange={setBy} options={GROUPINGS.map((g) => ({ value: g, label: m.groupings[g] }))} />
+        {by === "epic" && <ContainerPicker candidates={candidates} active={types} chosen={chosenTypes} onChange={setChosenTypes} />}
         <select value={project ?? ""} onChange={(e) => setProject(e.target.value || null)}>
           <option value="">{m.allProjects} ({all.length})</option>
           {projects.map((p) => <option key={p.key} value={p.key}>{p.key} — {p.name} ({p.count})</option>)}
@@ -120,7 +130,10 @@ export default function Dashboard({ jiraReady, onOpenSettings }: { jiraReady: bo
       {error && <div className="error">{m.failed(error)}</div>}
       {data && shown.length === 0 && <p className="muted">{all.length ? m.nothing : m.empty}</p>}
 
-      <GroupList groups={groups} by={by} today={today} now={now} onOpen={setOpened} />
+      {main.length > 0 && (
+        <Board lanes={boardLanes} columns={columns} by={by} today={today} now={now}
+          doneFolded={doneFolded} onToggleDone={() => setDoneFolded(!doneFolded)} onOpen={setOpened} />
+      )}
 
       {folded.length > 0 && (
         <details className="dash-folded">

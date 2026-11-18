@@ -75,7 +75,7 @@ export function IssueDrawer({ issueKey, context, onClose }: { issueKey: string; 
               {data.description ? <div className="drawer-text">{data.description}</div> : <p className="muted">{d.noDescription}</p>}
 
               {data.subtasks.length > 0 && <RelatedList title={d.subtasks} items={data.subtasks} onOpen={open} />}
-              {data.links.length > 0 && <RelatedList title={d.links} items={data.links} onOpen={open} />}
+              {data.linked.length > 0 && <RelatedList title={d.links} items={data.linked} onOpen={open} />}
 
               <h4>{d.comments(data.commentTotal)}</h4>
               {data.commentTotal > data.comments.length && <p className="muted">{d.olderHidden(data.comments.length, data.commentTotal)}</p>}

@@ -16,21 +16,37 @@
 .dash-stat b { font-size: 24px; line-height: 1.15; color: var(--s, var(--text)); }
 .dash-stat.f-overdue { --s: var(--bad); } .dash-stat.f-stale, .dash-stat.f-unassigned { --s: var(--warn); }
 
-/* Groups: epic / release / stage */
-.dash-groups { display: flex; flex-direction: column; gap: 12px; }
-.dash-group { border: 1px solid var(--line); border-radius: var(--r-lg); background: color-mix(in srgb, var(--bg) 45%, var(--card)); padding: 10px 12px 12px; min-width: 0; }
-.dash-group > header { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; margin-bottom: 6px; }
-.dash-group.s-dev > header b, .dash-group.s-review > header b, .dash-group.s-test > header b, .dash-group.s-done > header b { color: var(--s); }
+/* Board: stage columns, swimlanes by epic / release */
+.board-scroll { overflow-x: auto; padding-bottom: 6px; }
+.board { display: grid; gap: 0 10px; min-width: min-content; }
+.board-col-h { display: flex; align-items: center; gap: 6px; padding: 6px 10px; margin-bottom: 8px; border-radius: var(--r-md); background: color-mix(in srgb, var(--s) 10%, var(--card)); border-top: 3px solid var(--s); font-size: 13px; position: sticky; top: 0; z-index: 1; }
+.board-col-h b { color: var(--s); }
+.board-fold { margin-left: auto; border: 0; background: none; color: var(--muted); font-size: 15px; cursor: pointer; padding: 0 4px; }
+.board-fold:hover { color: var(--text); }
+.board-lane { display: grid; gap: 0 10px; margin-bottom: 10px; }
+.board-lane-h { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 6px 8px; margin-bottom: 6px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.board-caret { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 2px; font-size: 12px; }
+.board-lane-who { font-size: 12px; white-space: nowrap; }
+.board-cell { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 4px; border-radius: var(--r-md); background: color-mix(in srgb, var(--bg) 55%, transparent); min-height: 36px; }
+.board-cell.folded { display: grid; place-items: center; color: var(--muted); font-weight: 600; font-size: 12px; }
+.board-more { border: 0; background: none; padding: 2px 4px; font: inherit; font-size: 12px; color: var(--accent); cursor: pointer; text-align: left; }
+.board-more:hover { text-decoration: underline; }
 .dash-head-key { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--accent); cursor: pointer; white-space: nowrap; }
 .dash-head-key:hover { text-decoration: underline; }
 .dash-head-sum { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.dash-head-people { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; margin: 0 0 8px; }
-.dash-counts { display: inline-flex; gap: 4px; flex: none; }
-.dash-count { min-width: 22px; text-align: center; font-size: 11.5px; font-weight: 700; padding: 0 6px; border-radius: var(--r-pill); color: var(--s); background: color-mix(in srgb, var(--s) 14%, transparent); }
-.dash-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 8px; }
+.dash-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; }
+
+/* "What counts as an epic" */
+.dash-ctypes { position: relative; font-size: 13px; }
+.dash-ctypes summary { cursor: pointer; padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); list-style: none; }
+.dash-ctypes summary::-webkit-details-marker { display: none; }
+.dash-ctypes[open] summary { border-color: var(--accent); }
+.dash-ctypes-pop { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; min-width: 280px; max-height: 360px; overflow: auto; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--card); box-shadow: 0 8px 24px var(--overlay-shadow); display: flex; flex-direction: column; gap: 4px; }
+.dash-ctypes-h { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+.dash-ctypes-pop label { display: flex; align-items: center; gap: 8px; padding: 2px 0; cursor: pointer; }
 
 /* Task card */
-.dash-card { display: flex; flex-direction: column; gap: 4px; text-align: left; border: 1px solid var(--line); border-left: 3px solid var(--s); border-radius: var(--r-md); background: var(--card); padding: 8px 10px; font: inherit; color: var(--text); cursor: pointer; min-width: 0; }
+.dash-card { width: 100%; display: flex; flex-direction: column; gap: 4px; text-align: left; border: 1px solid var(--line); border-left: 3px solid var(--s); border-radius: var(--r-md); background: var(--card); padding: 8px 10px; font: inherit; color: var(--text); cursor: pointer; min-width: 0; }
 .dash-card:hover { border-color: var(--s); }
 .dash-card.late { border-color: color-mix(in srgb, var(--bad) 55%, var(--line)); border-left-color: var(--bad); }
 .dash-card-h { display: flex; align-items: center; gap: 6px; font-size: 13px; min-width: 0; flex-wrap: wrap; }
@@ -42,6 +58,7 @@
 .dash-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 12px; font-size: 11.5px; }
 .dash-who.me { font-weight: 600; color: var(--accent); }
 .dash-who.none { color: var(--warn); }
+.dash-role { font-weight: 600; color: var(--accent); }
 .dash-due { font-weight: 600; color: var(--muted); white-space: nowrap; }
 .dash-due.late { color: var(--bad); }
 .dash-folded { margin-top: 14px; border: 1px dashed var(--line); border-radius: var(--r-lg); padding: 10px 12px; }
@@ -68,3 +85,4 @@
 .drawer-comment { border-top: 1px solid var(--line); padding: 10px 0; }
 .drawer-comment header { display: flex; gap: 10px; align-items: baseline; font-size: 13px; margin-bottom: 4px; }
 @media (max-width: 900px) { .dash-cards { grid-template-columns: 1fr; } }
+

@@ -1,8 +1,10 @@
 import type { DashIssue } from "@/shared/types";
+import { containerOf } from "./containers";
 import { flagsOf, PROFILE, stageOf, type Flag, type Profile, type Stage } from "./stages";
 
-export type Grouping = "epic" | "release" | "stage";
-export const GROUPINGS: Grouping[] = ["epic", "release", "stage"];
+/** Swimlanes of the board: by epic (container), by release, or one lane. */
+export type Grouping = "epic" | "release" | "none";
+export const GROUPINGS: Grouping[] = ["epic", "release", "none"];
 
 export interface DashFilter {
   profile: Profile;
@@ -28,7 +30,7 @@ export function filterIssues(list: DashIssue[], f: DashFilter, today: string, no
   );
 }
 
-/** Stage order of the role first, then flagged tasks, then the most recently changed. */
+/** Stage order of the role first, then flagged tasks, then the most recently changed: lanes follow what matters to the role. */
 export function sortForProfile(list: DashIssue[], profile: Profile, today: string, now: number): DashIssue[] {
   const rank = (i: DashIssue) => PROFILE[profile].order.indexOf(stageOf(i));
   return [...list].sort(
@@ -36,44 +38,44 @@ export function sortForProfile(list: DashIssue[], profile: Profile, today: strin
   );
 }
 
-export interface Group {
-  /** Epic/parent key, release name or stage; null for "no epic" / "no release". */
+/** Board columns, left to right like Jira; review only when something is in review. */
+export const COLUMNS: Stage[] = ["todo", "dev", "review", "test", "done"];
+export const visibleColumns = (list: DashIssue[]): Stage[] => COLUMNS.filter((s) => s !== "review" || list.some((i) => stageOf(i) === "review"));
+
+/** Done tasks older than this are tucked away inside the done column. */
+export const RECENT_DONE_DAYS = 7;
+export const isOldDone = (i: DashIssue, now: number): boolean =>
+  stageOf(i) === "done" && !!i.resolved && now - i.resolved > RECENT_DONE_DAYS * 86_400_000;
+
+export interface Lane {
+  /** Container key or release name; null for "no epic" / "no release" / the single lane. */
   id: string | null;
-  /** The epic or parent itself when known: summary, status, who is responsible. */
+  /** The container itself when known: summary, status, who is responsible. */
   head?: DashIssue;
-  issues: DashIssue[];
+  cells: Record<Stage, DashIssue[]>;
+  total: number;
 }
 
-/** The epic of a task, also through its parent (a subtask of a story in an epic). */
-export function epicOf(i: DashIssue, byKey: Map<string, DashIssue>): string | null {
-  if (i.epic) return i.epic;
-  const p = i.parent ? byKey.get(i.parent) : undefined;
-  if (p?.epic) return p.epic;
-  return p && p.issueType.toLowerCase() === "epic" ? p.key : (i.parent ?? null);
+const emptyCells = (): Record<Stage, DashIssue[]> => ({ backlog: [], todo: [], dev: [], review: [], test: [], done: [] });
+
+/** Lanes keep the order of their first (most important) task; the "none" lane goes last. */
+export function lanes(sorted: DashIssue[], by: Grouping, byKey: Map<string, DashIssue>, types: Set<string>): Lane[] {
+  const keysOf = (i: DashIssue): (string | null)[] =>
+    by === "epic" ? [containerOf(i, byKey, types)] : by === "release" ? (i.fixVersions.length ? i.fixVersions : [null]) : [null];
+  const m = new Map<string | null, Lane>();
+  for (const i of sorted) {
+    for (const k of keysOf(i)) {
+      const lane = m.get(k) ?? { id: k, head: k && by === "epic" ? byKey.get(k) : undefined, cells: emptyCells(), total: 0 };
+      lane.cells[stageOf(i)].push(i);
+      lane.total++;
+      m.set(k, lane);
+    }
+  }
+  const all = [...m.values()];
+  return [...all.filter((l) => l.id !== null), ...all.filter((l) => l.id === null)];
 }
 
-function collect(list: DashIssue[], keysOf: (i: DashIssue) => (string | null)[]): Map<string | null, DashIssue[]> {
-  const m = new Map<string | null, DashIssue[]>();
-  for (const i of list) for (const k of keysOf(i)) m.set(k, [...(m.get(k) ?? []), i]);
-  return m;
-}
-
-/** Groups keep the order of their first (most important) task; the "none" group goes last. */
-function ordered(m: Map<string | null, DashIssue[]>, head?: (id: string) => DashIssue | undefined): Group[] {
-  const groups = [...m.entries()].filter(([id]) => id !== null).map(([id, issues]) => ({ id, head: head?.(id!), issues }));
-  const none = m.get(null);
-  return none ? [...groups, { id: null, issues: none }] : groups;
-}
-
-export function groupIssues(sorted: DashIssue[], by: Grouping, context: DashIssue[], profile: Profile): Group[] {
-  const byKey = new Map([...context, ...sorted].map((i) => [i.key, i]));
-  if (by === "epic") return ordered(collect(sorted, (i) => [epicOf(i, byKey)]), (id) => byKey.get(id));
-  if (by === "release") return ordered(collect(sorted, (i) => (i.fixVersions.length ? i.fixVersions : [null])));
-  const m = collect(sorted, (i) => [stageOf(i)]);
-  return PROFILE[profile].order.filter((s) => m.has(s)).map((s) => ({ id: s, issues: m.get(s)! }));
-}
-
-/** Folded stages (backlog) are kept apart from the groups. */
+/** Folded stages (backlog) are kept apart from the board. */
 export function splitFolded(list: DashIssue[], profile: Profile): { main: DashIssue[]; folded: DashIssue[] } {
   const folded = PROFILE[profile].folded;
   return { main: list.filter((i) => !folded.includes(stageOf(i))), folded: list.filter((i) => folded.includes(stageOf(i))) };

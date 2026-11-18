@@ -1,16 +1,18 @@
 import { describe, expect, it } from "vitest";
 import type { DashIssue } from "@/shared/types";
-import { epicOf, filterIssues, groupIssues, sortForProfile, splitFolded } from "./groups";
+import { containerCandidates, containerOf, containerTypes } from "./containers";
+import { filterIssues, isOldDone, lanes, sortForProfile, splitFolded, visibleColumns } from "./groups";
 import { flagsOf, stageOf } from "./stages";
 
 const issue = (key: string, status: string, category: string, extra: Partial<DashIssue> = {}): DashIssue => ({
   key, summary: `Task ${key}`, status, category, priority: "", issueType: "Story", project: key.split("-")[0], projectName: "P",
-  parent: null, epic: null, fixVersions: [], assignee: { name: "me", display: "Me", me: true }, people: [], mine: true,
+  parent: null, epic: null, fixVersions: [], links: [], assignee: { name: "me", display: "Me", me: true }, people: [], mine: true,
   updated: 0, resolved: null, due: null, ...extra,
 });
 const today = "2026-11-18";
 const now = Date.parse("2026-11-18T12:00:00Z");
 const day = 86_400_000;
+const rel = (key: string, issueType: string) => ({ key, issueType, relation: "relates to" });
 
 describe("stages", () => {
   it("tells backlog, to do, dev, review, test and done apart by category and name", () => {
@@ -30,32 +32,56 @@ describe("stages", () => {
   });
 });
 
-describe("profiles and groups", () => {
+describe("containers", () => {
+  const rls = issue("R-1", "Open", "new", { issueType: "RLS" });
+  const story = issue("A-1", "In Progress", "indeterminate", { links: [rel("R-1", "RLS"), rel("B-5", "Bug")] });
+  const sub = issue("A-2", "To Do", "new", { issueType: "Sub-task", parent: "A-1" });
+  const loose = issue("A-3", "To Do", "new", { links: [rel("B-5", "Bug")] });
+  const byKey = new Map([rls, story, sub, loose].map((i) => [i.key, i]));
+
+  it("guesses container types by name and counts how many tasks use them", () => {
+    const c = containerCandidates([story, sub, loose], byKey);
+    expect(c.map((x) => [x.type, x.count, x.auto])).toEqual([["RLS", 1, true], ["Bug", 2, false], ["Story", 1, false]]);
+    expect([...containerTypes(null, c)]).toEqual(["rls"]);
+    expect([...containerTypes(["BFR"], c)]).toEqual(["bfr"]);
+  });
+
+  it("finds the container by Epic Link, a link, or through the parent", () => {
+    const types = new Set(["rls"]);
+    expect(containerOf(story, byKey, types)).toBe("R-1");
+    expect(containerOf(sub, byKey, types)).toBe("R-1");
+    expect(containerOf(loose, byKey, types)).toBeNull();
+    expect(containerOf(issue("A-9", "To Do", "new", { epic: "E-1", links: [rel("R-1", "RLS")] }), byKey, types)).toBe("E-1");
+  });
+});
+
+describe("profiles and board", () => {
   const list = [
-    issue("A-1", "To Do", "new", { updated: 3, epic: "A-100" }),
+    issue("A-1", "To Do", "new", { updated: 3, epic: "E-1" }),
     issue("A-2", "Testing", "indeterminate", { updated: 2, mine: false, assignee: { name: "x", display: "X", me: false }, fixVersions: ["1.2"] }),
-    issue("A-3", "In Progress", "indeterminate", { updated: 1, parent: "A-1" }),
+    issue("A-3", "In Progress", "indeterminate", { updated: 1, epic: "E-1" }),
     issue("A-4", "Backlog", "new"),
+    issue("A-5", "Done", "done", { resolved: now - 10 * day }),
   ];
   const base = { project: null, query: "", stage: null, flag: null, onlyMine: false };
 
   it("developer sees only own tasks; QA sees the team's with tests first", () => {
-    expect(filterIssues(list, { ...base, profile: "dev" }, today, now).map((i) => i.key)).toEqual(["A-1", "A-3", "A-4"]);
+    expect(filterIssues(list, { ...base, profile: "dev" }, today, now).map((i) => i.key)).toEqual(["A-1", "A-3", "A-4", "A-5"]);
     const qa = sortForProfile(filterIssues(list, { ...base, profile: "qa" }, today, now), "qa", today, now);
-    expect(qa.map((i) => i.key)).toEqual(["A-2", "A-3", "A-1", "A-4"]);
+    expect(qa.map((i) => i.key)).toEqual(["A-2", "A-3", "A-1", "A-5", "A-4"]);
   });
 
-  it("keeps the backlog apart and groups by epic through the parent, or by release", () => {
+  it("lays tasks out in lanes by container and columns by stage; backlog and old done are kept apart", () => {
     const { main, folded } = splitFolded(list, "lead");
     expect(folded.map((i) => i.key)).toEqual(["A-4"]);
-    const byKey = new Map(list.map((i) => [i.key, i]));
-    expect(epicOf(list[2], byKey)).toBe("A-100");
-    const epic = issue("A-100", "In Progress", "indeterminate", { issueType: "Epic" });
-    const groups = groupIssues(main, "epic", [epic], "lead");
-    expect(groups.map((g) => [g.id, g.head?.key, g.issues.map((i) => i.key)])).toEqual([
-      ["A-100", "A-100", ["A-1", "A-3"]],
-      [null, undefined, ["A-2"]],
+    expect(visibleColumns(main)).toEqual(["todo", "dev", "test", "done"]);
+    const byKey = new Map(main.map((i) => [i.key, i]));
+    const ls = lanes(main, "epic", byKey, new Set(["epic"]));
+    expect(ls.map((l) => [l.id, l.total, l.cells.todo.map((i) => i.key), l.cells.dev.map((i) => i.key)])).toEqual([
+      ["E-1", 2, ["A-1"], ["A-3"]],
+      [null, 2, [], []],
     ]);
-    expect(groupIssues(main, "release", [], "lead").map((g) => g.id)).toEqual(["1.2", null]);
+    expect(lanes(main, "release", byKey, new Set()).map((l) => l.id)).toEqual(["1.2", null]);
+    expect(isOldDone(list[4], now)).toBe(true);
   });
 });

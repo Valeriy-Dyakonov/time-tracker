@@ -19,7 +19,7 @@ export function Who({ p, m }: { p: DashPerson | null; m: M }) {
   return <span className={`dash-who ${p.me ? "me" : ""}`}>{p.display}{p.me && <small> · {m.you}</small>}</span>;
 }
 
-/** One task: stage, flags, people and dates; a click opens it in the side panel. */
+/** One task on the board: status, flags, assignee and the user's roles; a click opens it in the side panel. */
 export function IssueCard({ i, today, now, onOpen }: { i: DashIssue; today: string; now: number; onOpen: (key: string) => void }) {
   const m = useT().dashboard;
   const stage = stageOf(i);
@@ -37,8 +37,9 @@ export function IssueCard({ i, today, now, onOpen }: { i: DashIssue; today: stri
       <span className="dash-sum">{i.summary}</span>
       <span className="dash-meta">
         <span title={m.assignee}><Who p={i.assignee} m={m} /></span>
-        {i.people.map((p) => (
-          <span key={p.field + p.person.name} title={p.field}><span className="muted">{p.field}:</span> <Who p={p.person} m={m} /></span>
+        {/* Only the roles the user holds: the full list is in the task panel. */}
+        {i.people.filter((p) => p.person.me).map((p) => (
+          <span key={p.field} className="dash-role">{p.field}: {m.you}</span>
         ))}
         <span className="spacer" />
         {i.due && <span className={`dash-due ${flags.includes("overdue") ? "late" : ""}`}>{flags.includes("overdue") ? m.overdue(dateShort(i.due)) : m.due(dateShort(i.due))}</span>}

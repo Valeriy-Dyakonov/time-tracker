@@ -10,6 +10,8 @@ use std::collections::BTreeSet;
 /// Resolved tasks are shown for this many days: enough to see what was just finished.
 pub const RECENT_DAYS: u32 = 14;
 const MAX: usize = 500;
+/// Epics, parents and linked tasks read for headers.
+const MAX_CONTEXT: usize = 400;
 /// More people fields than this would make the JQL unwieldy; real installations have a handful.
 const MAX_PEOPLE_FIELDS: usize = 15;
 
@@ -29,6 +31,16 @@ pub struct FieldPerson {
     pub person: Person,
 }
 
+/// A linked task: release/epic-like containers are often connected by a plain link ("relates"), not Epic Link.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LinkRef {
+    pub key: String,
+    pub issue_type: String,
+    /// Link wording from this task's side ("relates to", "blocks"...).
+    pub relation: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DashIssue {
@@ -44,6 +56,7 @@ pub struct DashIssue {
     pub parent: Option<String>,
     pub epic: Option<String>,
     pub fix_versions: Vec<String>,
+    pub links: Vec<LinkRef>,
     pub assignee: Option<Person>,
     pub people: Vec<FieldPerson>,
     /// The user is the assignee or in one of the people fields.
@@ -129,6 +142,7 @@ pub(super) fn issue(it: &Value, epic: &Option<String>, fields: &[UserField], me:
             .and_then(|e| f[e.as_str()].as_str().map(String::from))
             .or_else(|| parent_is_epic.then(|| s(&f["parent"]["key"]))),
         fix_versions: f["fixVersions"].as_array().into_iter().flatten().filter_map(|v| v["name"].as_str().map(String::from)).collect(),
+        links: links(f),
         assignee,
         people,
         mine,
@@ -138,8 +152,25 @@ pub(super) fn issue(it: &Value, epic: &Option<String>, fields: &[UserField], me:
     }
 }
 
+fn links(f: &Value) -> Vec<LinkRef> {
+    f["issuelinks"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|l| {
+            let (side, word) = if l["outwardIssue"].is_object() { ("outwardIssue", "outward") } else { ("inwardIssue", "inward") };
+            let o = &l[side];
+            Some(LinkRef {
+                key: o["key"].as_str()?.to_string(),
+                issue_type: o["fields"]["issuetype"]["name"].as_str().unwrap_or("").to_string(),
+                relation: l["type"][word].as_str().unwrap_or("").to_string(),
+            })
+        })
+        .collect()
+}
+
 pub(super) fn field_list(epic: &Option<String>, fields: &[UserField]) -> String {
-    let mut f = String::from("summary,status,priority,issuetype,project,parent,updated,resolutiondate,duedate,assignee,fixVersions");
+    let mut f = String::from("summary,status,priority,issuetype,project,parent,updated,resolutiondate,duedate,assignee,fixVersions,issuelinks");
     for id in epic.iter().chain(fields.iter().map(|u| &u.id)) {
         f.push(',');
         f.push_str(id);
@@ -232,9 +263,13 @@ pub async fn load(client: &reqwest::Client, base: &str, pat: &str, profile: &str
     let issues: Vec<DashIssue> = raw.iter().map(|i| issue(i, &epic, &fields, &me)).collect();
 
     // Epics and parents for the group headers: who is responsible for the epic, what it is about.
-    let keys: BTreeSet<&str> = issues.iter().flat_map(|i| [i.epic.as_deref(), i.parent.as_deref()]).flatten().collect();
+    // Linked tasks too: which of them are containers (epic, release...) is the user's choice on the dashboard.
+    let keys: BTreeSet<&str> = issues
+        .iter()
+        .flat_map(|i| [i.epic.as_deref(), i.parent.as_deref()].into_iter().flatten().chain(i.links.iter().map(|l| l.key.as_str())))
+        .collect();
     let known: BTreeSet<&str> = issues.iter().map(|i| i.key.as_str()).collect();
-    let want: Vec<&str> = keys.into_iter().filter(|k| !known.contains(k)).take(200).collect();
+    let want: Vec<&str> = keys.into_iter().filter(|k| !known.contains(k)).take(MAX_CONTEXT).collect();
     let mut context = vec![];
     for chunk in want.chunks(50) {
         let jql = format!("key in ({})", chunk.join(","));
@@ -264,6 +299,7 @@ mod tests {
             "customfield_1": { "name": "me", "displayName": "Me" },
             "customfield_2": [{ "name": "x", "displayName": "X" }, { "name": "y", "displayName": "Y" }],
             "fixVersions": [{ "name": "1.2" }],
+            "issuelinks": [{ "type": { "outward": "relates to", "inward": "relates to" }, "outwardIssue": { "key": "R-9", "fields": { "issuetype": { "name": "RLS" } } } }],
             "parent": { "key": "A-0", "fields": { "issuetype": { "name": "Epic" } } }
         }});
         let d = issue(&it, &None, &fields, &me());
@@ -271,6 +307,7 @@ mod tests {
         assert_eq!(d.assignee.as_ref().map(|a| a.me), Some(false));
         assert_eq!(d.people.iter().map(|p| format!("{}:{}", p.field, p.person.display)).collect::<Vec<_>>(), ["QA:Me", "Reviewers:X", "Reviewers:Y"]);
         assert_eq!((d.epic.as_deref(), d.fix_versions.clone()), (Some("A-0"), vec!["1.2".to_string()]));
+        assert_eq!(d.links.iter().map(|l| format!("{} {} {}", l.relation, l.key, l.issue_type)).collect::<Vec<_>>(), ["relates to R-9 RLS"]);
     }
 
     #[test]

@@ -43,7 +43,8 @@ pub struct IssueDetail {
     /// Comments in the task overall, when more than were returned.
     pub comment_total: usize,
     pub subtasks: Vec<Related>,
-    pub links: Vec<Related>,
+    /// Linked tasks with summary and status (the base `links` only carry key and type).
+    pub linked: Vec<Related>,
 }
 
 fn related(v: &Value, relation: String) -> Option<Related> {
@@ -64,7 +65,7 @@ pub async fn load(client: &reqwest::Client, base: &str, pat: &str, key: &str) ->
     let me = jira.myself().await?;
     let epic = jira.epic_field().await;
     let fields = user_fields(&jira).await;
-    let fl = format!("{},reporter,created,labels,components,description,comment,subtasks,issuelinks", field_list(&epic, &fields));
+    let fl = format!("{},reporter,created,labels,components,description,comment,subtasks", field_list(&epic, &fields));
     let it = jira.get(&format!("/rest/api/2/issue/{key}"), &[("fields", fl)]).await?;
     let f = &it["fields"];
 
@@ -77,7 +78,7 @@ pub async fn load(client: &reqwest::Client, base: &str, pat: &str, key: &str) ->
             body: c["body"].as_str().unwrap_or("").to_string(),
         })
         .collect();
-    let links = f["issuelinks"]
+    let linked = f["issuelinks"]
         .as_array()
         .into_iter()
         .flatten()
@@ -101,7 +102,7 @@ pub async fn load(client: &reqwest::Client, base: &str, pat: &str, key: &str) ->
         comment_total: f["comment"]["total"].as_u64().map(|n| n as usize).unwrap_or(all.len()),
         comments,
         subtasks: f["subtasks"].as_array().into_iter().flatten().filter_map(|s| related(s, String::new())).collect(),
-        links,
+        linked,
     })
 }
 

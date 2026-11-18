@@ -129,6 +129,8 @@ export interface DashIssue {
   parent: string | null;
   epic: string | null;
   fixVersions: string[];
+  /** Linked tasks with their type: containers (epic, release...) are often a plain "relates" link. */
+  links: { key: string; issueType: string; relation: string }[];
   assignee: DashPerson | null;
   /** User-type custom fields of the installation (Responsible, QA...) with who is in them. */
   people: { field: string; person: DashPerson }[];
@@ -164,7 +166,8 @@ export interface IssueDetail extends DashIssue {
   comments: { author: string; created: number | null; body: string }[];
   commentTotal: number;
   subtasks: DashRelated[];
-  links: DashRelated[];
+  /** Linked tasks with summary and status. */
+  linked: DashRelated[];
 }
 
 /** A worklog of the user in Jira (Tempo on Server/DC keeps its worklogs there). */
