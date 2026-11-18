@@ -25,6 +25,11 @@ const EMPTY_MRS: TaskMrs = { configured: false, mrs: [], docs: [], error: null }
 /** Per task, for the session: reopening a task or running the analysis does not read git again. */
 const cache = new Map<string, Promise<TaskDev>>();
 
+/** Forget what was found for a task, so the next read asks git and GitLab again. */
+export function forgetTaskDev(key: string): void {
+  for (const id of [...cache.keys()]) if (id.startsWith(`${key}|`)) cache.delete(id);
+}
+
 export function loadTaskDev(key: string, setup: Pick<SetupState, "git" | "gitlab">): Promise<TaskDev> {
   const id = `${key}|${setup.git}|${setup.gitlab}`;
   if (!cache.has(id)) {
@@ -52,8 +57,10 @@ export function notesOf(dev: TaskDev): TaskNote[] {
   return out;
 }
 
-export function useTaskDev(key: string, setup: SetupState): TaskDev | null {
+/** The task's development data, and a way to search again (after a push or a new MR). */
+export function useTaskDev(key: string, setup: SetupState): { dev: TaskDev | null; reload: () => void } {
   const [dev, setDev] = useState<TaskDev | null>(null);
+  const [round, setRound] = useState(0);
   // Primitive deps: the setup object is rebuilt on every App render.
   const { git, gitlab } = setup;
   useEffect(() => {
@@ -62,6 +69,10 @@ export function useTaskDev(key: string, setup: SetupState): TaskDev | null {
     if (git || gitlab) void loadTaskDev(key, { git, gitlab }).then((d) => live && setDev(d));
     else setDev({ git: EMPTY_GIT, mrs: EMPTY_MRS });
     return () => { live = false; };
-  }, [key, git, gitlab]);
-  return dev;
+  }, [key, git, gitlab, round]);
+  const reload = () => {
+    forgetTaskDev(key);
+    setRound((n) => n + 1);
+  };
+  return { dev, reload };
 }

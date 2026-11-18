@@ -15,7 +15,7 @@ describe("DevPanel", () => {
           configured: true, docs: [], error: { code: "http", params: { service: "GitLab", status: "500", body: "x" } },
           mrs: [{ project: "team/app", projectId: 1, iid: 12, title: "ABC-1 import", state: "merged", webUrl: "https://git/x", sourceBranch: "feature/abc-1", targetBranch: "main", author: "Ivan", updated: "2026-11-11T00:00:00Z", commits: [], files: ["docs/ai/ABC-1/plan.md"] }],
         },
-      }} />,
+      }} onReload={() => {}} />,
     );
     for (const s of ["ABC-1 import", "team/app", "feature/abc-1", "abcdef12", "ABC-1 plan", "not a git repository", "GitLab HTTP 500"]) expect(html).toContain(s);
   });

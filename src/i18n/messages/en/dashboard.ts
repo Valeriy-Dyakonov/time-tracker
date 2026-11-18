@@ -85,9 +85,12 @@ const dashboard: typeof ru = {
     notesOn: "searched in MR files and MR branches in GitLab, and locally (HEAD and task branches)",
     notesOff: "off, not searched.",
     toSettings: "Turn on in settings",
+    reload: "Search again",
+    reloadTip: "Ask git and GitLab again, e.g. after a push or a new MR",
   },
   tools: {
     dev: "Development",
+    searching: "Searching git and GitLab…",
     devTip: "What is known about development: MRs in GitLab, commits in your repositories and where exactly we looked",
     docs: "AI notes",
     docsTip: "Markdown notes about the task kept in git (folders like docs/ai/<key>): read them right here",

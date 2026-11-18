@@ -263,3 +263,5 @@ body.resizing .drawer { animation: none; }
 .dev-where[open] > summary::before { transform: rotate(90deg); }
 .dev-where > summary h5 { margin: 0 !important; }
 .dev-where > ul { margin-top: 6px !important; }
+.tool-panel.dev { position: relative; }
+.dev-reload { position: absolute; top: 10px; right: 12px; }

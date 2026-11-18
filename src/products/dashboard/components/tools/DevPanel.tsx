@@ -9,7 +9,7 @@ const day = (iso: string) => iso.slice(0, 10);
  * What is known about the task's development: merge requests in GitLab, commits in the local repositories,
  * and where exactly the app looked, so "nothing found" can be told from "not looked".
  */
-export function DevPanel({ dev, onSettings }: { dev: TaskDev; onSettings?: () => void }) {
+export function DevPanel({ dev, onSettings, onReload }: { dev: TaskDev; onSettings?: () => void; onReload: () => void }) {
   const m = useT().dashboard.dev;
   const { git, mrs } = dev;
   const [openMr, setOpenMr] = useState<string | null>(null);
@@ -17,6 +17,7 @@ export function DevPanel({ dev, onSettings }: { dev: TaskDev; onSettings?: () =>
 
   return (
     <div className="tool-panel dev">
+      <button className="dev-reload board-more" title={m.reloadTip} onClick={onReload}>↻ {m.reload}</button>
       <section>
         <h5>{m.mrs}<span className="tool-n">{mrs.mrs.length}</span></h5>
         {!mrs.configured && <p className="muted">{m.gitlabOff}</p>}

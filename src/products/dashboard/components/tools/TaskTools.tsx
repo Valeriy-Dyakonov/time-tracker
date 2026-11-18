@@ -23,7 +23,7 @@ export function TaskTools(props: {
 }) {
   const m = useT().dashboard.tools;
   const key = props.detail.key;
-  const dev = useTaskDev(key, props.setup);
+  const { dev, reload } = useTaskDev(key, props.setup);
   const [view, setView] = useState<View>(null);
   useEffect(() => { setView(hasAnalysis(key) ? "ai" : null); }, [key]);
 
@@ -53,7 +53,7 @@ export function TaskTools(props: {
           {m.ai}
         </button>
       </div>
-      {view === "dev" && dev && <DevPanel dev={dev} onSettings={props.onSettings} />}
+      {view === "dev" && (dev ? <DevPanel dev={dev} onSettings={props.onSettings} onReload={reload} /> : <div className="tool-panel dev"><div className="ai-progress"><i className="spin" />{m.searching}</div></div>)}
       {view === "notes" && <NotesPanel notes={notes} isKey={props.isKey} onKey={props.onKey} />}
       {view === "ai" && <AnalysisPanel detail={props.detail} context={props.context} setup={props.setup} />}
     </div>
