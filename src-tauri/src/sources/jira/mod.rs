@@ -46,7 +46,11 @@ impl<'a> Jira<'a> {
     }
 
     async fn search(&self, jql: String, fields: String, max: usize) -> AppResult<Value> {
-        self.get("/rest/api/2/search", &[("jql", jql), ("fields", fields), ("maxResults", max.to_string())]).await
+        self.get(
+            "/rest/api/2/search",
+            &[("jql", jql), ("fields", fields), ("expand", "changelog".into()), ("maxResults", max.to_string())],
+        )
+        .await
     }
 }
 
@@ -110,6 +114,7 @@ pub async fn fetch(
             events.extend(parse::my_events(it, &me, start_ms, end_ms, lang));
             let mut info = parse::issue(it, &epic);
             info.transitions = parse::transitions(it, &me);
+            info.assigned_to_me = parse::assigned_to_me(it, &me);
             issues.push(info);
         }
         start_at += arr.len();
@@ -124,11 +129,17 @@ pub async fn fetch(
 /// the whole JQL fail with 400, so a failed batch is retried key by key.
 pub async fn lookup(client: &reqwest::Client, base: &str, pat: &str, keys: &[String]) -> AppResult<Vec<IssueInfo>> {
     let jira = Jira::new(client, base, pat);
+    let me = jira.myself().await?;
     let epic = jira.epic_field().await;
     let fields = parse::issue_fields(&epic);
     let run = |batch: &[String]| jira.search(format!("key in ({})", batch.join(",")), fields.clone(), 50);
     let mut out = vec![];
-    let mut collect = |v: Value| out.extend(v["issues"].as_array().into_iter().flatten().map(|it| parse::issue(it, &epic)));
+    let mut collect = |v: Value| {
+        out.extend(v["issues"].as_array().into_iter().flatten().map(|it| IssueInfo {
+            assigned_to_me: parse::assigned_to_me(it, &me),
+            ..parse::issue(it, &epic)
+        }))
+    };
 
     for chunk in keys.chunks(30) {
         match run(chunk).await {

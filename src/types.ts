@@ -102,6 +102,8 @@ export interface IssueInfo {
   /** ms since epoch: a task cannot be worked on before it was created or after it was resolved. */
   created?: number | null;
   resolved?: number | null;
+  /** The user is or was the assignee; tasks with `false` are context only and never get hours. */
+  assignedToMe?: boolean;
 }
 
 export interface TaskHours {

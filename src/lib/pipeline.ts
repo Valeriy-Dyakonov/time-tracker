@@ -32,7 +32,8 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
     warnings: cal.warning ? [cal.warning] : [],
     targets: cal.targets,
     aiOn: o.useAi && !!settings.llmBaseUrl && !!settings.llmModel,
-    isCtx: (key: string) => ctxProjects.has(projectOf(key)),
+    // Hours go only to the user's own tasks: someone else's task touched via a comment or a commit is context.
+    isCtx: (key: string) => ctxProjects.has(projectOf(key)) || ctx.issues[key]?.assignedToMe === false,
     enrich: new IssueEnricher(),
   };
   const { dates } = cal;
@@ -48,6 +49,8 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
   }
   await ctx.enrich.secondPass(ctx);
   ctx.enrich.dropUnknownKeys(ctx);
+  const notMine = [...new Set(ctx.events.map((e) => e.issueKey).filter((k): k is string => !!k && ctx.issues[k]?.assignedToMe === false))];
+  if (notMine.length) log("info", m.notAssigned(notMine.length, notMine.slice(0, 8).join(", ")));
   log("info", m.daysStage);
 
   const r = await analyseDays(ctx, dates, h.onDays);

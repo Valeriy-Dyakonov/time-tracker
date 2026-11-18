@@ -64,4 +64,7 @@ pub struct IssueInfo {
     pub created: Option<i64>,
     #[serde(default)]
     pub resolved: Option<i64>,
+    /// The user is or was the assignee: only such tasks get hours, the rest are context.
+    #[serde(default)]
+    pub assigned_to_me: bool,
 }

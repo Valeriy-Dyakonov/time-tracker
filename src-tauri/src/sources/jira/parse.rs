@@ -24,7 +24,7 @@ impl Me {
 }
 
 pub fn issue_fields(epic: &Option<String>) -> String {
-    let mut f = String::from("summary,status,issuetype,description,parent,issuelinks,created,resolutiondate");
+    let mut f = String::from("summary,status,issuetype,description,parent,issuelinks,created,resolutiondate,assignee");
     if let Some(e) = epic {
         f.push(',');
         f.push_str(e);
@@ -70,7 +70,22 @@ pub fn issue(it: &Value, epic: &Option<String>) -> IssueInfo {
         transitions: vec![],
         created: f["created"].as_str().and_then(parse_jira_time),
         resolved: f["resolutiondate"].as_str().and_then(parse_jira_time),
+        assigned_to_me: false,
     }
+}
+
+/// Current assignee, or an assignee change from/to the user in the history (a task handed over to QA still counts).
+pub fn assigned_to_me(it: &Value, me: &Me) -> bool {
+    if me.is(&it["fields"]["assignee"]) {
+        return true;
+    }
+    let is_me = |v: &Value| v.as_str().is_some_and(|s| !s.is_empty() && (s == me.name || s == me.key));
+    it["changelog"]["histories"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .flat_map(|h| h["items"].as_array().into_iter().flatten())
+        .any(|i| i["field"].as_str() == Some("assignee") && (is_me(&i["from"]) || is_me(&i["to"])))
 }
 
 /// Status history by anyone: needed to tell "in development" from "in testing".
@@ -173,5 +188,24 @@ mod tests {
         let texts: Vec<&str> = events.iter().map(|e| e.text.as_str()).collect();
         assert_eq!(texts, vec!["Создал задачу: Task", "Комментарий: done"]);
         assert!(events.iter().all(|e| e.issue_key.as_deref() == Some("A-1")));
+    }
+
+    #[test]
+    fn assignee_now_or_in_history() {
+        let me = Me { name: "me".into(), key: "JIRAUSER1".into(), display: "Me".into() };
+        let now = json!({ "fields": { "assignee": { "name": "me" } } });
+        let before = json!({
+            "fields": { "assignee": { "name": "qa" } },
+            "changelog": { "histories": [{ "items": [{ "field": "assignee", "from": "JIRAUSER1", "to": "qa" }] }] }
+        });
+        let never = json!({
+            "fields": { "assignee": { "name": "qa" }, "reporter": { "name": "me" } },
+            "changelog": { "histories": [{ "items": [{ "field": "assignee", "from": "dev", "to": "qa" }] }] }
+        });
+        let unassigned = json!({ "fields": { "assignee": null } });
+        assert!(assigned_to_me(&now, &me));
+        assert!(assigned_to_me(&before, &me));
+        assert!(!assigned_to_me(&never, &me));
+        assert!(!assigned_to_me(&unassigned, &me));
     }
 }

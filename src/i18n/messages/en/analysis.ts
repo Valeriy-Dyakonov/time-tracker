@@ -12,6 +12,8 @@ const en: typeof ru = {
     period: (start: string, end: string, hours: string, workdays: string) =>
       `Period ${start} – ${end}, ${hours} h per day, working days: ${workdays}.`,
     contextProjects: (list: string) => `Context-only projects (no hours are booked on them): ${list}.`,
+    notAssigned: (n: number, list: string) =>
+      `Tasks you were never assigned to (${n}) are used as context only, no hours are booked on them: ${list}${n > 8 ? "…" : ""}.`,
     toFill: (n: number, futureSkipped: boolean, ai: boolean) =>
       `Working days to fill: ${n}${futureSkipped ? " (future days are not filled)" : ""}. AI analysis: ${ai ? "on" : "off — heuristics will be used"}.`,
     step: (i: number, n: number, title: string) => `━━ Step ${i} of ${n}: ${title}`,

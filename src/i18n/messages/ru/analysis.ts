@@ -12,6 +12,8 @@ export default {
     period: (start: string, end: string, hours: string, workdays: string) =>
       `Период ${start} – ${end}, норма ${hours} ч в день, рабочие дни: ${workdays}.`,
     contextProjects: (list: string) => `Проекты только для контекста (часы на них не начисляются): ${list}.`,
+    notAssigned: (n: number, list: string) =>
+      `Задачи, где вы не были исполнителем (${n}), используются только как контекст, часы на них не начисляются: ${list}${n > 8 ? "…" : ""}.`,
     toFill: (n: number, futureSkipped: boolean, ai: boolean) =>
       `К заполнению ${n} рабочих дн.${futureSkipped ? " (будущие дни не заполняются)" : ""}. Анализ ИИ: ${ai ? "включён" : "выключен — будет эвристика"}.`,
     step: (i: number, n: number, title: string) => `━━ Шаг ${i} из ${n}: ${title}`,
