@@ -4,19 +4,22 @@ import type { DashIssue, DashProfile } from "@/shared/types";
  * Where a task stands, independent of how an installation names its statuses:
  * the Jira status category plus the status name (review / test / backlog are named, not categorised).
  */
-export type Stage = "backlog" | "todo" | "dev" | "review" | "test" | "done";
-export const STAGES: Stage[] = ["backlog", "todo", "dev", "review", "test", "done"];
+export type Stage = "backlog" | "todo" | "dev" | "review" | "test" | "ship" | "done";
+export const STAGES: Stage[] = ["backlog", "todo", "dev", "review", "test", "ship", "done"];
 
 const has = (name: string, words: string[]) => {
   const n = name.toLowerCase();
   return words.some((w) => n.includes(w));
 };
 const TEST = ["test", "qa", "verif", "тест", "провер", "acceptance", "приемк", "приёмк"];
-const REVIEW = ["review", "ревью", "merge", "code check"];
+const REVIEW = ["review", "ревью", "code check"];
+/** After testing, before done: approvals, merging, deploying. */
+const SHIP = ["approv", "соглас", "merge", "мерж", "deploy", "деплой", "release", "релиз", "выкат", "install", "установ", "prod"];
 const BACKLOG = ["backlog", "бэклог", "беклог", "icebox", "someday", "later", "отлож"];
 
 export function stageOf(i: DashIssue): Stage {
   if (i.category === "done") return "done";
+  if (has(i.status, SHIP)) return "ship";
   if (has(i.status, TEST)) return "test";
   if (has(i.status, REVIEW)) return "review";
   if (i.category === "new") return has(i.status, BACKLOG) ? "backlog" : "todo";
@@ -40,14 +43,14 @@ export interface ProfileSpec {
 }
 
 export const PROFILE: Record<Profile, ProfileSpec> = {
-  dev: { order: ["dev", "review", "todo", "test", "done", "backlog"], focus: ["todo", "dev", "review"], folded: ["backlog"], mineOnly: true },
-  qa: { order: ["test", "review", "dev", "todo", "done", "backlog"], focus: ["test"], folded: ["backlog"], mineOnly: false },
-  lead: { order: ["dev", "review", "test", "todo", "done", "backlog"], focus: ["todo", "dev", "review", "test"], folded: ["backlog"], mineOnly: false },
+  dev: { order: ["dev", "review", "todo", "test", "ship", "done", "backlog"], focus: ["todo", "dev", "review"], folded: ["backlog"], mineOnly: true },
+  qa: { order: ["test", "ship", "review", "dev", "todo", "done", "backlog"], focus: ["test", "ship"], folded: ["backlog"], mineOnly: false },
+  lead: { order: ["dev", "review", "test", "ship", "todo", "done", "backlog"], focus: ["todo", "dev", "review", "test", "ship"], folded: ["backlog"], mineOnly: false },
 };
 
 /** No change for this long in an active stage looks stuck. */
 export const STALE_DAYS = 5;
-const ACTIVE: Stage[] = ["dev", "review", "test"];
+const ACTIVE: Stage[] = ["dev", "review", "test", "ship"];
 
 export type Flag = "overdue" | "stale" | "unassigned";
 

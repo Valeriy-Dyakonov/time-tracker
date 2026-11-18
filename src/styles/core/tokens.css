@@ -26,6 +26,8 @@
   /* Dim layer under side panels: dark in every theme */
   --overlay: rgb(0 0 0 / .32);
   --overlay-shadow: rgb(0 0 0 / .18);
+  /* Initials on avatars: their backgrounds are saturated key colours in every theme */
+  --on-avatar: #fff;
 
   --grad-from: #7c3aed;
   --grad-to: #06b6d4;

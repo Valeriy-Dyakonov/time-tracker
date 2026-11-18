@@ -225,11 +225,35 @@ async fn test_statuses(jira: &Jira<'_>) -> Vec<String> {
     names.into_iter().collect()
 }
 
-fn open_or_recent() -> String {
-    format!("(resolution = Unresolved OR resolutiondate >= -{RECENT_DAYS}d)")
+/// The board: open tasks. History: tasks resolved in the last `days` days, read only when the user opens it.
+pub enum Scope {
+    Open,
+    History(u32),
 }
 
-pub async fn load(client: &reqwest::Client, base: &str, pat: &str, profile: &str) -> AppResult<Dashboard> {
+impl Scope {
+    fn jql(&self) -> String {
+        match self {
+            Scope::Open => "resolution = Unresolved".into(),
+            Scope::History(d) => format!("resolutiondate >= -{}d", d.clamp(&1, &365)),
+        }
+    }
+    fn order(&self) -> &'static str {
+        match self {
+            Scope::Open => "ORDER BY updated DESC",
+            Scope::History(_) => "ORDER BY resolutiondate DESC",
+        }
+    }
+}
+
+/// Projects the user takes part in: the scope of the QA and lead views, the same for the board and its history.
+async fn my_projects(jira: &Jira<'_>, involved: &str) -> AppResult<BTreeSet<String>> {
+    let jql = format!("({involved}) AND (resolution = Unresolved OR resolutiondate >= -{RECENT_DAYS}d)");
+    let raw = search_all(jira, &jql, "project", MAX).await?;
+    Ok(raw.iter().filter_map(|i| i["fields"]["project"]["key"].as_str().map(String::from)).collect())
+}
+
+pub async fn load(client: &reqwest::Client, base: &str, pat: &str, profile: &str, scope: Scope) -> AppResult<Dashboard> {
     let jira = Jira::new(client, base, pat);
     let me = jira.myself().await?;
     let epic = jira.epic_field().await;
@@ -240,20 +264,21 @@ pub async fn load(client: &reqwest::Client, base: &str, pat: &str, profile: &str
         .chain(fields.iter().map(|f| format!("{} = currentUser()", jql_field(&f.id))))
         .collect::<Vec<_>>()
         .join(" OR ");
-    let mine_jql = format!("({involved}) AND {} ORDER BY updated DESC", open_or_recent());
-    let mut raw = search_all(&jira, &mine_jql, &fl, MAX).await?;
-    let projects: BTreeSet<String> = raw.iter().filter_map(|i| i["fields"]["project"]["key"].as_str().map(String::from)).collect();
+    let (state, order) = (scope.jql(), scope.order());
+    let mut raw = search_all(&jira, &format!("({involved}) AND {state} {order}"), &fl, MAX).await?;
+    let projects = if profile == "dev" { BTreeSet::new() } else { my_projects(&jira, &involved).await? };
     let in_projects = projects.iter().map(|p| quote(p)).collect::<Vec<_>>().join(",");
 
-    let extra_jql = match profile {
-        "qa" if !projects.is_empty() => {
+    let extra_jql = match (profile, &scope) {
+        // QA's history is its own tasks: who tested what is not kept in a status once a task is closed.
+        ("qa", Scope::Open) if !projects.is_empty() => {
             let st = test_statuses(&jira).await;
             (!st.is_empty()).then(|| {
                 let st = st.iter().map(|s| quote(s)).collect::<Vec<_>>().join(",");
-                format!("project in ({in_projects}) AND status in ({st}) ORDER BY updated DESC")
+                format!("project in ({in_projects}) AND status in ({st}) {order}")
             })
         }
-        "lead" if !projects.is_empty() => Some(format!("project in ({in_projects}) AND {} ORDER BY updated DESC", open_or_recent())),
+        ("lead", _) if !projects.is_empty() => Some(format!("project in ({in_projects}) AND {state} {order}")),
         _ => None,
     };
     if let Some(jql) = extra_jql {

@@ -3,16 +3,18 @@ import { useT } from "@/i18n";
 import { api } from "@/shared/api";
 import { useStored } from "@/shared/hooks/useStored";
 import { localDate } from "@/shared/lib/dates";
-import type { DashData } from "@/shared/types";
-import { Button, InfoTip, Segmented, Switch } from "@/shared/ui";
+import type { DashData, DashIssue } from "@/shared/types";
+import { Button, InfoTip, Switch } from "@/shared/ui";
 import { containerCandidates, containerTypes } from "../lib/containers";
+import { byColumn, filterIssues, projectsOf, sortForProfile, splitFolded, visibleColumns } from "../lib/groups";
 import { normalizeData } from "../lib/normalize";
-import { filterIssues, GROUPINGS, lanes, projectsOf, sortForProfile, splitFolded, visibleColumns, type Grouping } from "../lib/groups";
 import { flagsOf, PROFILE, PROFILE_FLAGS, STALE_DAYS, stageOf, type Flag, type Profile, type Stage } from "../lib/stages";
 import { Board } from "./Board";
 import { ContainerPicker } from "./ContainerPicker";
+import { History } from "./History";
 import { IssueCard } from "./IssueCard";
 import { IssueDrawer } from "./IssueDrawer";
+import { OpenByKey } from "./OpenByKey";
 
 type Cached = { at: number; data: DashData };
 // v3: tasks carry links; older caches lack them and are not read.
@@ -29,12 +31,9 @@ function readCache(p: Profile): Cached | null {
   }
 }
 
-/** "Work dashboard": tasks for a role, grouped by epic, release or stage; a task opens in a side panel. Read-only. */
+/** "Work dashboard": open tasks for a role on one Jira-like board; closed ones in a history read on demand. Read-only. */
 export default function Dashboard({ jiraReady, profile, onOpenSettings }: { jiraReady: boolean; profile: Profile; onOpenSettings: () => void }) {
   const m = useT().dashboard;
-  const [byStored, setBy] = useStored<Grouping>("worklog.dashboard.grouping", "epic");
-  const by: Grouping = GROUPINGS.includes(byStored) ? byStored : "epic";
-  const [doneFolded, setDoneFolded] = useStored("worklog.dashboard.doneFolded", false);
   /** Issue types that count as an epic; null = guessed from the type names. */
   const [chosenTypes, setChosenTypes] = useStored<string[] | null>("worklog.dashboard.containerTypes", null);
   const [onlyMine, setOnlyMine] = useStored("worklog.dashboard.onlyMine", false);
@@ -70,9 +69,15 @@ export default function Dashboard({ jiraReady, profile, onOpenSettings }: { jira
   const data = cached?.data;
   // "Now" of the loaded data: flags such as "stuck" stay stable between renders.
   const now = useMemo(() => Date.now(), [cached]);
-  const all = useMemo(() => data?.issues ?? [], [data]);
-  const context = useMemo(() => new Map([...(data?.context ?? []), ...all].map((i) => [i.key, i])), [data, all]);
-  const scoped = useMemo(() => filterIssues(all, { profile, project, query, stage: null, flag: null, onlyMine }, today, now), [all, profile, project, query, onlyMine, today, now]);
+  // Done tasks belong to the history, even if a cache from an older version still has them.
+  const all = useMemo(() => (data?.issues ?? []).filter((i) => stageOf(i) !== "done"), [data]);
+  const context = useMemo(() => new Map([...(data?.context ?? []), ...(data?.issues ?? [])].map((i) => [i.key, i])), [data]);
+  const projectSet = useMemo(() => new Set([...(data?.projects ?? []), ...[...context.values()].map((i) => i.project)]), [data, context]);
+  const scope = useCallback(
+    (list: DashIssue[]) => filterIssues(list, { profile, project, query, stage: null, flag: null, onlyMine }, today, now),
+    [profile, project, query, onlyMine, today, now],
+  );
+  const scoped = useMemo(() => scope(all), [scope, all]);
   const shown = useMemo(
     () => sortForProfile(filterIssues(scoped, { profile, project: null, query: "", ...focus, onlyMine: false }, today, now), profile, today, now),
     [scoped, focus, profile, today, now],
@@ -80,8 +85,8 @@ export default function Dashboard({ jiraReady, profile, onOpenSettings }: { jira
   const { main, folded } = useMemo(() => splitFolded(shown, profile), [shown, profile]);
   const candidates = useMemo(() => containerCandidates(all, context), [all, context]);
   const types = useMemo(() => containerTypes(chosenTypes, candidates), [chosenTypes, candidates]);
-  const boardLanes = useMemo(() => lanes(main, by, context, types), [main, by, context, types]);
   const columns = useMemo(() => visibleColumns(main), [main]);
+  const cells = useMemo(() => byColumn(main, columns), [main, columns]);
   const projects = useMemo(() => projectsOf(all), [all]);
 
   if (!jiraReady) {
@@ -101,12 +106,15 @@ export default function Dashboard({ jiraReady, profile, onOpenSettings }: { jira
 
   return (
     <div className="dash">
-      <div className="dash-bar">
+      <div className="dash-top">
         <span className="dash-profile">{m.profileLabel}: <b>{m.profiles[profile]}</b></span>
         <InfoTip>{m.profileTip}</InfoTip>
         <Button variant="link" title={m.changeProfileTitle} onClick={onOpenSettings}>{m.changeProfile}</Button>
         <span className="spacer" />
-        {loading ? <span className="muted">{m.loading}</span> : cached && <span className="muted">{m.updatedAt(new Date(cached.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))}</span>}
+        <OpenByKey onOpen={setOpened} />
+        <span className="dash-sync muted">
+          {loading ? <><i className="spin" />{m.loading}</> : cached && m.updatedAt(new Date(cached.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))}
+        </span>
         <Button size="small" disabled={loading} onClick={() => void load(profile)}>{m.refresh}</Button>
       </div>
 
@@ -121,32 +129,30 @@ export default function Dashboard({ jiraReady, profile, onOpenSettings }: { jira
       </div>
 
       <div className="dash-bar">
-        <Segmented size="small" value={by} onChange={setBy} options={GROUPINGS.map((g) => ({ value: g, label: m.groupings[g] }))} />
-        {by === "epic" && <ContainerPicker candidates={candidates} active={types} chosen={chosenTypes} onChange={setChosenTypes} />}
+        <input type="search" className="dash-search" value={query} placeholder={m.search} onChange={(e) => setQuery(e.target.value)} />
         <select value={project ?? ""} onChange={(e) => setProject(e.target.value || null)}>
           <option value="">{m.allProjects} ({all.length})</option>
           {projects.map((p) => <option key={p.key} value={p.key}>{p.key} — {p.name} ({p.count})</option>)}
         </select>
-        <input type="search" value={query} placeholder={m.search} onChange={(e) => setQuery(e.target.value)} />
+        <ContainerPicker candidates={candidates} active={types} chosen={chosenTypes} onChange={setChosenTypes} />
         {!spec.mineOnly && <Switch checked={onlyMine} onChange={setOnlyMine} title={m.onlyMineTip}>{m.onlyMine}</Switch>}
         {(focus.stage || focus.flag) && <Button variant="ghost" size="small" onClick={() => setFocus({ stage: null, flag: null })}>{m.clearFilter}</Button>}
       </div>
       {error && <div className="error">{m.failed(error)}</div>}
       {data && shown.length === 0 && <p className="muted">{all.length ? m.nothing : m.empty}</p>}
 
-      {main.length > 0 && (
-        <Board lanes={boardLanes} columns={columns} by={by} today={today} now={now}
-          doneFolded={doneFolded} onToggleDone={() => setDoneFolded(!doneFolded)} onOpen={setOpened} />
-      )}
+      {main.length > 0 && <Board columns={columns} cells={cells} context={context} types={types} today={today} now={now} onOpen={setOpened} />}
 
       {folded.length > 0 && (
         <details className="dash-folded">
-          <summary>{m.folded(folded.length)}<InfoTip>{m.foldedTip}</InfoTip></summary>
+          <summary><b>{m.folded(folded.length)}</b><InfoTip>{m.foldedTip}</InfoTip></summary>
           <div className="dash-cards">{folded.map((i) => <IssueCard key={i.key} i={i} today={today} now={now} onOpen={setOpened} />)}</div>
         </details>
       )}
 
-      {opened && <IssueDrawer issueKey={opened} context={context} onClose={() => setOpened(null)} />}
+      <History profile={profile} filter={scope} onOpen={setOpened} />
+
+      {opened && <IssueDrawer issueKey={opened} context={context} projects={projectSet} onClose={() => setOpened(null)} />}
     </div>
   );
 }

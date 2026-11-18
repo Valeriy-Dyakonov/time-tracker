@@ -23,11 +23,28 @@ pub async fn lookup_issues(app: tauri::AppHandle, keys: Vec<String>) -> AppResul
     jira::lookup(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &keys).await
 }
 
-/// "Work dashboard": tasks for a profile ("dev", "qa", "lead") with their epics/parents.
+/// "Work dashboard": open tasks for a profile ("dev", "qa", "lead") with their epics/parents;
+/// with `history_days`, the tasks resolved in that many days instead.
 #[tauri::command]
-pub async fn jira_dashboard(app: tauri::AppHandle, profile: String) -> AppResult<jira::dashboard::Dashboard> {
+pub async fn jira_dashboard(app: tauri::AppHandle, profile: String, history_days: Option<u32>) -> AppResult<jira::dashboard::Dashboard> {
     let c = Ctx::load(&app)?;
-    jira::dashboard::load(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &profile).await
+    let scope = history_days.map_or(jira::dashboard::Scope::Open, jira::dashboard::Scope::History);
+    jira::dashboard::load(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &profile, scope).await
+}
+
+/// Opens a link found in a task's description or comments in the system browser. Only http(s):
+/// the text comes from Jira, so no other scheme (file:, javascript:...) is ever handed to the OS.
+#[tauri::command]
+pub fn open_link(url: String) -> AppResult<()> {
+    if !is_web_link(&url) {
+        return Err(AppError::new("openLinkInvalid").with("url", url));
+    }
+    browser::open(&url)
+}
+
+fn is_web_link(url: &str) -> bool {
+    let lower = url.to_ascii_lowercase();
+    (lower.starts_with("https://") || lower.starts_with("http://")) && url.len() <= 2048 && !url.chars().any(|c| c.is_control() || c == '"' || c.is_whitespace())
 }
 
 /// One task in full for the dashboard's task view.
@@ -152,5 +169,13 @@ mod tests {
         assert!(!is_issue_key("ABC"));
         assert!(!is_issue_key("A-1/../../x"));
         assert!(!is_issue_key("A-1?x=https://evil"));
+    }
+
+    #[test]
+    fn opens_only_web_links() {
+        assert!(super::is_web_link("https://wiki.company.ru/x?pageId=1"));
+        assert!(!super::is_web_link("file:///C:/Windows/system32/calc.exe"));
+        assert!(!super::is_web_link("javascript:alert(1)"));
+        assert!(!super::is_web_link("https://a b"));
     }
 }

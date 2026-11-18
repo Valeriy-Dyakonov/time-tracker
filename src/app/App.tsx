@@ -57,7 +57,8 @@ export default function App() {
     } catch { /* storage unavailable */ }
   }, [analysis]);
 
-  if (!ready) return null;
+  // Same markup as in index.html: the loader stays put until settings are read.
+  if (!ready) return <div className="boot" role="status" aria-busy="true"><span className="boot-name">Worklog Tracker</span><span className="boot-bar"><i /></span></div>;
 
   const setup = setupState(settings, stored);
   const openSettings = () => setSettingsOpen(true);

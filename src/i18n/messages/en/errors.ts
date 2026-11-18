@@ -22,6 +22,7 @@ const codes: Record<string, Msg> = {
     `Windows Credential Manager did not store "${p.secret}" (${p.length} chars). Make sure the app runs under your own user account.`,
   tokenMissing: (p) => `${secretLabel(p.secret)}: no token in settings`,
   unknownSecret: (p) => `Unknown secret: ${p.secret}`,
+  openLinkInvalid: (p) => `This link cannot be opened: ${p.url}`,
   worklogBadTime: (p) => `Cannot book this time: ${p.seconds} s`,
   worklogBadTarget: (p) => `Invalid task or worklog: ${p.key}`,
   unknownService: (p) => `Unknown service: ${p.service}`,

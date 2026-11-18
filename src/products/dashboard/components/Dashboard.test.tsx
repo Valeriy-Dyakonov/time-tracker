@@ -28,7 +28,7 @@ const render = (data: object) => {
 };
 
 describe("Dashboard render", () => {
-  it("draws the board with lanes, columns and cards", () => {
+  it("draws one board: columns, epic blocks and cards", () => {
     const html = render({
       issues: [
         task("A-1", "To Do", "new"),
@@ -43,7 +43,9 @@ describe("Dashboard render", () => {
     });
     expect(html).toContain("A-1");
     expect(html).toContain("R-1");
-    expect(html).toContain("board-lane");
+    expect(html).toContain("epic-block");
+    expect(html).toContain("board-col s-test");
+    expect(html).not.toContain("A-5"); // done lives in the history
   });
 
   it("does not crash on data cached by an older version (no links, no people)", () => {

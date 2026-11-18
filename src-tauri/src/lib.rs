@@ -34,6 +34,7 @@ pub fn run() {
             atlassian::jira_worklogs,
             atlassian::jira_dashboard,
             atlassian::jira_issue_detail,
+            atlassian::open_link,
             atlassian::jira_add_worklog,
             atlassian::jira_update_worklog,
             atlassian::jira_delete_worklog,

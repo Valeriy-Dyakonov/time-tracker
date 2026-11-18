@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DashIssue } from "@/shared/types";
 import { containerCandidates, containerOf, containerTypes } from "./containers";
-import { filterIssues, isOldDone, lanes, sortForProfile, splitFolded, visibleColumns } from "./groups";
+import { byColumn, epicBlocks, filterIssues, sortForProfile, splitFolded, visibleColumns } from "./groups";
 import { flagsOf, stageOf } from "./stages";
 
 const issue = (key: string, status: string, category: string, extra: Partial<DashIssue> = {}): DashIssue => ({
@@ -71,17 +71,15 @@ describe("profiles and board", () => {
     expect(qa.map((i) => i.key)).toEqual(["A-2", "A-3", "A-1", "A-5", "A-4"]);
   });
 
-  it("lays tasks out in lanes by container and columns by stage; backlog and old done are kept apart", () => {
-    const { main, folded } = splitFolded(list, "lead");
+  it("one board: columns by stage (no done), epic blocks inside a column, backlog kept apart", () => {
+    const { main, folded } = splitFolded(list.filter((i) => stageOf(i) !== "done"), "lead");
     expect(folded.map((i) => i.key)).toEqual(["A-4"]);
-    expect(visibleColumns(main)).toEqual(["todo", "dev", "test", "done"]);
+    expect(visibleColumns(main)).toEqual(["todo", "dev", "test"]);
+    expect(visibleColumns([...main, issue("A-9", "Ready to merge", "indeterminate")])).toEqual(["todo", "dev", "test", "ship"]);
+    const cells = byColumn(main, visibleColumns(main));
+    expect(Object.fromEntries(Object.entries(cells).map(([k, v]) => [k, v.map((i) => i.key)]))).toEqual({ todo: ["A-1"], dev: ["A-3"], test: ["A-2"] });
     const byKey = new Map(main.map((i) => [i.key, i]));
-    const ls = lanes(main, "epic", byKey, new Set(["epic"]));
-    expect(ls.map((l) => [l.id, l.total, l.cells.todo.map((i) => i.key), l.cells.dev.map((i) => i.key)])).toEqual([
-      ["E-1", 2, ["A-1"], ["A-3"]],
-      [null, 2, [], []],
-    ]);
-    expect(lanes(main, "release", byKey, new Set()).map((l) => l.id)).toEqual(["1.2", null]);
-    expect(isOldDone(list[4], now)).toBe(true);
+    const blocks = epicBlocks([...cells.todo, issue("A-7", "To Do", "new"), issue("A-8", "To Do", "new", { epic: "E-1" })], byKey, new Set(["epic"]));
+    expect(blocks.map((b) => [b.id, b.issues.map((i) => i.key)])).toEqual([["E-1", ["A-1", "A-8"]], [null, ["A-7"]]]);
   });
 });
