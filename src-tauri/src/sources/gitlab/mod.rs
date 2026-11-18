@@ -10,6 +10,8 @@ use std::collections::HashMap;
 use crate::texts::Lang;
 use crate::error::{AppError, AppResult};
 
+pub mod task;
+
 const DAY_MS: i64 = 86_400_000;
 const MAX_MR_LOOKUPS: usize = 120;
 
@@ -27,6 +29,10 @@ impl<'a> GitLab<'a> {
 
     async fn get(&self, path: &str, query: &[(&str, String)]) -> AppResult<Value> {
         self.api.get(&format!("{}{path}", self.root), query).await
+    }
+
+    async fn get_text(&self, path: &str, query: &[(&str, String)]) -> AppResult<String> {
+        self.api.get_text(&format!("{}{path}", self.root), query).await
     }
 
     /// Several pages of a list endpoint, 100 items each; a failed page ends the list.

@@ -189,6 +189,23 @@ export interface TaskGit {
   commits: { repo: string; hash: string; date: string; author: string; subject: string; files: string[] }[];
   /** Markdown notes kept per task (optional feature): read one with `api.taskDoc`. */
   docs: { repo: string; repoName: string; path: string; commit: string; date: string }[];
+  /** Where it looked: repositories and the refs searched for notes. */
+  searched: { repoName: string; refs: string[]; error: string | null }[];
+  docsEnabled: boolean;
+}
+
+/** The task's merge requests in GitLab and the notes in their branches (read-only). */
+export interface TaskMrs {
+  configured: boolean;
+  mrs: {
+    project: string; projectId: number; iid: number; title: string; state: string; webUrl: string;
+    sourceBranch: string; targetBranch: string; author: string; updated: string;
+    commits: { short: string; title: string; date: string; author: string }[];
+  }[];
+  /** Read one with `api.taskRemoteDoc`. */
+  docs: { projectId: number; project: string; refName: string; path: string; mrIid: number }[];
+  /** A backend error ({ code, params }) when GitLab could not be read. */
+  error: unknown;
 }
 
 /** A worklog of the user in Jira (Tempo on Server/DC keeps its worklogs there). */

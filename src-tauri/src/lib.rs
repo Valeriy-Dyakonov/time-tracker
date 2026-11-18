@@ -56,6 +56,8 @@ pub fn run() {
             code::scan_git_repos,
             code::task_git,
             code::task_doc,
+            code::task_mrs,
+            code::task_remote_doc,
             code::fetch_gitlab,
             calendar::fetch_calendar,
             calendar::fetch_holidays,

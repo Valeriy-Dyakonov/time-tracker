@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getLocale, t } from "@/i18n";
 import type { ErrorParams } from "@/i18n/messages/ru/errors";
-import type { DashData, Evt, IssueDetail, TaskGit, IssueInfo, JiraWorklog, Meeting, PageCtx, Settings } from "./types";
+import type { DashData, Evt, IssueDetail, TaskGit, TaskMrs, IssueInfo, JiraWorklog, Meeting, PageCtx, Settings } from "./types";
 
 export interface JiraResult {
   me: string;
@@ -41,6 +41,9 @@ function localize(e: unknown): unknown {
   return new BackendError(code, params, text);
 }
 
+/** A backend error ({ code, params }) returned inside data rather than thrown, worded in the UI language. */
+export const errorText = (e: unknown): string => String(localize(e));
+
 async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   try {
     return await invoke<T>(cmd, args);
@@ -74,6 +77,8 @@ export const api = {
   openLink: (url: string) => call<void>("open_link", { url }),
   taskGit: (key: string) => call<TaskGit>("task_git", { key }),
   taskDoc: (repo: string, commit: string, path: string) => call<string>("task_doc", { repo, commit, path }),
+  taskMrs: (key: string) => call<TaskMrs>("task_mrs", { key }),
+  taskRemoteDoc: (projectId: number, refName: string, path: string) => call<string>("task_remote_doc", { projectId, refName, path }),
   jiraIssueDetail: (key: string) => call<IssueDetail>("jira_issue_detail", { key }),
   jiraWorklogs: (start: string, end: string) => call<JiraWorklog[]>("jira_worklogs", { start, end }),
   jiraAddWorklog: (key: string, date: string, seconds: number, comment: string) =>

@@ -1,0 +1,67 @@
+import { useEffect, useState } from "react";
+import { api } from "@/shared/api";
+import type { SetupState } from "@/shared/lib/setup";
+import type { TaskGit, TaskMrs } from "@/shared/types";
+
+/** Everything known about a task's development: local commits and notes, GitLab merge requests and notes. */
+export interface TaskDev {
+  git: TaskGit;
+  mrs: TaskMrs;
+}
+
+/** A note from either place, read the way it was found. */
+export interface TaskNote {
+  id: string;
+  path: string;
+  /** Repository or project it came from, and the branch/commit when that helps. */
+  where: string;
+  date: string;
+  read: () => Promise<string>;
+}
+
+const EMPTY_GIT: TaskGit = { commits: [], docs: [], searched: [], docsEnabled: false };
+const EMPTY_MRS: TaskMrs = { configured: false, mrs: [], docs: [], error: null };
+
+/** Per task, for the session: reopening a task or running the analysis does not read git again. */
+const cache = new Map<string, Promise<TaskDev>>();
+
+export function loadTaskDev(key: string, setup: Pick<SetupState, "git" | "gitlab">): Promise<TaskDev> {
+  const id = `${key}|${setup.git}|${setup.gitlab}`;
+  if (!cache.has(id)) {
+    cache.set(id, Promise.all([
+      setup.git ? api.taskGit(key).catch((e) => ({ ...EMPTY_GIT, searched: [{ repoName: "git", refs: [], error: String(e) }] })) : Promise.resolve(EMPTY_GIT),
+      setup.gitlab ? api.taskMrs(key).catch((e) => ({ ...EMPTY_MRS, configured: true, error: e })) : Promise.resolve(EMPTY_MRS),
+    ]).then(([git, mrs]) => ({ git, mrs })));
+  }
+  return cache.get(id)!;
+}
+
+/** Notes found locally first (they are what is checked out), then those only in GitLab branches. */
+export function notesOf(dev: TaskDev): TaskNote[] {
+  const seen = new Set<string>();
+  const out: TaskNote[] = [];
+  for (const d of dev.git.docs) {
+    seen.add(d.path.toLowerCase());
+    out.push({ id: `l:${d.repo}:${d.path}`, path: d.path, where: d.repoName, date: d.date, read: () => api.taskDoc(d.repo, d.commit, d.path) });
+  }
+  for (const d of dev.mrs.docs) {
+    if (seen.has(d.path.toLowerCase())) continue;
+    seen.add(d.path.toLowerCase());
+    out.push({ id: `r:${d.projectId}:${d.path}`, path: d.path, where: `${d.project}!${d.mrIid} · ${d.refName}`, date: "", read: () => api.taskRemoteDoc(d.projectId, d.refName, d.path) });
+  }
+  return out;
+}
+
+export function useTaskDev(key: string, setup: SetupState): TaskDev | null {
+  const [dev, setDev] = useState<TaskDev | null>(null);
+  // Primitive deps: the setup object is rebuilt on every App render.
+  const { git, gitlab } = setup;
+  useEffect(() => {
+    let live = true;
+    setDev(null);
+    if (git || gitlab) void loadTaskDev(key, { git, gitlab }).then((d) => live && setDev(d));
+    else setDev({ git: EMPTY_GIT, mrs: EMPTY_MRS });
+    return () => { live = false; };
+  }, [key, git, gitlab]);
+  return dev;
+}

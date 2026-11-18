@@ -1,4 +1,4 @@
-import type { DashIssue, IssueDetail, PageCtx, TaskGit } from "@/shared/types";
+import type { DashIssue, IssueDetail, PageCtx, TaskGit, TaskMrs } from "@/shared/types";
 import { parseWiki, type Block, type Inline } from "./wiki";
 
 /**
@@ -13,6 +13,7 @@ export interface AnalysisInput {
   parent?: DashIssue;
   pages: PageCtx[];
   git: TaskGit;
+  mrs?: TaskMrs["mrs"];
   docs: { path: string; text: string }[];
 }
 
@@ -65,6 +66,10 @@ export function buildAnalysisPrompt(x: AnalysisInput): string {
     subtasks: d.subtasks.map((r) => `${r.key} [${r.status}] ${r.summary}`),
     links: d.linked.map((r) => `${r.relation} ${r.key} [${r.status}] ${r.summary}`),
     pages: x.pages.slice(0, 8).map((p) => ({ title: p.title, text: cut(p.excerpt, 1500), children: p.children.slice(0, 10) })),
+    merge_requests: (x.mrs ?? []).slice(0, 10).map((r) => ({
+      ref: `${r.project}!${r.iid}`, title: r.title, state: r.state, branch: `${r.sourceBranch} -> ${r.targetBranch}`, author: r.author,
+      updated: r.updated.slice(0, 10), commits: r.commits.slice(0, 15).map((c) => c.title),
+    })),
     commits: x.git.commits.slice(0, 25).map((c) => ({ repo: c.repo, at: c.date.slice(0, 10), author: c.author, subject: c.subject, files: c.files.slice(0, 15) })),
     notes: x.docs.slice(0, 5).map((n) => ({ path: n.path, text: cut(n.text, 4000) })),
   });

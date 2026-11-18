@@ -16,7 +16,7 @@ describe("task analysis", () => {
   });
 
   it("packs the task with long parts cut and only recent comments", () => {
-    const p = JSON.parse(buildAnalysisPrompt({ detail, pages: [], git: { commits: [], docs: [] }, docs: [] }));
+    const p = JSON.parse(buildAnalysisPrompt({ detail, pages: [], git: { commits: [], docs: [], searched: [], docsEnabled: false }, docs: [] }));
     expect(p.task.description.length).toBeLessThanOrEqual(8001);
     expect(p.comments.map((c: { text: string }) => c.text)).toEqual(Array.from({ length: 15 }, (_, n) => `c${n + 5}`));
   });

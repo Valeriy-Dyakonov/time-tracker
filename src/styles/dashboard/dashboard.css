@@ -235,3 +235,24 @@ body.resizing .drawer { animation: none; }
 .ai-list ul { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.55; }
 .ai-list li::marker { color: var(--c); }
 .ai-foot { display: flex; align-items: center; gap: 10px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 12px; }
+
+/* Development panel: MRs, commits, where we looked */
+.tool-btn.t-dev { --t: var(--accent); }
+.tool-btn .spin { width: 10px; height: 10px; }
+.tool-panel.dev { gap: 14px; }
+.tool-panel.dev h5 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.tool-panel.dev p { margin: 0; font-size: 13px; }
+.mr { --st: var(--accent); border: 1px solid var(--line); border-left: 3px solid var(--st); border-radius: var(--r-lg); padding: 6px 10px; margin-bottom: 6px; }
+.mr.st-merged { --st: var(--good); } .mr.st-closed, .mr.st-locked { --st: var(--muted); }
+.mr-h, .commit-h { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; padding: 2px 0; border: 0; background: none; color: var(--text); font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
+.mr-state { flex: none; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 1px 7px; border-radius: var(--r-pill); color: var(--st); background: color-mix(in srgb, var(--st) 14%, transparent); }
+.mr-title, .commit-subj { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-weight: 500; }
+.mr-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 12px; margin-top: 2px; }
+.mr-meta code, .commit-h code, .mr-commits code, .commit-files code { font-family: var(--font-mono); font-size: 11.5px; padding: 0 5px; border-radius: var(--r-xs); background: var(--bg); color: var(--text); }
+.mr-meta a { color: var(--accent); text-decoration: none; cursor: pointer; }
+.mr-commits, .commit-files { margin: 6px 0 2px; padding-left: 18px; font-size: 12.5px; line-height: 1.6; }
+.commit { border-bottom: 1px dashed var(--line); padding: 4px 0; }
+.commit:last-child { border-bottom: 0; }
+.commit-h .muted { font-size: 12px; white-space: nowrap; }
+.dev-where ul { margin: 0; padding-left: 16px; font-size: 12.5px; line-height: 1.7; }
+.dev-err { color: var(--bad); }
