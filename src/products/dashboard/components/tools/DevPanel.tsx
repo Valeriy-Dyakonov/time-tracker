@@ -30,7 +30,7 @@ export function DevPanel({ dev, onSettings }: { dev: TaskDev; onSettings?: () =>
                 <span className="mr-state">{m.states[r.state as keyof typeof m.states] ?? r.state}</span>
                 <span className="mr-title">{r.title}</span>
                 <span className="spacer" />
-                <span className="muted">{r.commits.length > 0 && m.commitsN(r.commits.length)}</span>
+                <span className="muted">{[r.commits.length > 0 && m.commitsN(r.commits.length), r.files.length > 0 && m.filesN(r.files.length)].filter(Boolean).join(" · ")}</span>
               </button>
               <div className="mr-meta muted">
                 <span>{r.project}!{r.iid}</span>
@@ -44,6 +44,12 @@ export function DevPanel({ dev, onSettings }: { dev: TaskDev; onSettings?: () =>
                   {r.commits.map((c) => <li key={c.short}><code>{c.short}</code> {c.title} <span className="muted">· {c.author}, {day(c.date)}</span></li>)}
                 </ul>
               )}
+              {openMr === id && r.files.length > 0 && (
+                <details className="mr-files">
+                  <summary>{m.filesN(r.files.length)}</summary>
+                  <ul className="commit-files">{r.files.map((f) => <li key={f}><code>{f}</code></li>)}</ul>
+                </details>
+              )}
             </article>
           );
         })}
@@ -51,7 +57,7 @@ export function DevPanel({ dev, onSettings }: { dev: TaskDev; onSettings?: () =>
 
       <section>
         <h5>{m.commits}<span className="tool-n">{git.commits.length}</span></h5>
-        {git.searched.length === 0 && <p className="muted">{m.gitOff}</p>}
+        {git.searched.length === 0 && <p className="muted">{mrs.mrs.length ? m.gitOffMrs : m.gitOff}</p>}
         {git.searched.length > 0 && git.commits.length === 0 && <p className="muted">{m.noCommits}</p>}
         {git.commits.map((c) => (
           <article key={c.hash} className="commit">
@@ -66,8 +72,8 @@ export function DevPanel({ dev, onSettings }: { dev: TaskDev; onSettings?: () =>
         ))}
       </section>
 
-      <section className="dev-where">
-        <h5>{m.where}</h5>
+      <details className="dev-where">
+        <summary><h5>{m.where}</h5></summary>
         <ul>
           {git.searched.map((r) => (
             <li key={r.repoName}>
@@ -78,7 +84,7 @@ export function DevPanel({ dev, onSettings }: { dev: TaskDev; onSettings?: () =>
           {git.searched.length === 0 && <li className="muted">{m.gitOff}</li>}
           <li>
             <b>GitLab</b>{" "}
-            <span className="muted">{!mrs.configured ? m.gitlabOff : mrs.error ? m.gitlabError : m.gitlabSearched(mrs.mrs.length)}</span>
+            <span className="muted">{!mrs.configured ? m.gitlabOff : mrs.error ? m.gitlabError : m.gitlabSearched(mrs.mrs.length, mrs.mrs.reduce((n, r) => n + r.files.length, 0))}</span>
           </li>
           <li>
             <b>{m.notes}</b>{" "}
@@ -87,7 +93,7 @@ export function DevPanel({ dev, onSettings }: { dev: TaskDev; onSettings?: () =>
             )}
           </li>
         </ul>
-      </section>
+      </details>
     </div>
   );
 }

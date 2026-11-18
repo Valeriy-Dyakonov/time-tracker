@@ -201,6 +201,8 @@ export interface TaskMrs {
     project: string; projectId: number; iid: number; title: string; state: string; webUrl: string;
     sourceBranch: string; targetBranch: string; author: string; updated: string;
     commits: { short: string; title: string; date: string; author: string }[];
+    /** Files the MR changes. */
+    files: string[];
   }[];
   /** Read one with `api.taskRemoteDoc`. */
   docs: { projectId: number; project: string; refName: string; path: string; mrIid: number }[];

@@ -13,7 +13,7 @@ describe("DevPanel", () => {
         },
         mrs: {
           configured: true, docs: [], error: { code: "http", params: { service: "GitLab", status: "500", body: "x" } },
-          mrs: [{ project: "team/app", projectId: 1, iid: 12, title: "ABC-1 import", state: "merged", webUrl: "https://git/x", sourceBranch: "feature/abc-1", targetBranch: "main", author: "Ivan", updated: "2026-11-11T00:00:00Z", commits: [] }],
+          mrs: [{ project: "team/app", projectId: 1, iid: 12, title: "ABC-1 import", state: "merged", webUrl: "https://git/x", sourceBranch: "feature/abc-1", targetBranch: "main", author: "Ivan", updated: "2026-11-11T00:00:00Z", commits: [], files: ["docs/ai/ABC-1/plan.md"] }],
         },
       }} />,
     );

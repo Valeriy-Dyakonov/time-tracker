@@ -256,3 +256,10 @@ body.resizing .drawer { animation: none; }
 .commit-h .muted { font-size: 12px; white-space: nowrap; }
 .dev-where ul { margin: 0; padding-left: 16px; font-size: 12.5px; line-height: 1.7; }
 .dev-err { color: var(--bad); }
+.mr-files summary { cursor: pointer; font-size: 12px; color: var(--muted); margin-top: 4px; }
+.dev-where > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
+.dev-where > summary::-webkit-details-marker { display: none; }
+.dev-where > summary::before { content: "›"; color: var(--muted); font-size: 16px; line-height: 1; transition: transform var(--ease); }
+.dev-where[open] > summary::before { transform: rotate(90deg); }
+.dev-where > summary h5 { margin: 0 !important; }
+.dev-where > ul { margin-top: 6px !important; }
