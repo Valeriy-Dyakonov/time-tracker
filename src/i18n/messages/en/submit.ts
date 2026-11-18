@@ -89,6 +89,7 @@ const en: typeof ru = {
     refresh: "Reload from Jira",
     refreshTitle: "Read again what is already logged in Jira for this period",
     loading: "Reading worklogs from Jira…",
+    locked: "Reading worklogs from Jira: logging and edits are unavailable until it finishes.",
     loadFailed: (e: string) => `Could not read worklogs from Jira: ${e}`,
     periodTotals: (logged: string, planned: string) => `In Tempo: ${logged} h · planned: ${planned} h`,
     summaryTitle: "All your Jira worklogs in the period against the plan. Days are compared one by one.",

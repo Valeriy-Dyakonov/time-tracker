@@ -88,6 +88,7 @@ export default {
     refresh: "Обновить из Jira",
     refreshTitle: "Перечитать, что уже списано в Jira за этот период",
     loading: "Читаю списания из Jira…",
+    locked: "Читаю списания из Jira — списание и правки недоступны, пока чтение не закончится.",
     loadFailed: (e: string) => `Не удалось прочитать списания из Jira: ${e}`,
     periodTotals: (logged: string, planned: string) => `В Tempo: ${logged} ч · по плану: ${planned} ч`,
     summaryTitle: "Все ваши списания в Jira за период против плана. Сверка идёт по каждому дню.",

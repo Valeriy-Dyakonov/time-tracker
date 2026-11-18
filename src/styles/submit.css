@@ -108,3 +108,8 @@
 .limits ul { margin: 6px 0 0; padding-left: 18px; }
 .limits-ack { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 4px; }
 .wk-tempo { margin-bottom: 10px; }
+
+/* Locked while Jira is read */
+.step-body { border: 0; padding: 0; margin: 0; min-width: 0; }
+.step-body.locked { opacity: .55; cursor: progress; }
+.sync-lock { padding: 8px 12px; margin-bottom: 12px; border-radius: var(--r-md); font-size: 13px; color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }

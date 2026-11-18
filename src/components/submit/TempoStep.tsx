@@ -63,13 +63,18 @@ export function TempoStep({ a, storeId, jira }: { a: Analysis; storeId: string; 
   const limitsAfter = (writes: PlannedWrite[]) =>
     checkLimits(perDay([...jiraMinutes, ...writes.map((p) => ({ date: p.row.date, minutes: p.minutes }))]), a.days, a.start, a.end);
 
+  /** Reading Jira: the comparison is stale until it ends, so every action of this step waits. */
+  const locked = jira.load.kind === "loading";
+  /** Writing to Jira: a reload now would race the writes. */
+  const writing = Object.values(jira.actions).some((x) => x.busy);
+
   const jiraBar = (
     <div className="ts-bar jira-bar">
       {jira.load.kind === "loading" && <span className="muted">{t.submit.jira.loading}</span>}
       {jira.load.kind === "error" && <span className="wl-err">{t.submit.jira.loadFailed(jira.load.error)}</span>}
       {jira.load.kind === "ok" && <PeriodMatch days={days} mismatched={mismatchedDays(days)} />}
       <span className="spacer" />
-      <Button variant="ghost" size="small" title={t.submit.jira.refreshTitle} disabled={jira.load.kind === "loading" || reviewing} onClick={() => void jira.reload()}>
+      <Button variant="ghost" size="small" title={t.submit.jira.refreshTitle} disabled={locked || writing || reviewing} onClick={() => void jira.reload()}>
         {t.submit.jira.refresh}
       </Button>
       {jira.load.kind === "ok" && (
@@ -111,6 +116,9 @@ export function TempoStep({ a, storeId, jira }: { a: Analysis; storeId: string; 
       <StepHeader n={1} title={m.title} tip={m.tip}>
         {m.introBefore}<b>{m.introHours}</b>{m.introAnd}<b>{m.introDesc}</b>{m.introAfter}{jira.load.kind !== "off" && m.introJira}
       </StepHeader>
+      {locked && <div className="sync-lock">{t.submit.jira.locked}</div>}
+      {/* A disabled fieldset turns off every button and field inside: nothing can be changed or sent while Jira is read. */}
+      <fieldset className={`step-body ${locked ? "locked" : ""}`} disabled={locked} aria-busy={locked}>
       <div className="ts-bar">
         <Segmented size="small" value={group} onChange={setGroup}
           options={[{ value: "tasks", label: m.byTask }, { value: "days", label: m.byDay }]} />
@@ -181,6 +189,7 @@ export function TempoStep({ a, storeId, jira }: { a: Analysis; storeId: string; 
               </article>
             ))}
       </div>
+      </fieldset>
     </Card>
   );
 }

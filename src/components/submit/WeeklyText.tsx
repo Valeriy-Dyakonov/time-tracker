@@ -66,7 +66,7 @@ export function WeeklyText({ a, storeId, canAi, jira }: { a: Analysis; storeId: 
         <div className="row wrap wk-tempo">
           {jira.load.kind === "error" && <span className="wl-err">{t.submit.jira.loadFailed(jira.load.error)}</span>}
           <span className="spacer" />
-          <Button variant="ghost" size="small" disabled={jira.load.kind === "loading"} onClick={() => void jira.reload()}>
+          <Button variant="ghost" size="small" disabled={jira.load.kind === "loading" || Object.values(jira.actions).some((x) => x.busy)} onClick={() => void jira.reload()}>
             {jira.load.kind === "loading" ? t.submit.jira.loading : m.tempoRefresh}
           </Button>
           <InfoTip>{m.sourceTip}</InfoTip>
