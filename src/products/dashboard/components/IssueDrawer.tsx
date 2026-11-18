@@ -6,7 +6,9 @@ import { localDate } from "@/shared/lib/dates";
 import type { DashIssue, DashPerson, DashRelated, IssueDetail } from "@/shared/types";
 import { Button, keyColor } from "@/shared/ui";
 import { priorityLevel } from "../lib/priority";
+import type { SetupState } from "@/shared/lib/setup";
 import { stageOf } from "../lib/stages";
+import { TaskTools } from "./TaskTools";
 import { Avatar } from "./Avatar";
 import { ago } from "./IssueCard";
 import { WikiText } from "./WikiText";
@@ -39,7 +41,7 @@ function useDrawerWidth(): [number, (e: React.PointerEvent) => void, () => void]
  * Side panel to read a task without leaving the app: people, epic, description, links, comments.
  * Task keys inside open in the same panel; "Back" returns to the previous one.
  */
-export function IssueDrawer(props: { issueKey: string; context: Map<string, DashIssue>; projects: Set<string>; onClose: () => void }) {
+export function IssueDrawer(props: { issueKey: string; context: Map<string, DashIssue>; projects: Set<string>; setup: SetupState; onClose: () => void }) {
   const m = useT().dashboard;
   const d = m.detail;
   const [stack, setStack] = useState<string[]>([props.issueKey]);
@@ -94,6 +96,8 @@ export function IssueDrawer(props: { issueKey: string; context: Map<string, Dash
                 {data.components.map((c) => <span key={c} className="chip c-component">{c}</span>)}
                 {data.labels.map((l) => <span key={l} className="chip c-label" style={{ ["--c" as string]: keyColor(l) }}>#{l}</span>)}
               </div>
+
+              <TaskTools detail={data} context={props.context} setup={props.setup} isKey={isKey} onKey={open} />
 
               {(data.epic || (data.parent && data.parent !== data.epic)) && (
                 <div className="drawer-parents">

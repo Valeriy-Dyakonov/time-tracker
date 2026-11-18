@@ -99,6 +99,10 @@ const en: typeof ru = {
     authors: "Commit author",
     authorsHint: "Leave empty to use the email from each repository's git config.",
     authorsTip: "These addresses tell your commits apart from other people's.",
+    aiDocs: "Show AI notes per task (Work Dashboard)",
+    aiDocsTip: "If the repositories keep markdown notes about a task in folders like docs/ai/<key>, the task panel gets a button to read them without opening git. Read-only.",
+    aiDocsPaths: "Where the notes are",
+    aiDocsPathsHint: "Path from the repository root, one per line; {key} is the task key. Searched in all branches, in commits mentioning the task and in the current state.",
     helpTitle: "How to find your git email",
     helpSteps: [
       "Open a terminal in any repository and run: git config user.email",

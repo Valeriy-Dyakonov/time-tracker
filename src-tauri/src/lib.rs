@@ -22,6 +22,18 @@ pub fn run() {
     #[cfg(feature = "updater")]
     let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
     builder
+        .setup(|app| {
+            // The window starts hidden so no blank frame shows before the page; the page shows it once the
+            // loader is painted. Should the page fail to, show it anyway after a moment.
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_secs(3));
+                if let Some(w) = tauri::Manager::get_webview_window(&handle, "main") {
+                    let _ = w.show();
+                }
+            });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             config::load_settings,
             config::save_settings,
@@ -42,6 +54,8 @@ pub fn run() {
             atlassian::fetch_issue_pages,
             code::fetch_git,
             code::scan_git_repos,
+            code::task_git,
+            code::task_doc,
             code::fetch_gitlab,
             calendar::fetch_calendar,
             calendar::fetch_holidays,

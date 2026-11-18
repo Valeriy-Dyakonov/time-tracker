@@ -7,7 +7,7 @@ use std::process::Command;
 use crate::texts::Lang;
 use crate::error::{AppError, AppResult};
 
-fn git(repo: &str, args: &[String]) -> AppResult<String> {
+pub(crate) fn git(repo: &str, args: &[String]) -> AppResult<String> {
     let mut cmd = Command::new("git");
     cmd.arg("-C").arg(repo).arg("-c").arg("core.quotepath=off").args(args);
     // A windowed app must not flash a console window for every git call.

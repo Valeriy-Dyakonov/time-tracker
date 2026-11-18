@@ -7,3 +7,4 @@ pub mod holidays;
 pub mod jira;
 pub mod llm;
 pub mod matrix;
+pub mod taskgit;

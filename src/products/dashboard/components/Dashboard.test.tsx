@@ -24,7 +24,8 @@ const task = (key: string, status: string, category: string, extra: object = {})
 
 const render = (data: object) => {
   store.set("worklog.dashboard.v3.dev", JSON.stringify({ at: Date.now(), data }));
-  return renderToString(<Dashboard jiraReady profile="dev" onOpenSettings={() => {}} />);
+  const setup = { jira: true, llm: true, confluence: false, calendar: false, matrix: false, git: false, gitlab: false };
+  return renderToString(<Dashboard setup={setup} profile="dev" onOpenSettings={() => {}} />);
 };
 
 describe("Dashboard render", () => {

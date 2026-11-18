@@ -203,3 +203,35 @@ body.resizing .drawer { animation: none; }
 .wiki-table tr:last-child > * { border-bottom: 0; }
 .wiki-table th + th, .wiki-table td + td, .wiki-table th + td, .wiki-table td + th { border-left: 1px solid var(--line); }
 .wiki-table tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--bg) 45%, transparent); }
+
+/* Task tools: AI notes from git, AI analysis */
+.task-tools { display: flex; flex-direction: column; gap: 10px; }
+.task-tools-bar { display: flex; flex-wrap: wrap; gap: 8px; }
+.tool-btn { --t: var(--accent); display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid color-mix(in srgb, var(--t) 35%, var(--line)); border-radius: var(--r-pill); background: color-mix(in srgb, var(--t) 8%, var(--card)); color: var(--t); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background var(--ease), color var(--ease), box-shadow var(--ease); }
+.tool-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tool-btn:hover:not(:disabled) { box-shadow: 0 4px 14px color-mix(in srgb, var(--t) 22%, transparent); }
+.tool-btn.on { background: var(--t); color: var(--on-accent); border-color: var(--t); }
+.tool-btn:disabled { opacity: .5; cursor: not-allowed; }
+.tool-btn.t-docs { --t: var(--stage-test); }
+.tool-btn.t-ai { --t: var(--grad-from); }
+.tool-n { min-width: 20px; padding: 0 6px; border-radius: var(--r-pill); font-size: 11px; text-align: center; background: color-mix(in srgb, currentColor 16%, transparent); }
+.tool-panel { border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--card); padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; animation: drawer-fade .15s ease both; }
+.tool-panel.ai { border-color: color-mix(in srgb, var(--grad-from) 35%, var(--line)); background: linear-gradient(180deg, color-mix(in srgb, var(--grad-from) 6%, var(--card)), var(--card) 120px); }
+.tool-panel.docs { padding: 6px 8px; gap: 0; border-color: color-mix(in srgb, var(--stage-test) 35%, var(--line)); }
+.doc + .doc { border-top: 1px solid var(--line); }
+.doc-h { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; padding: 8px; border: 0; background: none; color: var(--text); font: inherit; font-size: 13px; cursor: pointer; text-align: left; border-radius: var(--r-md); }
+.doc-h:hover { background: var(--bg); }
+.doc-caret { color: var(--muted); font-size: 16px; line-height: 1; transition: transform var(--ease); }
+.doc.open .doc-caret { transform: rotate(90deg); }
+.doc-path { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.doc-body { padding: 4px 10px 12px 26px; }
+.ai-progress { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+.ai-summary { margin: 0; font-size: 14.5px; line-height: 1.55; font-weight: 500; }
+.ai-state { margin: 0; font-size: 13.5px; line-height: 1.5; }
+.ai-list { --c: var(--muted); }
+.ai-list.tone-good { --c: var(--good); } .ai-list.tone-accent { --c: var(--accent); } .ai-list.tone-bad { --c: var(--bad); } .ai-list.tone-warn { --c: var(--warn); }
+.ai-list h5 { display: flex; align-items: center; gap: 6px; margin: 4px 0 6px; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--c); }
+.ai-list h5::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.ai-list ul { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.55; }
+.ai-list li::marker { color: var(--c); }
+.ai-foot { display: flex; align-items: center; gap: 10px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 12px; }

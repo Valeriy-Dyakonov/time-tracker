@@ -90,7 +90,7 @@ export default function App() {
         ) : view === "home" ? (
           <Home jiraReady={setup.jira} onOpen={setView} />
         ) : view === "dashboard" ? (
-          <Dashboard jiraReady={setup.jira} profile={asProfile(settings.dashboardProfile)} onOpenSettings={openSettings} />
+          <Dashboard setup={setup} profile={asProfile(settings.dashboardProfile)} onOpenSettings={openSettings} />
         ) : (
           <Report settings={settings} setup={setup} onOpenSettings={openSettings} analysis={analysis} onChange={setAnalysis} />
         )}

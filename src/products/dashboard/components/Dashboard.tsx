@@ -3,6 +3,7 @@ import { useT } from "@/i18n";
 import { api } from "@/shared/api";
 import { useStored } from "@/shared/hooks/useStored";
 import { localDate } from "@/shared/lib/dates";
+import type { SetupState } from "@/shared/lib/setup";
 import type { DashData, DashIssue } from "@/shared/types";
 import { Button, InfoTip, Switch } from "@/shared/ui";
 import { containerCandidates, containerTypes } from "../lib/containers";
@@ -32,8 +33,9 @@ function readCache(p: Profile): Cached | null {
 }
 
 /** "Work dashboard": open tasks for a role on one Jira-like board; closed ones in a history read on demand. Read-only. */
-export default function Dashboard({ jiraReady, profile, onOpenSettings }: { jiraReady: boolean; profile: Profile; onOpenSettings: () => void }) {
+export default function Dashboard({ setup, profile, onOpenSettings }: { setup: SetupState; profile: Profile; onOpenSettings: () => void }) {
   const m = useT().dashboard;
+  const jiraReady = setup.jira;
   /** Issue types that count as an epic; null = guessed from the type names. */
   const [chosenTypes, setChosenTypes] = useStored<string[] | null>("worklog.dashboard.containerTypes", null);
   const [onlyMine, setOnlyMine] = useStored("worklog.dashboard.onlyMine", false);
@@ -152,7 +154,7 @@ export default function Dashboard({ jiraReady, profile, onOpenSettings }: { jira
 
       <History profile={profile} filter={scope} onOpen={setOpened} />
 
-      {opened && <IssueDrawer issueKey={opened} context={context} projects={projectSet} onClose={() => setOpened(null)} />}
+      {opened && <IssueDrawer issueKey={opened} context={context} projects={projectSet} setup={setup} onClose={() => setOpened(null)} />}
     </div>
   );
 }

@@ -38,6 +38,10 @@ pub struct Settings {
     pub git_repos: Vec<String>,
     /// Author name/email patterns. Empty = `git config user.email` of each repo.
     pub git_authors: Vec<String>,
+    /// Show markdown notes kept per task in the repositories (a team convention, off by default).
+    pub ai_docs_enabled: bool,
+    /// Where those notes live; `{key}` is the task key.
+    pub ai_docs_paths: Vec<String>,
     pub hours_per_day: f64,
     /// 1 = Monday ... 7 = Sunday
     pub workdays: Vec<u8>,
@@ -67,6 +71,8 @@ impl Default for Settings {
             git_root: String::new(),
             git_repos: vec![],
             git_authors: vec![],
+            ai_docs_enabled: false,
+            ai_docs_paths: vec!["docs/ai/{key}".into(), "ai/{key}".into()],
             hours_per_day: 8.0,
             workdays: vec![1, 2, 3, 4, 5],
             accept_invalid_certs: false,

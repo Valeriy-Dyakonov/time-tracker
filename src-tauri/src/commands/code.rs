@@ -2,7 +2,7 @@
 use super::Ctx;
 use crate::model::Event;
 use crate::secrets::{self, require};
-use crate::sources::{gitlab, gitlog};
+use crate::sources::{gitlab, gitlog, taskgit};
 use crate::util::range_ms;
 use crate::texts::Lang;
 use crate::error::{AppError, AppResult};
@@ -15,6 +15,26 @@ pub async fn fetch_git(app: tauri::AppHandle, start: String, end: String, lang: 
     tauri::async_runtime::spawn_blocking(move || gitlog::fetch(&s.git_repos, &s.git_authors, a, b, lang))
         .await
         .map_err(AppError::raw)?
+}
+
+/// Commits mentioning the task in the configured repositories, and its notes when that feature is on.
+#[tauri::command]
+pub async fn task_git(app: tauri::AppHandle, key: String) -> AppResult<taskgit::TaskGit> {
+    super::atlassian::valid_key(&key)?;
+    let s = crate::settings::load(&app)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let docs = s.ai_docs_enabled.then_some(s.ai_docs_paths.as_slice());
+        taskgit::find(&s.git_repos, &key, docs)
+    })
+    .await
+    .map_err(AppError::raw)
+}
+
+/// One task note as text, from a configured repository only.
+#[tauri::command]
+pub async fn task_doc(app: tauri::AppHandle, repo: String, commit: String, path: String) -> AppResult<String> {
+    let s = crate::settings::load(&app)?;
+    tauri::async_runtime::spawn_blocking(move || taskgit::read(&s.git_repos, &repo, &commit, &path)).await.map_err(AppError::raw)?
 }
 
 #[tauri::command]

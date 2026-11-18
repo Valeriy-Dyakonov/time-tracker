@@ -19,6 +19,10 @@ export interface Settings {
   gitRoot: string;
   gitRepos: string[];
   gitAuthors: string[];
+  /** Show markdown notes kept per task in the repositories (a team convention, off by default). */
+  aiDocsEnabled: boolean;
+  /** Where those notes live; `{key}` is the task key. */
+  aiDocsPaths: string[];
   hoursPerDay: number;
   /** Production calendar country (ru, by, kz, ua, uz, us); empty = weekdays only. */
   holidayCountry: string;
@@ -48,6 +52,8 @@ export const defaultSettings: Settings = {
   gitRoot: "",
   gitRepos: [],
   gitAuthors: [],
+  aiDocsEnabled: false,
+  aiDocsPaths: ["docs/ai/{key}", "ai/{key}"],
   hoursPerDay: 8,
   holidayCountry: "ru",
   shortDays: true,
@@ -176,6 +182,13 @@ export interface IssueDetail extends DashIssue {
   subtasks: DashRelated[];
   /** Linked tasks with summary and status. */
   linked: DashRelated[];
+}
+
+/** What local git knows about a task (read-only). */
+export interface TaskGit {
+  commits: { repo: string; hash: string; date: string; author: string; subject: string; files: string[] }[];
+  /** Markdown notes kept per task (optional feature): read one with `api.taskDoc`. */
+  docs: { repo: string; repoName: string; path: string; commit: string; date: string }[];
 }
 
 /** A worklog of the user in Jira (Tempo on Server/DC keeps its worklogs there). */

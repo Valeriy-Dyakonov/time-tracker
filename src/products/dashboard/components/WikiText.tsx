@@ -1,10 +1,12 @@
 import { Fragment, useMemo, type ReactNode } from "react";
 import { api } from "@/shared/api";
+import { parseMarkdown } from "../lib/markdown";
 import { parseWiki, type Inline } from "../lib/wiki";
 
-/** Jira wiki markup rendered as React elements (never as HTML); links open in the system browser. */
-export function WikiText({ text, isKey, onKey }: { text: string; isKey: (k: string) => boolean; onKey: (k: string) => void }) {
-  const blocks = useMemo(() => parseWiki(text, isKey), [text, isKey]);
+/** Jira wiki markup (or markdown notes) rendered as React elements, never as HTML; links open in the system browser. */
+export function WikiText(props: { text: string; isKey: (k: string) => boolean; onKey: (k: string) => void; format?: "wiki" | "md" }) {
+  const { text, isKey, onKey, format = "wiki" } = props;
+  const blocks = useMemo(() => (format === "md" ? parseMarkdown(text, isKey) : parseWiki(text, isKey)), [text, isKey, format]);
   const line = (parts: Inline[]): ReactNode[] =>
     parts.map((x, n) => {
       switch (x.t) {

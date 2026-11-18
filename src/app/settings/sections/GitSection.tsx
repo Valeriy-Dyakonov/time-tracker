@@ -58,6 +58,15 @@ export function GitSection({ f }: { f: SettingsForm }) {
       <Field label={m.authors} hint={m.authorsHint} tip={m.authorsTip}>
         <textarea rows={2} value={s.gitAuthors.join("\n")} placeholder="ivan@company.ru" onChange={(e) => set("gitAuthors", lines(e.target.value))} />
       </Field>
+      <label className="check" title={m.aiDocsTip}>
+        <input type="checkbox" checked={s.aiDocsEnabled} onChange={(e) => set("aiDocsEnabled", e.target.checked)} />
+        {m.aiDocs}
+      </label>
+      {s.aiDocsEnabled && (
+        <Field label={m.aiDocsPaths} hint={m.aiDocsPathsHint}>
+          <textarea rows={2} value={s.aiDocsPaths.join("\n")} placeholder="docs/ai/{key}" onChange={(e) => set("aiDocsPaths", lines(e.target.value))} />
+        </Field>
+      )}
       <Help title={m.helpTitle} steps={m.helpSteps} />
     </SectionCard>
   );

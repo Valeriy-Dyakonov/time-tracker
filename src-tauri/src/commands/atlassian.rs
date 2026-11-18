@@ -87,7 +87,7 @@ pub async fn jira_delete_worklog(app: tauri::AppHandle, key: String, id: String)
     worklog::delete(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &key, &id).await
 }
 
-fn valid_key(key: &str) -> AppResult<()> {
+pub(crate) fn valid_key(key: &str) -> AppResult<()> {
     if is_issue_key(key) { Ok(()) } else { Err(AppError::new("worklogBadTarget").with("key", key)) }
 }
 

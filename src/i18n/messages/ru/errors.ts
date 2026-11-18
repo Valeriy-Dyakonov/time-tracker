@@ -21,6 +21,7 @@ const codes: Record<string, Msg> = {
     `Хранилище паролей Windows не сохранило значение «${p.secret}» (длина ${p.length} симв.). Проверьте, что приложение запущено под вашим пользователем.`,
   tokenMissing: (p) => `${secretLabel(p.secret)}: токен не задан в настройках`,
   unknownSecret: (p) => `Неизвестный секрет: ${p.secret}`,
+  taskDocInvalid: (p) => `Этот файл нельзя прочитать: ${p.path}`,
   openLinkInvalid: (p) => `Эту ссылку нельзя открыть: ${p.url}`,
   worklogBadTime: (p) => `Нельзя списать такое время: ${p.seconds} с`,
   worklogBadTarget: (p) => `Некорректная задача или запись: ${p.key}`,

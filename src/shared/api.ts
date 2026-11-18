@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getLocale, t } from "@/i18n";
 import type { ErrorParams } from "@/i18n/messages/ru/errors";
-import type { DashData, Evt, IssueDetail, IssueInfo, JiraWorklog, Meeting, PageCtx, Settings } from "./types";
+import type { DashData, Evt, IssueDetail, TaskGit, IssueInfo, JiraWorklog, Meeting, PageCtx, Settings } from "./types";
 
 export interface JiraResult {
   me: string;
@@ -72,6 +72,8 @@ export const api = {
   lookupIssues: (keys: string[]) => call<IssueInfo[]>("lookup_issues", { keys }),
   jiraDashboard: (profile: string, historyDays?: number) => call<DashData>("jira_dashboard", { profile, historyDays }),
   openLink: (url: string) => call<void>("open_link", { url }),
+  taskGit: (key: string) => call<TaskGit>("task_git", { key }),
+  taskDoc: (repo: string, commit: string, path: string) => call<string>("task_doc", { repo, commit, path }),
   jiraIssueDetail: (key: string) => call<IssueDetail>("jira_issue_detail", { key }),
   jiraWorklogs: (start: string, end: string) => call<JiraWorklog[]>("jira_worklogs", { start, end }),
   jiraAddWorklog: (key: string, date: string, seconds: number, comment: string) =>

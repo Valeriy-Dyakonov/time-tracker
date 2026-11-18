@@ -62,6 +62,43 @@ const dashboard: typeof ru = {
   openTitle: "Open the task",
   needsJira: "The dashboard needs Jira: set its address and token in the settings.",
   openSettings: "Open settings",
+  tools: {
+    docs: "AI notes",
+    docsTip: "Markdown notes about the task kept in git (folders like docs/ai/<key>): read them right here",
+    ai: "AI analysis",
+    aiTip: "The AI reads the description, comments, links, Confluence pages and commits of the task and sums up what matters",
+    aiOff: "AI is not set up: add its address and model in the settings",
+    loading: "Loading…",
+    steps: { pages: "Reading Confluence pages…", git: "Looking for commits in git…", notes: "Reading the task notes…", ask: "The AI is analysing the task…" },
+    failed: (e: string) => `Failed: ${e}`,
+    unparsed: "The AI answered in the wrong format, try again",
+    state: "Where it stands",
+    done: "Done",
+    next: "Left to do",
+    risks: "Risks and blockers",
+    details: "Key details",
+    questions: "Open questions",
+    used: (list: string) => `Used: ${list}`,
+    again: "Analyse again",
+    src: {
+      task: (n: number) => `description and ${n} comments`,
+      pages: (n: number) => `${n} Confluence pages`,
+      commits: (n: number) => `${n} commits`,
+      notes: (n: number) => `${n} notes`,
+    },
+  },
+  prompt: {
+    task: `You help a developer. You get everything known about a Jira task: the description (Jira markup), comments, subtasks and links, epic and parent, Confluence pages, git commits (messages and changed files) and markdown notes about the task.
+Help them get into the task quickly. Write in English, short and concrete, no filler and no restating the obvious.
+
+Return ONLY JSON, no markdown:
+{"summary":"2-3 sentences: what has to be done and why","state":"1-2 sentences: where the task stands, by status, comments and commits","done":["what is already done"],"next":["what is left to do"],"risks":["risks, blockers, dependencies on other tasks"],"details":["key technical details: modules, files, decisions, constraints, agreements"],"questions":["what is unclear and worth asking"]}
+
+Rules:
+- Facts from the input only; if something is missing, leave the list empty, invent nothing.
+- Each item is one line up to 160 characters.
+- In details be specific: module and file names from commits, decisions from comments, task keys.`,
+  },
   detail: {
     openInJira: "Open in Jira",
     close: "Close",
