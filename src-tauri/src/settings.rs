@@ -23,7 +23,7 @@ pub struct Settings {
     /// Exchange (OWA) address; the EWS path is appended automatically.
     pub exchange_url: String,
     pub exchange_user: String,
-    /// Keep only meetings that look like calls (Teams/Zoom/... or "созвон" in title/location).
+    /// Keep only meetings that look like calls (Teams/Zoom/... or a call keyword in title/location).
     pub calendar_only_calls: bool,
     pub matrix_homeserver: String,
     pub matrix_user_id: String,

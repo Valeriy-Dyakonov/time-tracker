@@ -35,7 +35,7 @@ fn ru_name(d: NaiveDate, lang: Lang) -> Option<String> {
     Some(lang.holiday(d.month(), d.day()).to_string())
 }
 
-/// Russia 2026 (Постановление Правительства РФ от 24.09.2025 № 1466): weekday days off and shortened days.
+/// Russia 2026 (Government Decree No. 1466 of 24.09.2025): weekday days off and shortened days.
 /// Weekends are not listed: they follow the normal rule. No transferred working Saturdays in 2026.
 const RU_2026_OFF: [&str; 15] = [
     "2026-01-01", "2026-01-02", "2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09",

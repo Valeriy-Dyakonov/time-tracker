@@ -38,7 +38,7 @@ impl Members {
     }
 }
 
-/// "Иван", "Иван и Мария", "Иван, Мария и ещё 3" (in the requested language).
+/// "Ivan", "Ivan and Maria", "Ivan, Maria and 3 more" (in the requested language).
 fn members_label(mut names: Vec<String>, lang: Lang) -> Option<String> {
     names.sort_by_key(|n| n.to_lowercase());
     match names.len() {

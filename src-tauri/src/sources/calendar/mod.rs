@@ -17,7 +17,7 @@ pub struct Meeting {
     pub title: String,
     pub organizer: String,
     pub location: String,
-    /// Teams/Zoom/Telemost link or "созвон" in title/location.
+    /// Teams/Zoom/Telemost link or a call keyword in title/location.
     pub is_call: bool,
     pub tentative: bool,
 }

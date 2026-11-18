@@ -68,11 +68,11 @@ impl Lang {
     pub fn room_empty(self) -> &'static str {
         self.pick("Пустая комната", "Empty room")
     }
-    /// "Иван и Мария" / "Ivan and Maria".
+    /// "Ivan and Maria".
     pub fn two_names(self, a: &str, b: &str) -> String {
         format!("{a} {} {b}", self.pick("и", "and"))
     }
-    /// "Иван, Мария и ещё 3" / "Ivan, Maria and 3 more".
+    /// "Ivan, Maria and 3 more".
     pub fn names_and_more(self, a: &str, b: &str, more: usize) -> String {
         match self {
             Lang::Ru => format!("{a}, {b} и ещё {more}"),
