@@ -1,3 +1,5 @@
+import { forms } from "../../format";
+
 export default {
   tempo: {
     title: "Tempo в Jira — часы по задачам",
@@ -7,6 +9,7 @@ export default {
     introAnd: " и ",
     introDesc: "описание",
     introAfter: " (клик по значку ⧉), выберите дату и сохраните. Потом поставьте галочку — так не потеряете, где остановились.",
+    introJira: " Или списывайте прямо отсюда: кнопка «Списать» в строке или «Списать всё…» сверху — перед отправкой будет список на проверку.",
     byTask: "По задачам",
     byDay: "По дням",
     formatTip: "В каком виде копировать часы. Tempo принимает оба, но в некоторых настройках понимает только один — выберите тот, что у вас срабатывает.",
@@ -25,6 +28,42 @@ export default {
     descPlaceholder: "Описание работы",
     descTitle: "Текст для поля Description в Tempo — можно поправить",
     copyDesc: "Скопировать описание",
+    inJira: (h: string) => `В Jira: ${h} ч`,
+    inJiraTitle: (n: number) => `Ваши записи в Jira на эту задачу в этот день: ${n}`,
+    filled: "Заполнено в Jira",
+    submit: "Списать",
+    topUp: (h: string) => `Дописать ${h} ч`,
+    submitTitle: "Создать запись в Jira: недостающие часы этой строки с этим описанием",
+    overwrite: "Перезаписать",
+    overwriteTitle: "Заменить то, что уже списано в Jira на эту задачу в этот день, часами и описанием из этой строки",
+    overwriteAsk: (from: string, to: string, extra: number) =>
+      `Заменить ${from} ч в Jira на ${to} ч с этим описанием?${extra ? ` Лишние записи (${extra}) будут удалены.` : ""}`,
+    overwriteYes: "Заменить",
+    cancel: "Отмена",
+    busy: "Отправляю…",
+    failed: (e: string) => `Не удалось: ${e}`,
+  },
+  jira: {
+    refresh: "Обновить из Jira",
+    refreshTitle: "Перечитать, что уже списано в Jira за этот период",
+    loading: "Читаю списания из Jira…",
+    loadFailed: (e: string) => `Не удалось прочитать списания из Jira: ${e}`,
+    summary: (logged: string, planned: string) => `В Jira: ${logged} из ${planned} ч`,
+    summaryTitle: "Сколько из запланированного уже списано в Jira (ваши записи за период)",
+    submitAll: "Списать всё…",
+    submitAllTitle: "Показать, что будет записано в Jira, и списать после проверки",
+    nothing: "Всё уже списано",
+    reviewTitle: "Проверьте перед списанием",
+    reviewIntro: (rows: string, h: string) =>
+      `В Jira будет создано ${rows} на ${h} ч. Где уже списано столько же или больше — строка пропущена, где меньше — дописывается разница. Существующие записи не меняются.`,
+    rows: forms({ one: "запись", few: "записи", many: "записей", other: "записи" }),
+    topUpMark: "дописать",
+    topUpTitle: "В Jira уже есть часть времени — будет добавлена только разница",
+    include: "Списать эту строку",
+    confirm: (rows: string, h: string) => `Списать ${rows} (${h} ч)`,
+    close: "Закрыть",
+    progress: (done: number, total: number) => `Списываю ${done} из ${total}…`,
+    result: (ok: number, failed: number) => (failed ? `Списано: ${ok}, с ошибкой: ${failed} — см. строки ниже.` : `Списано записей: ${ok}.`),
   },
   weekly: {
     title: "Своя система — текст за неделю",

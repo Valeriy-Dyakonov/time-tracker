@@ -35,7 +35,7 @@ Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests
   - `ui/` — UI kit: `kit.tsx` (Button, Card, Segmented, Switch, Badge), `basics.tsx` (Field, InfoTip, Help, Title, keyColor, download), `Copy.tsx`, `Stepper.tsx`; import from `components/ui`.
   - `report/` — report screen, filters, view tabs, export; `analysisSources.ts` is the registry of toggleable sources.
   - `hours/` — "Часы" tab: stats, overview, weeks, day accordion, by-task; shared helpers in `review.ts`.
-  - `submit/` — "Списание" tab. `review/` — "Разбор ИИ" + evidence. `settings/` — settings screen.
+  - `submit/` — "Списание" tab; `useJiraSync.ts` reads/writes the user's Jira worklogs, comparison logic in `lib/worklogSync.ts`. `review/` — "Разбор ИИ" + evidence. `settings/` — settings screen.
   - `settings/registry.ts` — list of settings sections (nav + content); one component per section in `settings/sections/`.
   - `sources.ts` — source labels/order for display (single place, don't duplicate).
 - `styles/` — all CSS, imported via `styles/index.css`: `tokens.css`, `themes.css`, `base.css`, `kit.css`, one file per screen. No hardcoded colors outside `tokens.css`/`themes.css`.
@@ -80,4 +80,4 @@ Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests
 - UI text short and concrete. Anything whose purpose isn't obvious gets an `InfoTip` ("что это и зачем").
 - Small focused modules; prefer a registry/strategy over a growing `switch`/`match`.
 - Comments only for a non-obvious "why"; don't restate the code.
-- All connections are read-only: the app never writes to Jira, GitLab, Matrix etc.
+- All connections are read-only, with one exception: the user's own Jira worklogs, written only by an explicit action in the "Списание" tab (one row, or "log all" after a review list). Automatic actions only add missing time; replacing existing worklogs is a separate confirmed action. Never write anything else.

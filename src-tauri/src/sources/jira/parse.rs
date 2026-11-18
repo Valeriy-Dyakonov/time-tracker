@@ -16,7 +16,7 @@ impl Me {
         Self { name: s("name"), key: s("key"), display: s("displayName") }
     }
 
-    fn is(&self, user: &Value) -> bool {
+    pub(super) fn is(&self, user: &Value) -> bool {
         let name = user["name"].as_str().unwrap_or("");
         let key = user["key"].as_str().unwrap_or("");
         (!self.name.is_empty() && name == self.name) || (!self.key.is_empty() && key == self.key)

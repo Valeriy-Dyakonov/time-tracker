@@ -7,7 +7,10 @@ import { rowId, worklogRows, type HoursFormat, type WorklogRow as Row } from "..
 import { useStored } from "../hooks/useStored";
 import IssueLink from "../IssueLink";
 import { Button, Card, InfoTip, keyColor, Segmented } from "../ui";
+import { BulkReview } from "./BulkReview";
 import { StepHeader } from "./StepHeader";
+import { useJiraSync } from "./useJiraSync";
+import { bulkPlan, indexWorklogs } from "../../lib/worklogSync";
 import { WorklogRow, type RowLabel } from "./WorklogRow";
 
 type Group = "tasks" | "days";
@@ -32,8 +35,37 @@ export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
   const rows = useMemo(() => worklogRows(a), [a]);
   const byTask = useMemo(() => groupBy(rows, (r) => r.key).sort((x, y) => sumHours(y[1]) - sumHours(x[1])), [rows]);
   const byDay = useMemo(() => groupBy(rows, (r) => r.date).sort((x, y) => x[0].localeCompare(y[0])), [rows]);
-  const doneRows = rows.filter((r) => done[rowId(r)]);
+  const jira = useJiraSync(a);
+  const [reviewing, setReviewing] = useState(false);
+  const comment = (r: Row) => comments[rowId(r)] ?? r.comment;
+  /** Filled in Jira counts as done; the manual tick still works for rows logged elsewhere. */
+  const isDone = (r: Row) => !!done[rowId(r)] || jira.sync(r)?.state === "full";
+  const doneRows = rows.filter(isDone);
   const pct = rows.length ? (doneRows.length / rows.length) * 100 : 0;
+
+  // Built on demand: the review keeps its own copy, so later edits do not change what is being sent.
+  const plan = () => bulkPlan(rows, indexWorklogs(rows.flatMap((r) => jira.sync(r)?.entries ?? [])), comment);
+  const loggedMin = rows.reduce((s, r) => s + Math.min(jira.sync(r)?.logged ?? 0, jira.sync(r)?.planned ?? 0), 0);
+  const missingMin = rows.reduce((s, r) => s + (jira.sync(r)?.missing ?? 0), 0);
+
+  const jiraBar = (
+    <div className="ts-bar jira-bar">
+      {jira.load.kind === "loading" && <span className="muted">{t.submit.jira.loading}</span>}
+      {jira.load.kind === "error" && <span className="wl-err">{t.submit.jira.loadFailed(jira.load.error)}</span>}
+      {jira.load.kind === "ok" && (
+        <span className="progress" title={t.submit.jira.summaryTitle}>{t.submit.jira.summary(fmtH(loggedMin / 60), fmtH(sumHours(rows)))}</span>
+      )}
+      <span className="spacer" />
+      <Button variant="ghost" size="small" title={t.submit.jira.refreshTitle} disabled={jira.load.kind === "loading" || reviewing} onClick={() => void jira.reload()}>
+        {t.submit.jira.refresh}
+      </Button>
+      {jira.load.kind === "ok" && (
+        <Button variant="primary" size="small" title={t.submit.jira.submitAllTitle} disabled={missingMin === 0 || reviewing} onClick={() => setReviewing(true)}>
+          {missingMin === 0 ? t.submit.jira.nothing : t.submit.jira.submitAll}
+        </Button>
+      )}
+    </div>
+  );
 
   const line = (r: Row, label: RowLabel) => (
     <WorklogRow
@@ -42,17 +74,26 @@ export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
       row={r}
       label={label}
       fmt={fmt}
-      done={!!done[rowId(r)]}
-      comment={comments[rowId(r)] ?? r.comment}
+      done={isDone(r)}
+      comment={comment(r)}
       onToggle={() => setDone((p) => ({ ...p, [rowId(r)]: !p[rowId(r)] }))}
       onComment={(text) => setComments((p) => ({ ...p, [rowId(r)]: text }))}
+      jira={(() => {
+        const s = jira.sync(r);
+        return s && {
+          sync: s,
+          action: jira.actions[rowId(r)],
+          onSubmit: () => void jira.submit(r, comment(r)),
+          onOverwrite: () => void jira.overwrite(r, comment(r)),
+        };
+      })()}
     />
   );
 
   return (
     <Card className="step">
       <StepHeader n={1} title={m.title} tip={m.tip}>
-        {m.introBefore}<b>{m.introHours}</b>{m.introAnd}<b>{m.introDesc}</b>{m.introAfter}
+        {m.introBefore}<b>{m.introHours}</b>{m.introAnd}<b>{m.introDesc}</b>{m.introAfter}{jira.load.kind !== "off" && m.introJira}
       </StepHeader>
       <div className="ts-bar">
         <Segmented size="small" value={group} onChange={setGroup}
@@ -68,10 +109,15 @@ export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
         {doneRows.length > 0 && <Button variant="ghost" size="small" title={m.resetTitle} onClick={() => setDone({})}>{m.reset}</Button>}
       </div>
 
+      {jira.load.kind !== "off" && jiraBar}
+      {reviewing && (
+        <BulkReview a={a} plan={plan()} onConfirm={jira.submitMany} onClose={() => { setReviewing(false); void jira.reload(); }} />
+      )}
+
       <div className="wl-grid">
         {group === "tasks"
           ? byTask.map(([key, rs]) => {
-              const d = rs.filter((r) => done[rowId(r)]).length;
+              const d = rs.filter(isDone).length;
               return (
                 <article className="wl-card" key={key}>
                   <header>

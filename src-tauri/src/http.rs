@@ -27,7 +27,15 @@ impl<'a> JsonApi<'a> {
     }
 
     pub async fn get(&self, url: &str, query: &[(&str, String)]) -> AppResult<Value> {
-        let req = self.client.get(url).header("Accept", "application/json").query(query);
+        self.send(reqwest::Method::GET, url, query, None).await
+    }
+
+    /// Any method with an optional JSON body; an empty reply (e.g. 204 after DELETE) is `Value::Null`.
+    pub async fn send(&self, method: reqwest::Method, url: &str, query: &[(&str, String)], body: Option<&Value>) -> AppResult<Value> {
+        let mut req = self.client.request(method, url).header("Accept", "application/json").query(query);
+        if let Some(b) = body {
+            req = req.json(b);
+        }
         let req = match self.auth {
             Auth::Bearer(token) => req.bearer_auth(token),
             Auth::Header(name, value) => req.header(name, value),
@@ -43,6 +51,9 @@ impl<'a> JsonApi<'a> {
         }
         if !status.is_success() {
             return Err(AppError::http(service, status, &truncate(&text, 300)));
+        }
+        if text.trim().is_empty() {
+            return Ok(Value::Null);
         }
         serde_json::from_str(&text).map_err(|e| AppError::service(service, format!("JSON: {e}")))
     }

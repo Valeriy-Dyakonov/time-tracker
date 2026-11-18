@@ -4,6 +4,7 @@ import { dateShort, useT, weekdayShort } from "../../i18n";
 import { fmtTempo, type HoursFormat, type WorklogRow as Row } from "../../lib/submit";
 import IssueLink from "../IssueLink";
 import { CopyChip, CopyIcon, keyColor } from "../ui";
+import { JiraLine } from "./JiraLine";
 
 /** "By task" groups rows under a task, so each row shows its date; "by day" is the other way round. */
 export type RowLabel = "date" | "task";
@@ -19,6 +20,8 @@ export function WorklogRow(props: {
   comment: string;
   onToggle: () => void;
   onComment: (text: string) => void;
+  /** Present when the period's worklogs were read from Jira. */
+  jira?: Omit<Parameters<typeof JiraLine>[0], "comment">;
 }) {
   const { a, row: r, done } = props;
   const m = useT().submit.row;
@@ -41,6 +44,7 @@ export function WorklogRow(props: {
         <textarea rows={1} value={props.comment} onChange={(e) => props.onComment(e.target.value)} placeholder={m.descPlaceholder} title={m.descTitle} />
         <CopyIcon text={props.comment} title={m.copyDesc} />
       </span>
+      {props.jira && <JiraLine {...props.jira} comment={props.comment} />}
     </div>
   );
 }

@@ -109,6 +109,16 @@ export interface IssueInfo {
   assignedToMe?: boolean;
 }
 
+/** A worklog of the user in Jira (Tempo on Server/DC keeps its worklogs there). */
+export interface JiraWorklog {
+  id: string;
+  key: string;
+  /** Local date, YYYY-MM-DD. */
+  date: string;
+  seconds: number;
+  comment: string;
+}
+
 export interface TaskHours {
   key: string;
   hours: number;

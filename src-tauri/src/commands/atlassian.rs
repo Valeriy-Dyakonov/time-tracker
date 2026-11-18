@@ -4,6 +4,7 @@ use crate::browser;
 use crate::model::{Event, IssueInfo};
 use crate::secrets::{self, require};
 use crate::sources::{confluence, jira};
+use crate::sources::jira::worklog::{self, Worklog};
 use crate::util::{range_ms, trim_url};
 use futures::StreamExt;
 use crate::texts::Lang;
@@ -20,6 +21,50 @@ pub async fn fetch_jira(app: tauri::AppHandle, start: String, end: String, lang:
 pub async fn lookup_issues(app: tauri::AppHandle, keys: Vec<String>) -> AppResult<Vec<IssueInfo>> {
     let c = Ctx::load(&app)?;
     jira::lookup(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &keys).await
+}
+
+/// The user's own worklogs in the period, to compare with the plan in the "Списание" tab.
+#[tauri::command]
+pub async fn jira_worklogs(app: tauri::AppHandle, start: String, end: String) -> AppResult<Vec<Worklog>> {
+    let c = Ctx::load(&app)?;
+    worklog::mine(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &start, &end).await
+}
+
+// The only writes to Jira: each is an explicit action of the user on one row of the "Списание" tab.
+
+#[tauri::command]
+pub async fn jira_add_worklog(app: tauri::AppHandle, key: String, date: String, seconds: i64, comment: String) -> AppResult<Worklog> {
+    valid_key(&key)?;
+    let c = Ctx::load(&app)?;
+    worklog::add(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &key, &date, seconds, &comment).await
+}
+
+#[tauri::command]
+pub async fn jira_update_worklog(app: tauri::AppHandle, key: String, id: String, seconds: i64, comment: String) -> AppResult<Worklog> {
+    valid_key(&key)?;
+    valid_id(&id)?;
+    let c = Ctx::load(&app)?;
+    worklog::update(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &key, &id, seconds, &comment).await
+}
+
+#[tauri::command]
+pub async fn jira_delete_worklog(app: tauri::AppHandle, key: String, id: String) -> AppResult<()> {
+    valid_key(&key)?;
+    valid_id(&id)?;
+    let c = Ctx::load(&app)?;
+    worklog::delete(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &key, &id).await
+}
+
+fn valid_key(key: &str) -> AppResult<()> {
+    if is_issue_key(key) { Ok(()) } else { Err(AppError::new("worklogBadTarget").with("key", key)) }
+}
+
+fn valid_id(id: &str) -> AppResult<()> {
+    if !id.is_empty() && id.len() <= 20 && id.chars().all(|c| c.is_ascii_digit()) {
+        Ok(())
+    } else {
+        Err(AppError::new("worklogBadTarget").with("key", id))
+    }
 }
 
 fn is_issue_key(key: &str) -> bool {

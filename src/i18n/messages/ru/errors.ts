@@ -21,6 +21,8 @@ const codes: Record<string, Msg> = {
     `Хранилище паролей Windows не сохранило значение «${p.secret}» (длина ${p.length} симв.). Проверьте, что приложение запущено под вашим пользователем.`,
   tokenMissing: (p) => `${secretLabel(p.secret)}: токен не задан в настройках`,
   unknownSecret: (p) => `Неизвестный секрет: ${p.secret}`,
+  worklogBadTime: (p) => `Нельзя списать такое время: ${p.seconds} с`,
+  worklogBadTarget: (p) => `Некорректная задача или запись: ${p.key}`,
   unknownService: (p) => `Неизвестный сервис: ${p.service}`,
   openIssueInvalid: () => "Не удалось открыть задачу: неверный ключ или не задан адрес Jira",
   urlMissing: (p) => `${p.service}: не задан адрес`,

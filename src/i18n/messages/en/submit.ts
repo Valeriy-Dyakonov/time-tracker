@@ -1,3 +1,4 @@
+import { forms } from "../../format";
 import type ru from "../ru/submit";
 
 const en: typeof ru = {
@@ -9,6 +10,7 @@ const en: typeof ru = {
     introAnd: " and the ",
     introDesc: "description",
     introAfter: " (click the ⧉ icon), pick the date and save. Then tick the row so you don't lose your place.",
+    introJira: " Or log straight from here: “Log” on a row or “Log all…” at the top — you get the list to check before anything is sent.",
     byTask: "By task",
     byDay: "By day",
     formatTip: "How hours are copied. Tempo accepts both, but some setups understand only one — use whichever works for you.",
@@ -27,6 +29,42 @@ const en: typeof ru = {
     descPlaceholder: "Work description",
     descTitle: "Text for the Tempo Description field — you can edit it",
     copyDesc: "Copy description",
+    inJira: (h: string) => `In Jira: ${h} h`,
+    inJiraTitle: (n: number) => `Your Jira worklogs on this task on this day: ${n}`,
+    filled: "Filled in Jira",
+    submit: "Log",
+    topUp: (h: string) => `Add ${h} h`,
+    submitTitle: "Create a Jira worklog: the missing hours of this row with this description",
+    overwrite: "Overwrite",
+    overwriteTitle: "Replace what is already logged in Jira on this task on this day with the hours and description of this row",
+    overwriteAsk: (from: string, to: string, extra: number) =>
+      `Replace ${from} h in Jira with ${to} h and this description?${extra ? ` Extra worklogs (${extra}) will be deleted.` : ""}`,
+    overwriteYes: "Replace",
+    cancel: "Cancel",
+    busy: "Sending…",
+    failed: (e: string) => `Failed: ${e}`,
+  },
+  jira: {
+    refresh: "Reload from Jira",
+    refreshTitle: "Read again what is already logged in Jira for this period",
+    loading: "Reading worklogs from Jira…",
+    loadFailed: (e: string) => `Could not read worklogs from Jira: ${e}`,
+    summary: (logged: string, planned: string) => `In Jira: ${logged} of ${planned} h`,
+    summaryTitle: "How much of the plan is already logged in Jira (your worklogs in the period)",
+    submitAll: "Log all…",
+    submitAllTitle: "Show what will be written to Jira and log it after you check",
+    nothing: "Everything is logged",
+    reviewTitle: "Check before logging",
+    reviewIntro: (rows: string, h: string) =>
+      `${rows} for ${h} h will be created in Jira. Rows already logged in full are skipped; where less is logged, only the difference is added. Existing worklogs are not changed.`,
+    rows: forms({ one: "worklog", other: "worklogs" }),
+    topUpMark: "top-up",
+    topUpTitle: "Jira already has part of the time: only the difference is added",
+    include: "Log this row",
+    confirm: (rows: string, h: string) => `Log ${rows} (${h} h)`,
+    close: "Close",
+    progress: (done: number, total: number) => `Logging ${done} of ${total}…`,
+    result: (ok: number, failed: number) => (failed ? `Logged: ${ok}, failed: ${failed}, see the rows below.` : `Worklogs created: ${ok}.`),
   },
   weekly: {
     title: "Your own system — weekly text",

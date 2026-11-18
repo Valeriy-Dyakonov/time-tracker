@@ -1,5 +1,6 @@
 //! Jira Server / Data Center, REST API v2, Personal Access Token. Read-only.
 mod parse;
+pub mod worklog;
 
 use crate::http::{Auth, JsonApi};
 use crate::model::{Event, IssueInfo};
