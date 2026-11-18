@@ -75,10 +75,11 @@ export const weekHours = (w: Week): number => w.days.reduce((s, d) => s + (d.off
 /** System prompt for rewriting a week as prose, in the current language. */
 export const weekSystemPrompt = (): string => t().analysis.prompt.week;
 
-export function weekPrompt(a: Analysis, w: Week): string {
+/** `tasks` replaces the plan-based task list, e.g. with the week as logged in Tempo. */
+export function weekPrompt(a: Analysis, w: Week, tasks?: string): string {
   return JSON.stringify({
     week: weekTitle(w),
-    tasks: weekText(a, w),
+    tasks: tasks ?? weekText(a, w),
     days: w.days.filter((d) => !d.off && d.basis === "activity").map((d) => ({ date: d.date, summary: d.summary, reasoning: d.reasoning })),
   });
 }

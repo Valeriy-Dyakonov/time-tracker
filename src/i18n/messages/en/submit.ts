@@ -131,6 +131,12 @@ const en: typeof ru = {
     aiTip: "The AI turns the week's task list into a coherent paragraph for the report: what was done and why. The text in the field is replaced; use “restore original” to get it back.",
     aiEmpty: "The AI returned an empty answer — the text was not changed.",
     aiError: (e: string) => `AI error: ${e}`,
+    fromPlan: "Plan",
+    fromTempo: "Tempo",
+    fromTempoTitle: "Text and hours per day from what is actually logged in Tempo, including your edits there",
+    sourceTip: "Where the weekly text comes from: the analysis plan or what is logged in Tempo. If you changed hours in Tempo, use Tempo so your system matches it.",
+    tempoNotReady: (logged: string, norm: string) => `Tempo becomes available once the whole week is logged: now ${logged} of ${norm} h`,
+    tempoRefresh: "Reload Tempo",
   },
 };
 

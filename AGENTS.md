@@ -30,7 +30,7 @@ Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests
   - `plan/` — hour distribution, heuristic weights, task phase notes, gap fillers (`GapFiller` per fill mode), `buildPlan`.
   - `events/` — issue-key detection, grouping events by day, `toEvidence`.
   - `allocate.ts` — re-exports for old import paths; add new code to the modules above, not here.
-  - `report.ts` (totals, CSV/Markdown), `submit.ts` (Tempo rows, weekly text), `prompt.ts` (LLM prompts), `setup.ts` (which sources are configured), `dates.ts`.
+  - `report.ts` (totals, CSV/Markdown), `submit.ts` (Tempo rows, weekly text), `submitEdits.ts` (user edits of the rows), `limits.ts` (day/period norms), `worklogSync.ts` (plan vs Jira), `tempoWeek.ts` (weekly text from Tempo), `prompt.ts` (LLM prompts), `setup.ts` (which sources are configured), `dates.ts`.
 - `components/`:
   - `ui/` — UI kit: `kit.tsx` (Button, Card, Segmented, Switch, Badge), `basics.tsx` (Field, InfoTip, Help, Title, keyColor, download), `Copy.tsx`, `Stepper.tsx`; import from `components/ui`.
   - `report/` — report screen, filters, view tabs, export; `analysisSources.ts` is the registry of toggleable sources.

@@ -13,7 +13,7 @@ import IssueLink from "../IssueLink";
 import { Button, Card, InfoTip, keyColor, Segmented } from "../ui";
 import { BulkReview } from "./BulkReview";
 import { StepHeader } from "./StepHeader";
-import { useJiraSync } from "./useJiraSync";
+import type { JiraSync } from "./useJiraSync";
 import { bulkPlan, dayMatches, indexWorklogs, minutes, mismatchedDays, unplanned, type PlannedWrite } from "../../lib/worklogSync";
 import { DayMatchChip, PeriodMatch, Unplanned } from "./JiraCompare";
 import { WorklogRow, type RowLabel } from "./WorklogRow";
@@ -29,7 +29,7 @@ function groupBy(rows: Row[], key: (r: Row) => string): [string, Row[]][] {
 }
 
 /** Step 1: copy hours and descriptions into Tempo row by row, ticking off what is done. */
-export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
+export function TempoStep({ a, storeId, jira }: { a: Analysis; storeId: string; jira: JiraSync }) {
   const [done, setDone] = useStored<Record<string, boolean>>(`${storeId}.done`, {});
   const [comments, setComments] = useStored<Record<string, string>>(`${storeId}.comments`, {});
   const [fmt, setFmt] = useStored<HoursFormat>("worklog.submit.fmt", "hm");
@@ -44,7 +44,6 @@ export function TempoStep({ a, storeId }: { a: Analysis; storeId: string }) {
   const removed = planRows.filter((r) => edits.removed[rowId(r)]);
   const byTask = useMemo(() => groupBy(rows, (r) => r.key).sort((x, y) => sumHours(y[1]) - sumHours(x[1])), [rows]);
   const byDay = useMemo(() => groupBy(rows, (r) => r.date).sort((x, y) => x[0].localeCompare(y[0])), [rows]);
-  const jira = useJiraSync(a);
   const [reviewing, setReviewing] = useState(false);
   const comment = (r: PlanRow) => comments[rowId(r)] ?? r.comment;
   /** Filled in Jira counts as done; the manual tick still works for rows logged elsewhere. */

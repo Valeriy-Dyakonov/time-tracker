@@ -107,3 +107,4 @@
 .limits b { color: var(--warn); }
 .limits ul { margin: 6px 0 0; padding-left: 18px; }
 .limits-ack { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 4px; }
+.wk-tempo { margin-bottom: 10px; }
