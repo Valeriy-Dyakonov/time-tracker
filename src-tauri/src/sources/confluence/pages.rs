@@ -13,7 +13,7 @@ pub struct PageCtx {
 }
 
 #[derive(Debug, PartialEq)]
-enum PageRef {
+pub(super) enum PageRef {
     Id(String),
     Title { space: String, title: String },
 }
@@ -25,7 +25,7 @@ fn digits_after(s: &str, marker: &str) -> Option<String> {
 }
 
 /// `viewpage.action?pageId=N`, `/pages/N/...` and `/display/SPACE/Title`, on this Confluence only.
-fn parse_ref(base: &str, url: &str) -> Option<PageRef> {
+pub(super) fn parse_ref(base: &str, url: &str) -> Option<PageRef> {
     if !url.starts_with(base) {
         return None;
     }

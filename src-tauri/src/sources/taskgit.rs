@@ -33,6 +33,8 @@ pub struct TaskDoc {
     pub commit: String,
     /// ISO 8601 date of that commit.
     pub date: String,
+    /// The file on the repository's web page (from `origin`), when the remote is a known web host.
+    pub web_url: Option<String>,
 }
 
 /// Where the search looked, so the user can tell "nothing there" from "not looked".
@@ -87,6 +89,33 @@ pub fn mentions_key(text: &str, key: &str) -> bool {
     })
 }
 
+/// `git@host:g/p.git`, `ssh://git@host:22/g/p.git`, `https://user@host/g/p.git` -> `https://host/g/p`.
+pub fn web_base(remote: &str) -> Option<String> {
+    let r = remote.trim().trim_end_matches('/').trim_end_matches(".git");
+    let (host, path) = if let Some(rest) = r.strip_prefix("https://").or_else(|| r.strip_prefix("http://")).or_else(|| r.strip_prefix("ssh://")) {
+        let rest = rest.rsplit_once('@').map_or(rest, |(_, h)| h);
+        let (host, path) = rest.split_once('/')?;
+        // ssh://host:2222/... carries the ssh port, not the web one.
+        let host = if r.starts_with("ssh://") { host.split(':').next()? } else { host };
+        (host.to_string(), path.to_string())
+    } else {
+        let rest = r.rsplit_once('@').map_or(r, |(_, h)| h);
+        let (host, path) = rest.split_once(':')?;
+        // C:/repos/app is a local remote, not host:path.
+        if host.len() == 1 || path.contains('\\') {
+            return None;
+        }
+        (host.to_string(), path.to_string())
+    };
+    (!host.is_empty() && !path.is_empty() && !host.contains(char::is_whitespace)).then(|| format!("https://{host}/{}", path.trim_start_matches('/')))
+}
+
+/// A file at a commit on the web page: GitHub's `/blob/`, GitLab's (and the rest) `/-/blob/`.
+pub fn file_url(base: &str, commit: &str, path: &str) -> String {
+    let blob = if base.starts_with("https://github.com/") { "blob" } else { "-/blob" };
+    format!("{base}/{blob}/{commit}/{path}")
+}
+
 fn short_ref(r: &str) -> String {
     r.trim_start_matches("refs/heads/").trim_start_matches("refs/remotes/").to_string()
 }
@@ -139,6 +168,8 @@ pub fn find(repos: &[String], key: &str, doc_patterns: Option<&[String]>) -> Tas
 
         if let Some(patterns) = doc_patterns {
             let dirs = doc_dirs(patterns, key);
+            let web = git(repo, &["remote".into(), "get-url".into(), "origin".into()]).ok().and_then(|r| web_base(&r));
+            let url = |commit: &str, path: &str| web.as_deref().map(|b| file_url(b, commit, path));
             let mut docs: BTreeMap<String, TaskDoc> = BTreeMap::new();
             let mut refs = vec!["HEAD".to_string()];
             if let Ok(r) = git(repo, &["for-each-ref".into(), "--format=%(refname)".into(), "refs/heads".into(), "refs/remotes".into()]) {
@@ -153,6 +184,7 @@ pub fn find(repos: &[String], key: &str, doc_patterns: Option<&[String]>) -> Tas
                 for path in files.lines().map(str::trim).filter(|p| is_doc(p, &dirs)) {
                     docs.entry(path.to_string()).or_insert_with(|| TaskDoc {
                         repo: repo.clone(), repo_name: repo_name(repo), path: path.to_string(), commit: hash.clone(), date: commit_date(repo, &hash),
+                        web_url: url(&hash, path),
                     });
                 }
             }
@@ -160,6 +192,7 @@ pub fn find(repos: &[String], key: &str, doc_patterns: Option<&[String]>) -> Tas
                 for path in c.files.iter().filter(|p| is_doc(p, &dirs)) {
                     docs.entry(path.clone()).or_insert_with(|| TaskDoc {
                         repo: repo.clone(), repo_name: repo_name(repo), path: path.clone(), commit: c.hash.clone(), date: c.date.clone(),
+                        web_url: url(&c.hash, path),
                     });
                 }
             }
@@ -202,6 +235,17 @@ mod tests {
         assert!(!is_doc("docs/ai/ABC-12/plan.md", &dirs));
         assert!(!is_doc("docs/ai/ABC-1/image.png", &dirs));
         assert!(!is_doc("docs/aix/ABC-1/plan.md", &dirs));
+    }
+
+    #[test]
+    fn builds_web_links_from_remotes() {
+        assert_eq!(web_base("git@gitlab.corp:team/app.git").as_deref(), Some("https://gitlab.corp/team/app"));
+        assert_eq!(web_base("ssh://git@gitlab.corp:2222/team/app.git").as_deref(), Some("https://gitlab.corp/team/app"));
+        assert_eq!(web_base("https://user@gitlab.corp/team/sub/app.git
+").as_deref(), Some("https://gitlab.corp/team/sub/app"));
+        assert_eq!(web_base("C:/repos/app"), None);
+        assert_eq!(file_url("https://gitlab.corp/t/a", "abc", "docs/ai/X-1/a.md"), "https://gitlab.corp/t/a/-/blob/abc/docs/ai/X-1/a.md");
+        assert_eq!(file_url("https://github.com/t/a", "abc", "a.md"), "https://github.com/t/a/blob/abc/a.md");
     }
 
     #[test]

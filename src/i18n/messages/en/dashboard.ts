@@ -1,5 +1,20 @@
 import type ru from "../ru/dashboard";
 
+/** The analysis system prompt: who it helps, the JSON to return, rules shared by every mode plus its own. */
+const aiTask = (role: string, json: string, rule: string) => `${role}
+You get everything known about a Jira task: the description (Jira markup), comments, subtasks and links, epic and parent; touched — which services and files the task's MRs and commits already changed; Confluence pages (via=task — linked from the task, via=nested — linked from a page); GitLab material (MRs with description and diff, issues, files, wiki); markdown notes about the task.
+Pick what matters. Write in plain English, as to a colleague: what and why, no officialese and no needless jargon.
+
+Return ONLY JSON, no markdown. A list item is an object {"text":"...","source":"..."}:
+${json}
+
+Rules:
+- Facts from the input only; if something is missing, leave the list empty, invent nothing.
+- text is one short sentence, up to 160 characters, the point first. Numbers, fields and names exactly as in the input.
+- source is short: "description", "comment Name", "page Title", "MR !12", "file path"; empty if unclear.
+- At most 6 items per list: only what matters.
+- ${rule}`;
+
 const dashboard: typeof ru = {
   profiles: { dev: "Developer", qa: "QA", lead: "Lead" },
   profileLabel: "Profile",
@@ -82,6 +97,8 @@ const dashboard: typeof ru = {
     refs: (list: string) => `commits in all branches; notes in: ${list}`,
     commitsOnly: "commits in all branches",
     notes: "AI notes",
+    notesFound: (list: string) => `found: ${list}`,
+    notesNone: "none found",
     notesOn: "searched in MR files and MR branches in GitLab, and locally (HEAD and task branches)",
     notesOff: "off, not searched.",
     toSettings: "Turn on in settings",
@@ -94,40 +111,68 @@ const dashboard: typeof ru = {
     devTip: "What is known about development: MRs in GitLab, commits in your repositories and where exactly we looked",
     docs: "AI notes",
     docsTip: "Markdown notes about the task kept in git (folders like docs/ai/<key>): read them right here",
+    docsFound: (n: number) => `Notes found: ${n}`,
+    docsNone: "No AI notes found for this task",
+    docsNoneHint: "Looks for .md files under the folders in Settings → Git → Where the notes are, in local repositories and in the task's MR branches in GitLab. Details: Development → Where we looked.",
+    docsReload: "Search again",
+    docOpenRepo: "In repository",
+    close: "Close",
     ai: "AI analysis",
     aiTip: "The AI reads the description, comments, links, Confluence pages and commits of the task and sums up what matters",
     aiOff: "AI is not set up: add its address and model in the settings",
     loading: "Loading…",
-    steps: { pages: "Reading Confluence pages…", git: "Looking for commits in git…", notes: "Reading the task notes…", ask: "The AI is analysing the task…" },
+    steps: { pages: "Reading Confluence pages and the pages they link to…", git: "Looking for commits in git…", gitlab: "Reading GitLab: MRs with diffs, issues, files…", notes: "Reading the task notes…", ask: "The AI is analysing the task…" },
     failed: (e: string) => `Failed: ${e}`,
     unparsed: "The AI answered in the wrong format, try again",
     state: "Where it stands",
-    done: "Done",
-    next: "Left to do",
-    risks: "Risks and blockers",
-    details: "Key details",
-    questions: "Open questions",
+    modes: { overview: "State", dev: "Development", qa: "QA" },
+    modeTips: {
+      overview: "Where the task stands: done, left, risks — the overall view, e.g. for a lead",
+      dev: "What to change and where: per service, in plain words; requirements, what is done, where it is easy to go wrong",
+      qa: "How to test it: scenarios, integration tests, edge cases, what nearby may break, preparation",
+    },
+    changes: "What changes",
+    changeWhere: "Where",
+    sections: {
+      done: "Done", next: "Left to do", risks: "Risks and blockers", details: "Key details", questions: "Open questions",
+      requirements: "Requirements", pitfalls: "Pitfalls",
+      checks: "What to check", integration: "Integration tests", edge: "Negative and edge cases", regression: "May break nearby", setup: "Preparation",
+    },
     used: (list: string) => `Used: ${list}`,
+    readList: (n: number) => `What was read (${n})`,
+    readKinds: { page: "Confluence", nested: "Confluence, linked", mr: "MR", issue: "GitLab issue", file: "File", wiki: "Wiki", note: "Note" },
     again: "Analyse again",
+    againTip: "A new AI request: read everything again and redo the analysis",
+    analysedAt: (when: string) => `Analysed ${when}`,
+    notYet: (mode: string) => `This task has not been analysed in the "${mode}" view yet.`,
+    runNow: "Analyse",
     src: {
       task: (n: number) => `description and ${n} comments`,
-      pages: (n: number) => `${n} Confluence pages`,
+      pages: (n: number, nested: number) => (nested ? `${n} Confluence pages + ${nested} linked` : `${n} Confluence pages`),
+      gitlab: (n: number) => `${n} from GitLab`,
       commits: (n: number) => `${n} commits`,
       mrs: (n: number) => `${n} MRs`,
       notes: (n: number) => `${n} notes`,
     },
   },
   prompt: {
-    task: `You help a developer. You get everything known about a Jira task: the description (Jira markup), comments, subtasks and links, epic and parent, Confluence pages, git commits (messages and changed files) and markdown notes about the task.
-Help them get into the task quickly. Write in English, short and concrete, no filler and no restating the obvious.
-
-Return ONLY JSON, no markdown:
-{"summary":"2-3 sentences: what has to be done and why","state":"1-2 sentences: where the task stands, by status, comments and commits","done":["what is already done"],"next":["what is left to do"],"risks":["risks, blockers, dependencies on other tasks"],"details":["key technical details: modules, files, decisions, constraints, agreements"],"questions":["what is unclear and worth asking"]}
-
-Rules:
-- Facts from the input only; if something is missing, leave the list empty, invent nothing.
-- Each item is one line up to 160 characters.
-- In details be specific: module and file names from commits, decisions from comments, task keys.`,
+    analysis: {
+      overview: aiTask(
+        "You help someone quickly understand where a task stands: what is done, what is left, what is in the way.",
+        `{"summary":"1-2 sentences: what this task is and why","state":"1 sentence: where it stands — by status, comments, commits","done":[item],"next":[item],"risks":[item: risk, blocker, dependency],"details":[item: an important agreement or decision],"questions":[item: what is unclear]}`,
+        "details holds only what is easy to get wrong otherwise: decisions from comments, constraints, dependencies on other tasks.",
+      ),
+      dev: aiTask(
+        "You help a developer see what has to change in the code for this task, and where.",
+        `{"summary":"1-2 sentences: what has to be done and why, in plain words","state":"1 sentence: what is already done in the code","changes":[{"service":"service, repository or project","what":"what to do in it — 1-2 plain sentences","where":["rough location: folder, module, class or file"],"source":"where this is known from"}],"requirements":[item: a requirement or acceptance criterion with values],"done":[item: what is already implemented],"pitfalls":[item: where it is easy to go wrong],"questions":[item: what to clarify]}`,
+        "changes has one element per service, in the order of work. Take services and locations from touched, MRs, diffs, the description and pages. where is 1-4 places, a folder or module rather than a long file list; if no location is visible, leave it empty, invent nothing. If the service is not named but it is clear what changes, use service: \"unknown\".",
+      ),
+      qa: aiTask(
+        "You help a tester see what to check for this task and how.",
+        `{"summary":"1-2 sentences: what changes for the user","state":"1 sentence: whether the task is ready to test — status, MRs, what was already checked","checks":[item: action → expected result],"integration":[item: link (service, API, queue, database) → what goes in → what to expect],"edge":[item: a negative or edge case],"regression":[item: what nearby may break],"setup":[item: data, roles, environment, build],"questions":[item: what is unclear in the requirements]}`,
+        "Build checks from the requirements and acceptance criteria. integration covers only links visible in the input (touched, MRs, description); if the task touches nothing else, leave it empty.",
+      ),
+    },
   },
   detail: {
     openInJira: "Open in Jira",

@@ -1,4 +1,4 @@
-import type { Block, Inline } from "./wiki";
+import { addListItem, type Block, type Inline } from "./wiki";
 
 /**
  * Markdown (task notes kept in git) -> the same blocks as Jira markup, so one safe renderer draws both.
@@ -56,7 +56,11 @@ const isSeparator = (row: string) => /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*
 
 export function parseMarkdown(src: string, isKey?: (k: string) => boolean): Block[] {
   const blocks: Block[] = [];
-  const lines = src.replace(/\r\n?/g, "\n").split("\n");
+  const text = src.replace(/^﻿/, "").replace(/\r\n?/g, "\n");
+  // Front matter (title, tags...) is metadata, not text: the title is shown by the reader.
+  const lines = text.replace(/^---\n[\s\S]*?\n---(\n|$)/, "").split("\n");
+  /** Indents of the open list levels, to tell a nested item from a sibling. */
+  let indents: number[] = [];
   let para: Inline[][] = [];
   const flush = () => {
     if (para.length) blocks.push({ t: "p", lines: para });
@@ -76,7 +80,8 @@ export function parseMarkdown(src: string, isKey?: (k: string) => boolean): Bloc
       blocks.push({ t: "code", v: body.join("\n") });
       continue;
     }
-    if (!trimmed || /^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) { flush(); continue; }
+    if (!trimmed) { flush(); continue; }
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed.replace(/\s+/g, ""))) { flush(); blocks.push({ t: "hr" }); continue; }
 
     const h = trimmed.match(/^(#{1,6})\s+(.*?)\s*#*$/);
     if (h) { flush(); blocks.push({ t: "h", level: h[1].length, v: inl(h[2]) }); continue; }
@@ -104,10 +109,12 @@ export function parseMarkdown(src: string, isKey?: (k: string) => boolean): Bloc
       flush();
       const kind = li[1] ? "ul" : "ol";
       const box = li[3] === undefined ? "" : li[3] === " " ? "☐ " : "☑ ";
-      const item = inl(box + li[4]);
       const last = blocks[blocks.length - 1];
-      if (last && last.t === kind) last.items.push(item);
-      else blocks.push({ t: kind, items: [item] });
+      if (!last || (last.t !== "ul" && last.t !== "ol")) indents = [];
+      const indent = line.match(/^\s*/)![0].replace(/\t/g, "    ").length;
+      while (indents.length && indent < indents[indents.length - 1]) indents.pop();
+      if (!indents.length || indent > indents[indents.length - 1]) indents.push(indent);
+      addListItem(blocks, kind, indents.length - 1, inl(box + li[4]));
       continue;
     }
 
@@ -115,4 +122,16 @@ export function parseMarkdown(src: string, isKey?: (k: string) => boolean): Bloc
   }
   flush();
   return blocks;
+}
+
+/** A note's own name: `title:` in front matter, else its first `#` heading, else its first `##` heading. */
+export function noteTitle(src: string): string | null {
+  const text = src.replace(/^﻿/, "").replace(/\r\n?/g, "\n");
+  const fm = text.match(/^---\n([\s\S]*?)\n---(\n|$)/);
+  const t = fm?.[1].match(/^title:\s*(.+)$/m)?.[1].trim().replace(/^(["'])(.*)\1$/, "$2");
+  if (t) return t;
+  const body = (fm ? text.slice(fm[0].length) : text).replace(/^```[\s\S]*?^```/gm, "");
+  const h = body.match(/^#\s+(.+)$/m)?.[1] ?? body.match(/^##\s+(.+)$/m)?.[1];
+  const clean = h?.replace(/\s+#+\s*$/, "").replace(/[*_`]/g, "").trim();
+  return clean || null;
 }

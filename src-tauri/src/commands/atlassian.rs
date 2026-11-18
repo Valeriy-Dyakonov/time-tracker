@@ -159,6 +159,23 @@ pub async fn fetch_issue_pages(app: tauri::AppHandle, issues: Vec<IssueUrls>) ->
     Ok(out.into_iter().filter(|p| !p.pages.is_empty()).collect())
 }
 
+/// Confluence pages for the AI analysis of one task: linked from its text or as web links, read in full,
+/// plus the pages they lead to. Empty when Confluence is not set up.
+#[tauri::command]
+pub async fn analysis_pages(app: tauri::AppHandle, key: String, urls: Vec<String>) -> AppResult<Vec<confluence::PageDoc>> {
+    valid_key(&key)?;
+    let c = Ctx::load(&app)?;
+    let (jira_url, wiki_url) = (&c.settings.jira_url, &c.settings.confluence_url);
+    let Some(wiki_pat) = secrets::get(secrets::CONFLUENCE.name).filter(|_| !wiki_url.trim().is_empty()) else {
+        return Ok(vec![]);
+    };
+    let mut urls: Vec<String> = urls.into_iter().take(40).collect();
+    if let Some(jira_pat) = secrets::get(secrets::JIRA.name) {
+        urls.extend(jira::remote_links(&c.client, jira_url, &jira_pat, &key).await);
+    }
+    Ok(confluence::read_deep(&c.client, wiki_url, &wiki_pat, &urls).await)
+}
+
 #[cfg(test)]
 mod tests {
     use super::is_issue_key;

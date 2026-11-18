@@ -3,7 +3,7 @@ import { dateShort, useT } from "@/i18n";
 import { api } from "@/shared/api";
 import { useStored } from "@/shared/hooks/useStored";
 import { localDate } from "@/shared/lib/dates";
-import type { DashIssue, DashPerson, DashRelated, IssueDetail } from "@/shared/types";
+import type { DashIssue, DashPerson, DashProfile, DashRelated, IssueDetail } from "@/shared/types";
 import { Button, keyColor } from "@/shared/ui";
 import { priorityLevel } from "../lib/priority";
 import type { SetupState } from "@/shared/lib/setup";
@@ -46,6 +46,7 @@ export function IssueDrawer(props: {
   context: Map<string, DashIssue>;
   projects: Set<string>;
   setup: SetupState;
+  profile: DashProfile;
   onClose: () => void;
   onSettings?: () => void;
 }) {
@@ -104,7 +105,7 @@ export function IssueDrawer(props: {
                 {data.labels.map((l) => <span key={l} className="chip c-label" style={{ ["--c" as string]: keyColor(l) }}>#{l}</span>)}
               </div>
 
-              <TaskTools detail={data} context={props.context} setup={props.setup} isKey={isKey} onKey={open} onSettings={props.onSettings} />
+              <TaskTools detail={data} context={props.context} setup={props.setup} profile={props.profile} isKey={isKey} onKey={open} onSettings={props.onSettings} />
 
               {(data.epic || (data.parent && data.parent !== data.epic)) && (
                 <div className="drawer-parents">

@@ -95,6 +95,26 @@ export interface PageCtx {
   children: string[];
 }
 
+/** A Confluence page read in full for the AI analysis of a task (`analysis_pages`). */
+export interface PageDoc {
+  url: string;
+  title: string;
+  text: string;
+  children: string[];
+  /** Web links on the page that lead outside Confluence. */
+  links: string[];
+  /** 0: linked from the task; 1: reached from such a page (its link or child). */
+  depth: number;
+}
+
+/** A GitLab link of a task read for the AI analysis (`gitlab_links`). */
+export interface GitLabItem {
+  url: string;
+  kind: "mr" | "issue" | "file" | "wiki";
+  title: string;
+  text: string;
+}
+
 export interface IssueInfo {
   key: string;
   summary: string;
@@ -188,7 +208,7 @@ export interface IssueDetail extends DashIssue {
 export interface TaskGit {
   commits: { repo: string; hash: string; date: string; author: string; subject: string; files: string[] }[];
   /** Markdown notes kept per task (optional feature): read one with `api.taskDoc`. */
-  docs: { repo: string; repoName: string; path: string; commit: string; date: string }[];
+  docs: { repo: string; repoName: string; path: string; commit: string; date: string; webUrl: string | null }[];
   /** Where it looked: repositories and the refs searched for notes. */
   searched: { repoName: string; refs: string[]; error: string | null }[];
   docsEnabled: boolean;

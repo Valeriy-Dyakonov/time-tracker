@@ -48,6 +48,19 @@ pub async fn task_mrs(app: tauri::AppHandle, key: String) -> AppResult<gitlab::t
     }))
 }
 
+/// GitLab links of a task (MRs, issues, files, wiki pages) read as context for the AI analysis; empty when
+/// GitLab is not set up.
+#[tauri::command]
+pub async fn gitlab_links(app: tauri::AppHandle, urls: Vec<String>) -> AppResult<Vec<gitlab::links::GitLabItem>> {
+    let c = Ctx::load(&app)?;
+    let s = &c.settings;
+    let Some(pat) = secrets::get(secrets::GITLAB.name).filter(|_| !s.gitlab_url.trim().is_empty()) else {
+        return Ok(vec![]);
+    };
+    let urls: Vec<String> = urls.into_iter().take(40).collect();
+    Ok(gitlab::links::read(&c.client, &s.gitlab_url, &pat, &urls).await)
+}
+
 /// One task note from a GitLab project branch as text.
 #[tauri::command]
 pub async fn task_remote_doc(app: tauri::AppHandle, project_id: u64, ref_name: String, path: String) -> AppResult<String> {

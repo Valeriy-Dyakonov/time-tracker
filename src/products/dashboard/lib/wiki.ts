@@ -19,7 +19,9 @@ export type Inline =
 export type Block =
   | { t: "p"; lines: Inline[][] }
   | { t: "h"; level: number; v: Inline[] }
-  | { t: "ul" | "ol"; items: Inline[][] }
+  /** Nested items carry `depth` (0 = top) and their own list kind; both are absent in a flat list. */
+  | { t: "ul" | "ol"; items: Inline[][]; depth?: number[]; kinds?: ("ul" | "ol")[] }
+  | { t: "hr" }
   | { t: "code"; v: string }
   | { t: "quote"; lines: Inline[][] }
   | { t: "table"; rows: { head: boolean; v: Inline[] }[][] };
@@ -58,7 +60,9 @@ export function parseInline(text: string, isKey: (k: string) => boolean = () => 
     else if (x.t !== "text" || x.v) out.push(x);
   };
   // The empty {} only separates markup from adjacent text: *{}Where{}* is *Where*.
-  const src = text.replace(/\{\}/g, "");
+  // The visual editor doubles a bold heading as *{*}Where{*}*; read it as {*}Where{*}, otherwise
+  // the outer *...* grabs "{" as a bold word and leaves the braces on screen.
+  const src = text.replace(/\{\}/g, "").replace(/([*_+])\{\1\}(.+?)\{\1\}\1/g, "{$1}$2{$1}");
   let at = 0;
   for (const m of src.matchAll(INLINE)) {
     const g = m.groups!;
@@ -91,6 +95,27 @@ export function parseInline(text: string, isKey: (k: string) => boolean = () => 
   }
   push({ t: "text", v: src.slice(at) });
   return out;
+}
+
+/**
+ * Adds a list item, continuing the list just above. A nested item joins whatever list is open, and is never
+ * more than one level deeper than the item before it.
+ */
+export function addListItem(blocks: Block[], kind: "ul" | "ol", depth: number, item: Inline[]): void {
+  const last = blocks[blocks.length - 1];
+  if (!last || (last.t !== "ul" && last.t !== "ol") || (depth === 0 && last.t !== kind)) {
+    blocks.push({ t: kind, items: [item] });
+    return;
+  }
+  const prev = last.depth?.[last.depth.length - 1] ?? 0;
+  const d = Math.min(depth, prev + 1);
+  if (d > 0 && !last.depth) {
+    last.depth = last.items.map(() => 0);
+    last.kinds = last.items.map(() => last.t as "ul" | "ol");
+  }
+  last.items.push(item);
+  last.depth?.push(d);
+  last.kinds?.push(kind);
 }
 
 /** Formatting wrappers that carry no meaning in plain text. */
@@ -160,7 +185,8 @@ export function parseWiki(src: string, isKey?: (k: string) => boolean): Block[] 
       else blocks.push({ t: "code", v: body.join("\n") });
       continue;
     }
-    if (!trimmed || /^-{4,}$/.test(trimmed)) { flush(); continue; }
+    if (!trimmed) { flush(); continue; }
+    if (/^-{4,}$/.test(trimmed)) { flush(); blocks.push({ t: "hr" }); continue; }
 
     const h = trimmed.match(/^h([1-6])\.\s+(.*)$/);
     if (h) { flush(); blocks.push({ t: "h", level: Number(h[1]), v: inl(h[2]) }); continue; }
@@ -171,10 +197,8 @@ export function parseWiki(src: string, isKey?: (k: string) => boolean): Block[] 
     const li = trimmed.match(/^([*\-#]+)\s+(.*)$/);
     if (li) {
       flush();
-      const kind = li[1].startsWith("#") ? "ol" : "ul";
-      const last = blocks[blocks.length - 1];
-      if (last && last.t === kind) last.items.push(inl(li[2]));
-      else blocks.push({ t: kind, items: [inl(li[2])] });
+      // ** item / ## item: the marker count is the level; the last marker decides the kind.
+      addListItem(blocks, li[1].endsWith("#") ? "ol" : "ul", li[1].length - 1, inl(li[2]));
       continue;
     }
 

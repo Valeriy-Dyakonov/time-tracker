@@ -43,6 +43,8 @@ describe("visual editor markup", () => {
     expect(parseInline("{}Где искать{}")).toEqual([T("Где искать")]);
     expect(parseInline("*{}Где искать{}*:")).toEqual([{ t: "b", v: [T("Где искать")] }, T(":")]);
     expect(parseWiki("h3. {}Где искать{}")).toEqual([{ t: "h", level: 3, v: [T("Где искать")] }]);
+    expect(parseInline("*{*}Описание{*}*")).toEqual([{ t: "b", v: [T("Описание")] }]);
+    expect(parseInline("_{_}курсив{_}_ и +{+}черта{+}+")).toEqual([{ t: "i", v: [T("курсив")] }, T(" и "), { t: "u", v: [T("черта")] }]);
   });
 
   it("reads braced emphasis next to letters, nested formatting and the rest", () => {
@@ -100,5 +102,15 @@ describe("tables", () => {
       [{ head: true, v: [{ t: "text", v: "Doc" }] }],
       [{ head: false, v: [{ t: "link", href: "https://wiki/x", v: "spec" }] }],
     ] });
+  });
+});
+
+describe("nested lists", () => {
+  const T = (v: string) => ({ t: "text", v });
+  it("reads the marker count as the level", () => {
+    expect(parseWiki("* a\n** b\n*# c\n* d\n----")).toEqual([
+      { t: "ul", items: [[T("a")], [T("b")], [T("c")], [T("d")]], depth: [0, 1, 1, 0], kinds: ["ul", "ul", "ol", "ul"] },
+      { t: "hr" },
+    ]);
   });
 });

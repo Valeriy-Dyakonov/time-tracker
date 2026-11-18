@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseMarkdown, parseMdInline } from "./markdown";
+import { noteTitle, parseMarkdown, parseMdInline } from "./markdown";
 
 const T = (v: string) => ({ t: "text", v });
 
@@ -21,5 +21,24 @@ describe("markdown", () => {
       T("see "), { t: "link", href: "https://w/x", v: "spec" }, T(" "), { t: "b", v: [T("now")] }, T(" "),
       { t: "code", v: "x()" }, T(" "), { t: "s", v: [T("old")] }, T(" "), { t: "i", v: [T("it")] }, T(" local"),
     ]);
+  });
+});
+
+describe("noteTitle", () => {
+  it("takes front matter, then the first # heading, then ##", () => {
+    expect(noteTitle('---\ntitle: "План работ"\n---\n# Другое')).toBe("План работ");
+    expect(noteTitle("intro\n## Шаги\n# **Разбор** задачи #\n")).toBe("Разбор задачи");
+    expect(noteTitle("```\n# not a title\n```\n## Итоги")).toBe("Итоги");
+    expect(noteTitle("просто текст")).toBeNull();
+  });
+});
+
+describe("documents", () => {
+  it("skips front matter, keeps rules and nests lists by indent", () => {
+    const b = parseMarkdown("---\ntitle: X\n---\n- a\n  - b\n    - c\n- d\n1. one\n   - sub\n\n---\nend");
+    expect(b[0]).toMatchObject({ t: "ul", depth: [0, 1, 2, 0] });
+    expect(b[1]).toMatchObject({ t: "ol", depth: [0, 1], kinds: ["ol", "ul"] });
+    expect(b[2]).toEqual({ t: "hr" });
+    expect(b).toHaveLength(4);
   });
 });

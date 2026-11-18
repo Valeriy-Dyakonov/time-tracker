@@ -1,7 +1,9 @@
 //! Confluence Server / Data Center, REST API, Personal Access Token. Read-only.
 //! Pages and comments the user created or edited are extra context for the day.
+mod deep;
 mod pages;
 
+pub use deep::{read_deep, PageDoc};
 pub use pages::{pages, PageCtx};
 
 use crate::http::{Auth, JsonApi};

@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getLocale, t } from "@/i18n";
 import type { ErrorParams } from "@/i18n/messages/ru/errors";
-import type { DashData, Evt, IssueDetail, TaskGit, TaskMrs, IssueInfo, JiraWorklog, Meeting, PageCtx, Settings } from "./types";
+import type { DashData, Evt, GitLabItem, IssueDetail, PageDoc, TaskGit, TaskMrs, IssueInfo, JiraWorklog, Meeting, PageCtx, Settings } from "./types";
 
 export interface JiraResult {
   me: string;
@@ -79,6 +79,8 @@ export const api = {
   taskDoc: (repo: string, commit: string, path: string) => call<string>("task_doc", { repo, commit, path }),
   taskMrs: (key: string) => call<TaskMrs>("task_mrs", { key }),
   taskRemoteDoc: (projectId: number, refName: string, path: string) => call<string>("task_remote_doc", { projectId, refName, path }),
+  analysisPages: (key: string, urls: string[]) => call<PageDoc[]>("analysis_pages", { key, urls }),
+  gitlabLinks: (urls: string[]) => call<GitLabItem[]>("gitlab_links", { urls }),
   jiraIssueDetail: (key: string) => call<IssueDetail>("jira_issue_detail", { key }),
   jiraWorklogs: (start: string, end: string) => call<JiraWorklog[]>("jira_worklogs", { start, end }),
   jiraAddWorklog: (key: string, date: string, seconds: number, comment: string) =>

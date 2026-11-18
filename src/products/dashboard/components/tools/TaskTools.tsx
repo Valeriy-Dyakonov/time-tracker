@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/i18n";
 import type { SetupState } from "@/shared/lib/setup";
-import type { DashIssue, IssueDetail } from "@/shared/types";
+import type { DashIssue, DashProfile, IssueDetail } from "@/shared/types";
 import { AnalysisPanel, hasAnalysis } from "./AnalysisPanel";
 import { DevPanel } from "./DevPanel";
 import { NotesPanel } from "./NotesPanel";
@@ -17,6 +17,7 @@ export function TaskTools(props: {
   detail: IssueDetail;
   context: Map<string, DashIssue>;
   setup: SetupState;
+  profile: DashProfile;
   isKey: (k: string) => boolean;
   onKey: (k: string) => void;
   onSettings?: () => void;
@@ -27,7 +28,7 @@ export function TaskTools(props: {
   const [view, setView] = useState<View>(null);
   useEffect(() => { setView(hasAnalysis(key) ? "ai" : null); }, [key]);
 
-  const notes = dev ? notesOf(dev) : [];
+  const notes = useMemo(() => (dev ? notesOf(dev) : []), [dev]);
   const devCount = dev ? dev.mrs.mrs.length + dev.git.commits.length : 0;
   const toggle = (v: View) => setView((cur) => (cur === v ? null : v));
   const looked = props.setup.git || props.setup.gitlab;
@@ -41,7 +42,7 @@ export function TaskTools(props: {
             {m.dev}{dev ? <span className="tool-n">{devCount}</span> : <i className="spin" />}
           </button>
         )}
-        {notes.length > 0 && (
+        {dev && (notes.length > 0 || dev.git.docsEnabled) && (
           <button className={`tool-btn t-docs ${view === "notes" ? "on" : ""}`} onClick={() => toggle("notes")} title={m.docsTip}>
             <svg viewBox="0 0 24 24" aria-hidden><path d="M7 3h7l5 5v13H7z" /><path d="M14 3v5h5M10 13h6M10 17h6" /></svg>
             {m.docs}<span className="tool-n">{notes.length}</span>
@@ -54,8 +55,8 @@ export function TaskTools(props: {
         </button>
       </div>
       {view === "dev" && (dev ? <DevPanel dev={dev} onSettings={props.onSettings} onReload={reload} /> : <div className="tool-panel dev"><div className="ai-progress"><i className="spin" />{m.searching}</div></div>)}
-      {view === "notes" && <NotesPanel notes={notes} isKey={props.isKey} onKey={props.onKey} />}
-      {view === "ai" && <AnalysisPanel detail={props.detail} context={props.context} setup={props.setup} />}
+      {view === "notes" && <NotesPanel notes={notes} onReload={reload} isKey={props.isKey} onKey={props.onKey} />}
+      {view === "ai" && <AnalysisPanel detail={props.detail} context={props.context} setup={props.setup} profile={props.profile} />}
     </div>
   );
 }

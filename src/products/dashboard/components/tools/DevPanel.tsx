@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useT } from "@/i18n";
 import { api, errorText } from "@/shared/api";
-import type { TaskDev } from "./useTaskDev";
+import { Button } from "@/shared/ui";
+import { notesOf, type TaskDev } from "./useTaskDev";
 
 const day = (iso: string) => iso.slice(0, 10);
 
@@ -17,7 +18,7 @@ export function DevPanel({ dev, onSettings, onReload }: { dev: TaskDev; onSettin
 
   return (
     <div className="tool-panel dev">
-      <button className="dev-reload board-more" title={m.reloadTip} onClick={onReload}>↻ {m.reload}</button>
+      <Button size="small" className="dev-reload" title={m.reloadTip} onClick={onReload}>↻ {m.reload}</Button>
       <section>
         <h5>{m.mrs}<span className="tool-n">{mrs.mrs.length}</span></h5>
         {!mrs.configured && <p className="muted">{m.gitlabOff}</p>}
@@ -89,7 +90,12 @@ export function DevPanel({ dev, onSettings, onReload }: { dev: TaskDev; onSettin
           </li>
           <li>
             <b>{m.notes}</b>{" "}
-            {git.docsEnabled ? <span className="muted">{m.notesOn}</span> : (
+            {git.docsEnabled ? (
+              <span className="muted">
+                {(() => { const n = notesOf(dev); return n.length ? m.notesFound(n.map((x) => `${x.path} (${x.where})`).join(", ")) : m.notesNone; })()}
+                {" · "}{m.notesOn}
+              </span>
+            ) : (
               <span className="muted">{m.notesOff}{onSettings && <> <button className="board-more" onClick={onSettings}>{m.toSettings}</button></>}</span>
             )}
           </li>
