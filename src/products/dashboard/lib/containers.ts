@@ -2,11 +2,11 @@ import type { DashIssue } from "@/shared/types";
 
 /**
  * "Epic" in the broad sense: the task a group of tasks belongs to. Installations use Epic Link, a parent,
- * or a plain link ("relates") to an issue of some container type (Epic, RLS, BFR...). Which types are
+ * or a plain link ("relates") to an issue of some container type (epic, release, feature...). Which types are
  * containers is the user's choice; by default they are guessed from the type name.
  */
 
-const AUTO = ["epic", "эпик", "rls", "release", "релиз", "bfr", "feature", "фича", "фичи", "initiative", "инициатив"];
+const AUTO = ["epic", "эпик", "release", "релиз", "feature", "фича", "фичи", "initiative", "инициатив"];
 export const looksLikeContainer = (type: string): boolean => AUTO.some((w) => type.toLowerCase().includes(w));
 
 export interface ContainerType {

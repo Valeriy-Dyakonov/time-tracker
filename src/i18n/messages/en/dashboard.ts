@@ -30,7 +30,7 @@ const dashboard: typeof ru = {
   containersNone: "Epics: none chosen",
   containersTitle: "What counts as an epic",
   containersTip:
-    "A task is shown under its \"epic\": by Epic Link, by its parent, or by a link (e.g. relates) to a task of a chosen type. By default the types are guessed by name: Epic, RLS, BFR, Release, Feature. The list shows the types found in your tasks' links, with the number of tasks.",
+    "A task is shown under its \"epic\": by Epic Link, by its parent, or by a link (e.g. relates) to a task of a chosen type. By default the types are guessed by name: Epic, Release, Feature, Initiative. The list shows the types found in your tasks' links, with the number of tasks.",
   containersAuto: "guessed",
   containersReset: "Back to automatic choice",
   folded: (n: number) => `Backlog: ${n}`,

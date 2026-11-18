@@ -33,25 +33,25 @@ describe("stages", () => {
 });
 
 describe("containers", () => {
-  const rls = issue("R-1", "Open", "new", { issueType: "RLS" });
-  const story = issue("A-1", "In Progress", "indeterminate", { links: [rel("R-1", "RLS"), rel("B-5", "Bug")] });
+  const release = issue("R-1", "Open", "new", { issueType: "Release" });
+  const story = issue("A-1", "In Progress", "indeterminate", { links: [rel("R-1", "Release"), rel("B-5", "Bug")] });
   const sub = issue("A-2", "To Do", "new", { issueType: "Sub-task", parent: "A-1" });
   const loose = issue("A-3", "To Do", "new", { links: [rel("B-5", "Bug")] });
-  const byKey = new Map([rls, story, sub, loose].map((i) => [i.key, i]));
+  const byKey = new Map([release, story, sub, loose].map((i) => [i.key, i]));
 
   it("guesses container types by name and counts how many tasks use them", () => {
     const c = containerCandidates([story, sub, loose], byKey);
-    expect(c.map((x) => [x.type, x.count, x.auto])).toEqual([["RLS", 1, true], ["Bug", 2, false], ["Story", 1, false]]);
-    expect([...containerTypes(null, c)]).toEqual(["rls"]);
-    expect([...containerTypes(["BFR"], c)]).toEqual(["bfr"]);
+    expect(c.map((x) => [x.type, x.count, x.auto])).toEqual([["Release", 1, true], ["Bug", 2, false], ["Story", 1, false]]);
+    expect([...containerTypes(null, c)]).toEqual(["release"]);
+    expect([...containerTypes(["Bug"], c)]).toEqual(["bug"]);
   });
 
   it("finds the container by Epic Link, a link, or through the parent", () => {
-    const types = new Set(["rls"]);
+    const types = new Set(["release"]);
     expect(containerOf(story, byKey, types)).toBe("R-1");
     expect(containerOf(sub, byKey, types)).toBe("R-1");
     expect(containerOf(loose, byKey, types)).toBeNull();
-    expect(containerOf(issue("A-9", "To Do", "new", { epic: "E-1", links: [rel("R-1", "RLS")] }), byKey, types)).toBe("E-1");
+    expect(containerOf(issue("A-9", "To Do", "new", { epic: "E-1", links: [rel("R-1", "Release")] }), byKey, types)).toBe("E-1");
   });
 });
 

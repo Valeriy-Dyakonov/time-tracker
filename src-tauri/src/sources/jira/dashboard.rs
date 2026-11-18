@@ -324,7 +324,7 @@ mod tests {
             "customfield_1": { "name": "me", "displayName": "Me" },
             "customfield_2": [{ "name": "x", "displayName": "X" }, { "name": "y", "displayName": "Y" }],
             "fixVersions": [{ "name": "1.2" }],
-            "issuelinks": [{ "type": { "outward": "relates to", "inward": "relates to" }, "outwardIssue": { "key": "R-9", "fields": { "issuetype": { "name": "RLS" } } } }],
+            "issuelinks": [{ "type": { "outward": "relates to", "inward": "relates to" }, "outwardIssue": { "key": "R-9", "fields": { "issuetype": { "name": "Release" } } } }],
             "parent": { "key": "A-0", "fields": { "issuetype": { "name": "Epic" } } }
         }});
         let d = issue(&it, &None, &fields, &me());
@@ -332,7 +332,7 @@ mod tests {
         assert_eq!(d.assignee.as_ref().map(|a| a.me), Some(false));
         assert_eq!(d.people.iter().map(|p| format!("{}:{}", p.field, p.person.display)).collect::<Vec<_>>(), ["QA:Me", "Reviewers:X", "Reviewers:Y"]);
         assert_eq!((d.epic.as_deref(), d.fix_versions.clone()), (Some("A-0"), vec!["1.2".to_string()]));
-        assert_eq!(d.links.iter().map(|l| format!("{} {} {}", l.relation, l.key, l.issue_type)).collect::<Vec<_>>(), ["relates to R-9 RLS"]);
+        assert_eq!(d.links.iter().map(|l| format!("{} {} {}", l.relation, l.key, l.issue_type)).collect::<Vec<_>>(), ["relates to R-9 Release"]);
     }
 
     #[test]

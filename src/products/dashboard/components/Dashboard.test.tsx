@@ -17,7 +17,7 @@ afterEach(() => { delete (globalThis as { localStorage?: unknown }).localStorage
 const day = 86_400_000;
 const task = (key: string, status: string, category: string, extra: object = {}) => ({
   key, summary: `Task ${key}`, status, category, priority: "High", issueType: "Story", project: "A", projectName: "Alpha",
-  parent: null, epic: null, fixVersions: ["1.0"], links: [{ key: "R-1", issueType: "RLS", relation: "relates to" }],
+  parent: null, epic: null, fixVersions: ["1.0"], links: [{ key: "R-1", issueType: "Release", relation: "relates to" }],
   assignee: { name: "me", display: "Me", me: true }, people: [{ field: "QA", person: { name: "q", display: "Q", me: false } }],
   mine: true, updated: Date.now() - day, resolved: null, due: "2026-01-01", ...extra,
 });
@@ -38,7 +38,7 @@ describe("Dashboard render", () => {
         task("A-5", "Done", "done", { resolved: Date.now() - 10 * day }),
         task("A-6", "Backlog", "new"),
       ],
-      context: [task("R-1", "Open", "new", { issueType: "RLS", links: [] })],
+      context: [task("R-1", "Open", "new", { issueType: "Release", links: [] })],
       projects: ["A"],
     });
     expect(html).toContain("A-1");
