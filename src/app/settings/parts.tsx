@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Badge, Button, Card, Field, InfoTip } from "@/shared/ui";
 import type { Service, SettingsForm, TokenName } from "./useSettingsForm";
 import { useT } from "@/i18n";
@@ -47,3 +47,19 @@ export function SectionCard({ title, badge, tip, children }: { title: string; ba
 }
 
 export const lines = (v: string) => v.split("\n").map((x) => x.trim()).filter(Boolean);
+
+/**
+ * A list edited one item per line. Keeps the text as typed (new lines, spaces) and saves the cleaned list;
+ * a change made elsewhere (e.g. repositories picked from a scan) replaces the text.
+ */
+export function LinesInput(props: { value: string[]; onChange: (v: string[]) => void; rows?: number; placeholder?: string }) {
+  const outside = props.value.join("\n");
+  const [text, setText] = useState(outside);
+  useEffect(() => {
+    setText((cur) => (lines(cur).join("\n") === outside ? cur : outside));
+  }, [outside]);
+  return (
+    <textarea rows={props.rows ?? 2} value={text} placeholder={props.placeholder}
+      onChange={(e) => { setText(e.target.value); props.onChange(lines(e.target.value)); }} />
+  );
+}

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { api, type RepoInfo } from "@/shared/api";
 import { useT } from "@/i18n";
 import { Button, Field, Help } from "@/shared/ui";
-import { lines, SectionCard, Status } from "../parts";
+import { LinesInput, SectionCard, Status } from "../parts";
 import type { SettingsForm } from "../useSettingsForm";
 
 export function GitSection({ f }: { f: SettingsForm }) {
@@ -53,20 +53,24 @@ export function GitSection({ f }: { f: SettingsForm }) {
         </div>
       )}
       <Field label={m.selected} hint={m.selectedHint(s.gitRepos.length)}>
-        <textarea rows={3} value={s.gitRepos.join("\n")} onChange={(e) => set("gitRepos", lines(e.target.value))} />
+        <LinesInput rows={3} value={s.gitRepos} onChange={(v) => set("gitRepos", v)} />
       </Field>
       <Field label={m.authors} hint={m.authorsHint} tip={m.authorsTip}>
-        <textarea rows={2} value={s.gitAuthors.join("\n")} placeholder="ivan@company.ru" onChange={(e) => set("gitAuthors", lines(e.target.value))} />
+        <LinesInput value={s.gitAuthors} placeholder="ivan@company.ru" onChange={(v) => set("gitAuthors", v)} />
       </Field>
-      <label className="check" title={m.aiDocsTip}>
-        <input type="checkbox" checked={s.aiDocsEnabled} onChange={(e) => set("aiDocsEnabled", e.target.checked)} />
-        {m.aiDocs}
-      </label>
-      {s.aiDocsEnabled && (
-        <Field label={m.aiDocsPaths} hint={m.aiDocsPathsHint}>
-          <textarea rows={2} value={s.aiDocsPaths.join("\n")} placeholder="docs/ai/{key}" onChange={(e) => set("aiDocsPaths", lines(e.target.value))} />
-        </Field>
-      )}
+      <div className="sub-option">
+        <label className="check" title={m.aiDocsTip}>
+          <input type="checkbox" checked={s.aiDocsEnabled} onChange={(e) => set("aiDocsEnabled", e.target.checked)} />
+          {m.aiDocs}
+        </label>
+        {s.aiDocsEnabled && (
+          <div className="sub-option-body">
+            <Field label={m.aiDocsPaths} hint={m.aiDocsPathsHint}>
+              <LinesInput value={s.aiDocsPaths} placeholder={"docs/ai/{key}\nai/{key}"} onChange={(v) => set("aiDocsPaths", v)} />
+            </Field>
+          </div>
+        )}
+      </div>
       <Help title={m.helpTitle} steps={m.helpSteps} />
     </SectionCard>
   );
