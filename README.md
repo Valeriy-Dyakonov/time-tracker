@@ -23,7 +23,7 @@ Rust tests: `cargo test` in `src-tauri/`.
 
 ### Builds
 
-The `Release` GitHub Actions workflow builds all three platforms (manual run: installers as workflow artifacts; a `vX.Y.Z` tag: a release with auto-update files). Per-OS settings are in `src-tauri/tauri.<os>.conf.json`. Settings and tokens are stored per user and are not part of the build.
+The `Release` GitHub Actions workflow publishes a release with auto-update files for each `vX.Y.Z` tag: a minor or major version (`v0.3.0`, `v1.0.0`) for Windows, macOS and Linux, a patch (`v0.2.3`) for Windows only. A manual run keeps the installers as workflow artifacts and builds Windows or, if chosen, all three. Per-OS settings are in `src-tauri/tauri.<os>.conf.json`. Settings and tokens are stored per user and are not part of the build.
 
 - **Windows**: NSIS installer (`bundle/nsis/`), WebView2 required (included in Windows 10/11). Not code-signed, so SmartScreen may warn on first launch. Tokens: Windows Credential Manager.
 - **macOS** (11+, one universal app for Apple Silicon and Intel): `.dmg`. Signed ad hoc only, not notarized: on first launch open it with right-click → Open, or run `xattr -cr "/Applications/Worklog Tracker.app"`. Native window buttons over the app's title bar. Tokens: Keychain.
