@@ -23,3 +23,5 @@
 .tb-home svg { width: 15px; height: 15px; stroke-width: 1.6; }
 .tb-home:hover { color: var(--accent); }
 .tb-home + .tb-title { padding-left: 2px; }
+/* macOS: the native window buttons sit over the left end of the bar. */
+.titlebar.mac { padding-left: 76px; }

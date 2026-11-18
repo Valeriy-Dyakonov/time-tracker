@@ -21,14 +21,13 @@ npm test               # frontend tests
 
 Rust tests: `cargo test` in `src-tauri/`.
 
-### Windows build
+### Builds
 
-- `npm run tauri build` produces an NSIS installer in `src-tauri/target/release/bundle/nsis/` and a portable `src-tauri/target/release/worklog-tracker.exe`. WebView2 is required (included in Windows 10/11).
-- The `Build Windows installer` GitHub Actions workflow builds the installer on a Windows runner (manual run or a `vX.Y.Z` tag).
-- The installer is not code-signed, so Windows SmartScreen may show a warning on first launch.
-- Settings and tokens are stored per user (Windows Credential Manager and `%APPDATA%\dev.worklog.tracker`) and are not part of the build.
+The `Release` GitHub Actions workflow builds all three platforms (manual run: installers as workflow artifacts; a `vX.Y.Z` tag: a release with auto-update files). Per-OS settings are in `src-tauri/tauri.<os>.conf.json`. Settings and tokens are stored per user and are not part of the build.
 
-Linux: storing tokens requires Secret Service (gnome-keyring / KWallet); building requires `libdbus-1-dev`.
+- **Windows**: NSIS installer (`bundle/nsis/`), WebView2 required (included in Windows 10/11). Not code-signed, so SmartScreen may warn on first launch. Tokens: Windows Credential Manager.
+- **macOS** (11+, one universal app for Apple Silicon and Intel): `.dmg`. Signed ad hoc only, not notarized: on first launch open it with right-click → Open, or run `xattr -cr "/Applications/Worklog Tracker.app"`. Native window buttons over the app's title bar. Tokens: Keychain.
+- **Linux**: AppImage (auto-updates) and `.deb`. Tokens need Secret Service (GNOME Keyring / KWallet). Building needs `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev libdbus-1-dev`.
 
 ## Configuration (Settings screen)
 

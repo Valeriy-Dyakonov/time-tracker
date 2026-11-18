@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { inTauri } from "@/shared/api";
+import { os } from "@/shared/lib/platform";
 import { t as messages, useT } from "@/i18n";
 
 type Upd = { version: string; downloadAndInstall: (cb?: (e: { event: string; data?: { contentLength?: number; chunkLength?: number } }) => void) => Promise<void> };
@@ -7,7 +8,10 @@ type Win = { minimize(): Promise<void>; toggleMaximize(): Promise<void>; close()
 
 const RECHECK_MS = 4 * 60 * 60 * 1000;
 
-/** Custom window title bar (the native one is off via "decorations": false): app name, version, update button, window controls. */
+/**
+ * Custom window title bar: app name, version, update button, window controls. Windows and Linux draw their
+ * own controls ("decorations": false); macOS overlays its native buttons on the left (tauri.macos.conf.json).
+ */
 export default function TitleBar(props: {
   /** Current tool; the bare app name on the start screen. */
   title?: string;
@@ -72,7 +76,7 @@ export default function TitleBar(props: {
   };
 
   return (
-    <div className="titlebar" data-tauri-drag-region>
+    <div className={`titlebar ${os === "macos" ? "mac" : ""}`} data-tauri-drag-region>
       {props.onHome && (
         <button className="tb-btn tb-home" aria-label={home.home} title={home.home} onClick={props.onHome}>
           <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
@@ -96,8 +100,9 @@ export default function TitleBar(props: {
       <button className={`tb-btn tb-gear ${props.settingsOpen ? "on" : ""}`} aria-label={t.settings} title={props.settingsOpen ? t.closeSettings : t.settings} onClick={props.onToggleSettings}>
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
       </button>
-      {win && <span className="tb-sep" />}
-      {win && (
+      {/* macOS keeps its own window buttons (traffic lights) on the left. */}
+      {win && os !== "macos" && <span className="tb-sep" />}
+      {win && os !== "macos" && (
         <div className="tb-controls">
           <button className="tb-btn" aria-label={t.minimize} onClick={() => win.minimize()}>
             <svg viewBox="0 0 10 10"><path d="M0 5h10" /></svg>

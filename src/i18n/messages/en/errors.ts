@@ -19,7 +19,7 @@ const codes: Record<string, Msg> = {
   http: (p) => `${p.service} HTTP ${p.status}: ${p.body}`,
   browserOpen: (p) => `Couldn't open the browser (${p.detail}). Open it manually: ${p.url}`,
   keychainNotSaved: (p) =>
-    `Windows Credential Manager did not store "${p.secret}" (${p.length} chars). Make sure the app runs under your own user account.`,
+    `The system password store did not store "${p.secret}" (${p.length} chars). Make sure the app runs under your own user account.`,
   tokenMissing: (p) => `${secretLabel(p.secret)}: no token in settings`,
   unknownSecret: (p) => `Unknown secret: ${p.secret}`,
   taskDocInvalid: (p) => `This file cannot be read: ${p.path}`,

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { os } from "@/shared/lib/platform";
 import type { Settings as S } from "@/shared/types";
 import { Status } from "./parts";
 import { SECTIONS, sectionLabel } from "./registry";
@@ -30,7 +31,7 @@ export default function Settings(props: { settings: S; onSaved: (s: S) => void }
         <p className="side-note">{m.readOnlyNote}</p>
         <div className="side-note secure">
           <svg viewBox="0 0 16 16"><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></svg>
-          <span>{m.secure.before}<b>{m.secure.store}</b>{m.secure.after}</span>
+          <span>{m.secure.before}<b>{m.secure.stores[os]}</b>{m.secure.after}</span>
         </div>
       </nav>
       <div className="settings-main">

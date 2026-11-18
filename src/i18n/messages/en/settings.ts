@@ -27,7 +27,7 @@ const en: typeof ru = {
   readOnlyNote: "All connections only read data and never change anything.",
   secure: {
     before: "Tokens and passwords are kept in the system store — ",
-    store: "Windows Credential Manager",
+    stores: { windows: "Windows Credential Manager", macos: "the macOS Keychain", linux: "Secret Service (GNOME Keyring or KWallet)" },
     after: ", not in the settings file. They never leave this computer except in requests to the services themselves.",
   },
   saveBar: {
@@ -43,7 +43,7 @@ const en: typeof ru = {
   },
   token: {
     noun: "Token",
-    savedHint: (noun: string) => `✓ ${noun} is saved in Windows Credential Manager. Enter a new one to replace it.`,
+    savedHint: (noun: string) => `✓ ${noun} is saved in the system password store. Enter a new one to replace it.`,
     defaultHint: "Kept in the system password store, not in the settings file.",
     placeholder: (noun: string) => `Paste the ${noun.toLowerCase()}`,
     removeTitle: "Remove from the system store",
@@ -78,7 +78,7 @@ const en: typeof ru = {
     helpTitle: "Where to get the address, model and key",
     helpSteps: [
       "These come from the team that runs your company AI: ask them for “the OpenAI-compatible API address, model name and API key”.",
-      "If you already use OpenCode, the same values are usually in its opencode.json config (provider section: baseURL, apiKey and the models list). Look for it in .config\\opencode in your Windows profile or in the project root.",
+      "If you already use OpenCode, the same values are usually in its opencode.json config (provider section: baseURL, apiKey and the models list). Look for it in .config/opencode in your home folder or in the project root.",
       "The list of available models is returned by GET <Base URL>/models.",
       "Press Test connection — the app sends a short test request.",
     ],
@@ -223,7 +223,7 @@ const en: typeof ru = {
     tip: "The app's colour theme. Applied immediately and remembered on this computer — no need to press Save.",
     groupLabel: "Colour theme",
     themes: {
-      system: { label: "System", sub: "light or dark, following Windows" },
+      system: { label: "System", sub: "light or dark, following the system" },
       light: { label: "Light", sub: "neutral, blue accent" },
       dark: { label: "Dark", sub: "for evenings and dim rooms" },
       sepia: { label: "Sepia", sub: "warm, paper-like — easier on the eyes" },

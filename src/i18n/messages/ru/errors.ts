@@ -18,7 +18,7 @@ const codes: Record<string, Msg> = {
   http: (p) => `${p.service} HTTP ${p.status}: ${p.body}`,
   browserOpen: (p) => `Не удалось открыть браузер (${p.detail}). Откройте вручную: ${p.url}`,
   keychainNotSaved: (p) =>
-    `Хранилище паролей Windows не сохранило значение «${p.secret}» (длина ${p.length} симв.). Проверьте, что приложение запущено под вашим пользователем.`,
+    `Системное хранилище паролей не сохранило значение «${p.secret}» (длина ${p.length} симв.). Проверьте, что приложение запущено под вашим пользователем.`,
   tokenMissing: (p) => `${secretLabel(p.secret)}: токен не задан в настройках`,
   unknownSecret: (p) => `Неизвестный секрет: ${p.secret}`,
   taskDocInvalid: (p) => `Этот файл нельзя прочитать: ${p.path}`,

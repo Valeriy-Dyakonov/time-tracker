@@ -54,7 +54,7 @@ One folder per area; no loose files in folder roots. Inside an area imports are 
 - `commands/` — Tauri commands grouped by area; `commands/mod.rs` has `Ctx` (settings + HTTP client). `connection.rs` holds the per-service probe table for "Проверить подключение".
 - `sources/` — API clients and parsers per service (`jira/`, `confluence/`, `matrix/`, `calendar/`, `gitlab.rs`, `gitlog.rs`, `holidays.rs`, `llm.rs`).
 - `http.rs` — shared JSON GET with auth and error mapping; use it instead of hand-rolled requests.
-- `model.rs` — `Event`, `IssueInfo`, `StatusChange`. `settings.rs` — `Settings` + settings.json I/O. `secrets.rs` — Windows Credential Manager via keyring; secret names are constants there.
+- `model.rs` — `Event`, `IssueInfo`, `StatusChange`. `settings.rs` — `Settings` + settings.json I/O. `secrets.rs` — the OS password store via keyring (Windows Credential Manager, macOS Keychain, Linux Secret Service); secret names are constants there.
 
 ## Checklists
 
@@ -74,6 +74,7 @@ One folder per area; no loose files in folder roots. Inside an area imports are 
 - Tauri command names, arguments and returned JSON shapes (see `api.ts`).
 - `settings.json` format and keyring entry names — existing users' settings and tokens must keep working.
 - The `updater` cargo feature gates the updater plugin; release builds use `--features updater --config src-tauri/tauri.release.conf.json`.
+- Windows, macOS and Linux are built by `.github/workflows/release.yml`; per-OS bundle formats and the macOS window (native buttons, `titleBarStyle: Overlay`) are in `src-tauri/tauri.<os>.conf.json`. OS-specific UI goes through `shared/lib/platform.ts`.
 - Version lives in `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` (+ lockfiles); a `vX.Y.Z` tag must match it and triggers the release workflow.
 
 ## Localization
