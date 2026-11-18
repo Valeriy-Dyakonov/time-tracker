@@ -11,6 +11,7 @@ import { formatDate, localDate } from "./dates";
 import { msg } from "./analysis/format";
 import { projectOf } from "./events/keys";
 import { buildPlan } from "./plan/buildPlan";
+import { loadTempoDays, loadTempoIssues, tempoActivity, tempoDay } from "./analysis/tempoDays";
 import { fmtH, totalsOf } from "./report";
 
 export type { RunHandlers, RunOptions } from "./analysis/types";
@@ -51,10 +52,14 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
   ctx.enrich.dropUnknownKeys(ctx);
   const notMine = [...new Set(ctx.events.map((e) => e.issueKey).filter((k): k is string => !!k && ctx.issues[k]?.assignedToMe === false))];
   if (notMine.length) log("info", m.notAssigned(notMine.length, notMine.slice(0, 8).join(", ")));
+  const tempo = await loadTempoDays(ctx, dates);
+  await loadTempoIssues(ctx, tempo);
   log("info", m.daysStage);
 
-  const r = await analyseDays(ctx, dates, h.onDays);
-  const planned = buildPlan(dates, r.activity, ctx.issues, o.hoursPerDay, o.fillMode, r.meetingsByDay, ctx.targets);
+  const r = await analyseDays(ctx, dates.filter((d) => !tempo.has(d)), h.onDays);
+  for (const [d, ws] of tempo) r.activity[d] = tempoActivity(ws);
+  const planned = buildPlan(dates, r.activity, ctx.issues, o.hoursPerDay, o.fillMode, r.meetingsByDay, ctx.targets)
+    .map((d) => (tempo.has(d.date) ? tempoDay(d, tempo.get(d.date)!, ctx) : d));
   reportGaps(ctx, planned, r.board);
   const days = await polishNotes(ctx, planned);
 

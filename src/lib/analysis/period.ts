@@ -10,7 +10,7 @@ import type { RunContext } from "./types";
 /** Logs how days without data were filled and shows the result on the progress board. */
 export function reportGaps(ctx: RunContext, days: DayPlan[], board: ProgressBoard): void {
   const m = msg().period;
-  const gaps = days.filter((d) => d.basis !== "activity");
+  const gaps = days.filter((d) => d.basis !== "activity" && d.basis !== "tempo");
   if (gaps.length) {
     ctx.log("info", m.gaps(gaps.length, m.modeName[ctx.o.fillMode]));
     for (const d of gaps) ctx.log(d.basis === "empty" ? "warn" : "info", `${dayLabel(d.date)}: ${d.reasoning}`);

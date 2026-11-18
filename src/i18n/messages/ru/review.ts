@@ -1,5 +1,6 @@
 export default {
   basis: {
+    tempo: "из Tempo",
     activity: "по данным дня",
     inferred: "без данных",
     empty: "пусто",

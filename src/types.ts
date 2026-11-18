@@ -161,8 +161,11 @@ export interface DayPlan {
   target: number;
   tasks: TaskHours[];
   summary: string;
-  /** "activity" – built from the day's own events; "inferred" – copied from a neighbouring day; "empty" – nothing to go on */
-  basis: "activity" | "inferred" | "empty";
+  /**
+   * "activity" – built from the day's own events; "tempo" – already filled in Tempo, taken as is without analysis;
+   * "inferred" – copied from a neighbouring day; "empty" – nothing to go on.
+   */
+  basis: "activity" | "tempo" | "inferred" | "empty";
   inferredFrom?: string;
   /** Day switched off by the user (vacation, sick leave, ...). */
   off: boolean;

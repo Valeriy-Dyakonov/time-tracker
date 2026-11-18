@@ -114,6 +114,14 @@ const en: typeof ru = {
     label: (date: string, weekday: string) => `${date} (${weekday})`,
   },
 
+  tempo: {
+    filled: (n: number, total: number, list: string) =>
+      `Already filled in Tempo: ${n} of ${total} working days (${list}); taken from there as is, without analysis or AI.`,
+    none: "No fully filled days in Tempo for the period: every day is analysed.",
+    failed: (e: string) => `Could not read Tempo worklogs, every day is analysed as usual: ${e}`,
+    reasoning: "The day is already filled in Tempo: hours and descriptions are taken from there unchanged, no analysis was run.",
+  },
+
   alloc: {
     heuristicReasoning: (why: string, parts: string, unkeyed: number) =>
       `${why} Shares are based on the number and size of actions with a task key: ${parts}.` +

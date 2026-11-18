@@ -5,7 +5,7 @@ import { isoWeekday, parseDate } from "../../lib/dates";
 import { fmtH, fmtMinutes, meetingMinutes, meetingRange } from "../../lib/report";
 import IssueLink from "../IssueLink";
 import { Button, CopyButton, InfoTip, keyColor, Stepper } from "../ui";
-import { dayCopyText, isBalanced, reviewReason, sourceCounts } from "./review";
+import { dayCopyText, hasOwnData, isBalanced, reviewReason, sourceCounts } from "./review";
 import { SourceChips } from "./SourceChips";
 
 const CHIPS_IN_SUMMARY = 3;
@@ -51,8 +51,8 @@ function DaySummary({ a, d, open, onToggle }: { a: Analysis; d: DayPlan; open: b
               ))}
               {tasks.length > shown.length && <span className="d-more">+{tasks.length - shown.length}</span>}
             </span>
-            <span className={`d-line ${d.basis === "activity" ? "" : "warn"}`}>
-              {d.basis === "activity" ? (d.summary || a.issues[d.tasks[0].key]?.summary) : reviewReason(d)}
+            <span className={`d-line ${hasOwnData(d) ? "" : "warn"}`}>
+              {hasOwnData(d) ? (d.summary || a.issues[d.tasks[0].key]?.summary) : reviewReason(d)}
             </span>
           </>
         )}

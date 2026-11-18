@@ -26,7 +26,7 @@ export interface WorklogRow {
 export function worklogComment(a: Analysis, d: DayPlan, key: string): string {
   const note = d.tasks.find((t) => t.key === key)?.notes[0]?.trim();
   if (note) return note;
-  if (d.basis === "activity" && d.summary) return d.summary;
+  if ((d.basis === "activity" || d.basis === "tempo") && d.summary) return d.summary;
   return a.issues[key]?.summary ?? "";
 }
 
@@ -36,7 +36,7 @@ export function worklogRows(a: Analysis): WorklogRow[] {
   for (const d of a.days) {
     if (d.off) continue;
     for (const t of d.tasks) {
-      if (t.hours > 0) rows.push({ key: t.key, date: d.date, hours: t.hours, comment: worklogComment(a, d, t.key), inferred: d.basis !== "activity" });
+      if (t.hours > 0) rows.push({ key: t.key, date: d.date, hours: t.hours, comment: worklogComment(a, d, t.key), inferred: d.basis === "inferred" || d.basis === "empty" });
     }
   }
   return rows;
@@ -80,6 +80,6 @@ export function weekPrompt(a: Analysis, w: Week, tasks?: string): string {
   return JSON.stringify({
     week: weekTitle(w),
     tasks: tasks ?? weekText(a, w),
-    days: w.days.filter((d) => !d.off && d.basis === "activity").map((d) => ({ date: d.date, summary: d.summary, reasoning: d.reasoning })),
+    days: w.days.filter((d) => !d.off && (d.basis === "activity" || d.basis === "tempo")).map((d) => ({ date: d.date, summary: d.summary, reasoning: d.reasoning })),
   });
 }

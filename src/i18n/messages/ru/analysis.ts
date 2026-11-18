@@ -114,6 +114,14 @@ export default {
     label: (date: string, weekday: string) => `${date} (${weekday})`,
   },
 
+  tempo: {
+    filled: (n: number, total: number, list: string) =>
+      `Уже заполнено в Tempo: ${n} из ${total} рабочих дн. (${list}) — берутся оттуда как есть, без анализа и ИИ.`,
+    none: "В Tempo за период нет полностью заполненных дней — анализируются все дни.",
+    failed: (e: string) => `Не удалось прочитать списания из Tempo, все дни анализируются как обычно: ${e}`,
+    reasoning: "День уже заполнен в Tempo: часы и описания взяты оттуда без изменений, анализ не выполнялся.",
+  },
+
   alloc: {
     heuristicReasoning: (why: string, parts: string, unkeyed: number) =>
       `${why} Доли посчитаны по числу и размеру действий с ключом задачи: ${parts}.` +

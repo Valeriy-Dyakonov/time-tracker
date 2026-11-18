@@ -2,6 +2,7 @@ import type ru from "../ru/review";
 
 const en: typeof ru = {
   basis: {
+    tempo: "from Tempo",
     activity: "from the day's data",
     inferred: "no data",
     empty: "empty",

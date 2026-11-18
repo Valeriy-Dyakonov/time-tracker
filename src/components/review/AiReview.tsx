@@ -9,12 +9,12 @@ import Meetings from "../Meetings";
 import { Badge, Card, CopyButton, InfoTip, Title } from "../ui";
 import { Evidence } from "./Evidence";
 
-const BASIS_TONE: Record<DayPlan["basis"], "good" | "warn" | "bad"> = { activity: "good", inferred: "warn", empty: "bad" };
+const BASIS_TONE: Record<DayPlan["basis"], "good" | "warn" | "bad"> = { activity: "good", tempo: "good", inferred: "warn", empty: "bad" };
 
 /** What the AI saw and why hours ended up where they did. */
 export default function AiReview({ a }: { a: Analysis }) {
   const [onlyData, setOnlyData] = useState(false);
-  const days = a.days.filter((d) => !onlyData || d.basis === "activity");
+  const days = a.days.filter((d) => !onlyData || d.basis === "activity" || d.basis === "tempo");
   const m = useT().review;
   return (
     <div>

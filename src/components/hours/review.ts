@@ -8,7 +8,10 @@ const EPS = 0.001;
 
 export const isBalanced = (d: DayPlan): boolean => d.off || Math.abs(dayTotal(d) - d.target) < EPS;
 
-export const needsReview = (d: DayPlan): boolean => !d.off && (d.basis !== "activity" || !isBalanced(d));
+/** The day rests on its own data: analysed events or what is already logged in Tempo. */
+export const hasOwnData = (d: DayPlan): boolean => d.basis === "activity" || d.basis === "tempo";
+
+export const needsReview = (d: DayPlan): boolean => !d.off && (!hasOwnData(d) || (d.basis === "activity" && !isBalanced(d)));
 
 /** Why a day is in the "check me" list, in plain words. */
 export function reviewReason(d: DayPlan): string {
