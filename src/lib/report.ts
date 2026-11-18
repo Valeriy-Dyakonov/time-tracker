@@ -23,7 +23,7 @@ export function fmtMinutes(min: number): string {
 
 export const meetingMinutes = (d: DayPlan): number => d.meetings.reduce((s, m) => s + m.minutes, 0);
 
-/** "10:00–10:30 Daily; 14:00–15:00 Созвон" — for CSV / copy. */
+/** "10:00–10:30 Daily; 14:00–15:00 Planning" — for CSV / copy. */
 export function meetingsText(d: DayPlan): string {
   return d.meetings.map((m) => `${meetingRange(m)} ${m.title}${m.isCall ? msg().report.call : ""}`).join("; ");
 }

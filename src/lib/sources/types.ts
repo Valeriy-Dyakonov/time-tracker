@@ -5,7 +5,7 @@ import type { RunContext } from "../analysis/types";
  * Texts are getters so they follow the current language.
  */
 export interface SourceCollector {
-  /** Prefix of log lines and warnings: "Git", "Календарь". */
+  /** Prefix of log lines and warnings: "Git", "Calendar". */
   readonly name: string;
   readonly step: string;
   enabled(ctx: RunContext): boolean;

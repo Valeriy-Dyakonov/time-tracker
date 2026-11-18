@@ -45,7 +45,7 @@ export interface Gap {
   why: string;
 }
 
-/** Strategy for a day without own activity, chosen by the "дни без данных" mode. */
+/** Strategy for a day without own activity, chosen by the "days without events" mode. */
 export interface GapFiller {
   fill(gap: Gap): DayPlan;
 }

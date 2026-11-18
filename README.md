@@ -1,117 +1,96 @@
 # Worklog Tracker
 
-Десктопное приложение (Tauri + React/TS), которое собирает вашу активность за период из **Jira**, **git** и **Matrix**,
-просит корпоративный ИИ оценить, над чем вы работали, и раскладывает рабочие часы по дням и задачам так, чтобы
-**каждый рабочий день был заполнен ровно на норму**. Результат смотрите в UI по неделям и копируете сами:
-в Jira (worklog под задачей) и в систему учёта по дням.
+A desktop app (Tauri 2 + React/TypeScript, Rust backend) that collects your activity for a period from **Jira**, **git**, **GitLab**, **Matrix**, **Confluence** and an **Exchange calendar**, and helps you prepare time entries for Jira Tempo and a weekly report.
 
-**Приложение только читает данные.** Все обращения к Jira и Matrix — GET-запросы, в Jira/второй системе/Matrix ничего не пишется.
+The app builds a draft breakdown of hours per day and task from your events (optionally with the help of an AI model). You review and edit the draft and enter the time yourself; the app never submits anything.
 
-## Запуск
+**Read-only.** All connections only read data; nothing is written to Jira, GitLab, Matrix, Confluence or Exchange.
 
-Нужны Node 18+, Rust (https://rustup.rs) и системные зависимости Tauri v2 для вашей ОС
-(https://v2.tauri.app/start/prerequisites/). Для чтения git должен быть установлен `git` в PATH.
+The UI is available in English and Russian.
+
+## Getting started
+
+Requirements: Node 18+, Rust (https://rustup.rs) and the Tauri v2 system prerequisites for your OS (https://v2.tauri.app/start/prerequisites/). Reading local repositories requires `git` on PATH.
 
 ```bash
 npm install
-npm run tauri dev      # разработка
-npm run tauri build    # установщик в src-tauri/target/release/bundle
-npm test               # тесты логики распределения
+npm run tauri dev      # development
+npm run tauri build    # installer in src-tauri/target/release/bundle
+npm test               # frontend tests
 ```
 
-### Готовый .exe для коллеги (Windows)
+Rust tests: `cargo test` in `src-tauri/`.
 
-- **Локально:** `npm run tauri build` создаёт установщик `src-tauri/target/release/bundle/nsis/Worklog Tracker_0.1.0_x64-setup.exe`
-  и портативный `src-tauri/target/release/worklog-tracker.exe` (нужен WebView2 — он есть в Windows 10/11 из коробки).
-- **На GitHub:** workflow `Build Windows installer` (Actions → Run workflow, либо тег `v0.1.0`) собирает установщик
-  на Windows-раннере; готовый файл скачивается из Artifacts запуска.
-- Установщик не подписан, поэтому SmartScreen может предупредить («Подробнее» → «Выполнить в любом случае»).
-- Токены и настройки у каждого пользователя свои (Диспетчер учётных данных и `%APPDATA%\dev.worklog.tracker`), с .exe они не передаются.
+### Windows build
 
-Linux: для хранения токенов нужен Secret Service (gnome-keyring / KWallet) и `libdbus-1-dev` при сборке.
+- `npm run tauri build` produces an NSIS installer in `src-tauri/target/release/bundle/nsis/` and a portable `src-tauri/target/release/worklog-tracker.exe`. WebView2 is required (included in Windows 10/11).
+- The `Build Windows installer` GitHub Actions workflow builds the installer on a Windows runner (manual run or a `vX.Y.Z` tag).
+- The installer is not code-signed, so Windows SmartScreen may show a warning on first launch.
+- Settings and tokens are stored per user (Windows Credential Manager and `%APPDATA%\dev.worklog.tracker`) and are not part of the build.
 
-## Настройка (вкладка «Настройки»)
+Linux: storing tokens requires Secret Service (gnome-keyring / KWallet); building requires `libdbus-1-dev`.
 
-| Сервис | Что нужно |
+## Configuration (Settings screen)
+
+| Service | What is needed |
 |---|---|
-| Jira Server/DC | URL и Personal Access Token (Профиль → Personal Access Tokens). Права только на чтение. |
-| ИИ | Base URL OpenAI-совместимого API (без `/chat/completions`), имя модели, ключ. |
-| Confluence (необязательно) | URL и Personal Access Token. Берутся страницы и комментарии, которые вы создали или правили за период — как контекст для ИИ. |
-| Почта и календарь (необязательно) | Адрес Outlook в браузере (например `https://mail.company.ru`), логин `ДОМЕН\логин` или `логин@company.ru` и пароль. Подключение к Exchange напрямую через EWS (Basic-авторизация), только чтение календаря. |
-| GitLab (необязательно) | URL и Personal Access Token с правом `read_api`. Читаются MR, которые вы создали, одобрили или комментировали; по умолчанию только проекты ваших локальных репозиториев (сопоставление по `git remote origin`). Ключ задачи берётся из названия, ветки и описания MR. |
-| Matrix | Homeserver, ваш user ID, access token (или вход через SSO в приложении). Читаются все ваши комнаты, лишние можно исключить («Загрузить список комнат…»). |
-| Git | Пути к локальным репозиториям; автор — email/имя (по умолчанию `git config user.email`). |
+| Jira Server/DC | URL and a Personal Access Token (Profile → Personal Access Tokens). Read access is enough. |
+| AI (optional) | Base URL of an OpenAI-compatible API (without `/chat/completions`), model name, API key. |
+| Confluence (optional) | URL and a Personal Access Token. Pages and comments you created or edited in the period are used as context. |
+| Calendar (optional) | Exchange server address (e.g. `https://mail.company.com`), login (`DOMAIN\user` or `user@company.com`) and password. Read via EWS with Basic authentication; only the calendar is read. |
+| GitLab (optional) | URL and a Personal Access Token with `read_api`. Merge requests you created, approved or commented on are read; by default only projects of your local repositories (matched by `git remote origin`). |
+| Matrix (optional) | Homeserver, user ID and access token (or SSO login in the app). Rooms can be excluded from the list. |
+| Git | Paths to local repositories; author email/name (defaults to `git config user.email`). |
 
-Токены хранятся в системном хранилище (Windows Credential Manager / macOS Keychain / Secret Service),
-а не в файле настроек, и в интерфейс обратно не передаются. Если у корпоративных сервисов самоподписанный
-сертификат, включите «Не проверять TLS-сертификаты».
+Tokens are kept in the OS credential store (Windows Credential Manager / macOS Keychain / Secret Service), not in the settings file, and are never sent back to the UI. For services with self-signed certificates there is an option to skip TLS verification.
 
-## Как считаются часы
+## How the draft is built
 
-1. **Сбор.** Jira: ваши смены статусов/полей, ваши комментарии, созданные вами задачи. Git: ваши коммиты по всем веткам
-   (с размером изменений). Matrix: ваши сообщения в выбранных комнатах. Confluence: созданные/отредактированные вами страницы и комментарии (название, пространство, начало текста). Календарь Exchange: встречи и звонки (время, тема, организатор, место); отменённые, отклонённые, «свободные», события на весь день и блоки длиннее 10 ч пропускаются.
-2. **Привязка к задачам.** Ключ `ABC-123` ищется в тексте коммита, имени ветки, сообщении и названии комнаты.
-   Ключи, которых нет в Jira (например `UTF-8`), отбрасываются.
-3. **ИИ-анализ дня.** Для каждого дня в ИИ уходит список событий (время, источник, ключ, текст до 200 символов)
-   и список задач-кандидатов (±3 дня). ИИ возвращает относительные веса задач и краткое описание дня.
-   События без ключа он относит к подходящей задаче по смыслу. Без ИИ (или при ошибке) работает эвристика:
-   Jira-действие ≈ 2, коммит ≈ 1 + 1.5·log10(строк), сообщение с ключом ≈ 0.5.
-4. **Часы.** Веса превращаются в часы шагом 0.25 так, что сумма дня точно равна норме (метод наибольших остатков).
-5. **Дни без активности** заполняются по ближайшему дню с активностью (предыдущему, иначе следующему), только задачами,
-   которые в этот день уже существовали и не были закрыты. К часам добавляется нейтральное описание («Анализ задачи и
-   изучение контекста» и т. п.; без выдуманных результатов). Такие дни помечены жёлтым бейджем на вкладке «Часы» и знаком ≈ на
-   вкладке «Списание» — проверьте их. Будущие и нерабочие дни не заполняются.
+1. **Collect.** Jira: your status/field changes, comments and created issues. Git: your commits on all branches (with change size). GitLab: your merge request activity. Matrix: your messages in the selected rooms. Confluence: pages and comments you created or edited. Calendar: meetings (time, subject, organizer, location); cancelled, declined, free, all-day and over-10-hour items are skipped.
+2. **Link to issues.** Issue keys like `ABC-123` are detected in commit messages, branch names, messages and room names. Keys that do not exist in Jira (e.g. `UTF-8`) are dropped.
+3. **Analyse each day.** With AI enabled, the day's events (time, source, key, text truncated to 200 characters) and candidate issues (±3 days) are sent to the configured model, which returns relative task weights and a short summary of the day. Without AI, or if the request fails, a heuristic is used: Jira action ≈ 2, commit ≈ 1 + 1.5·log10(lines), message with a key ≈ 0.5.
+4. **Hours.** Weights are converted into hours in 0.25 h steps according to your working-hours setting.
+5. **Days without events.** Depending on the selected mode, such days are left empty or get a suggested split based on neighbouring days or the whole period. Suggested days are clearly marked in the UI and should be reviewed. Future days and non-working days are never filled.
 
-### Контекст задач
+### Issue context
 
-Для каждой задачи читаются описание, родитель, эпик и связанные тикеты (на два уровня вверх) — только как контекст для ИИ,
-часы на них не начисляются. Проекты «только для контекста» задаются в настройках Jira. Если подключён Confluence, читаются
-страницы, на которые ссылается задача (описание, веб-ссылки Jira) или её эпик, и заголовки их дочерних страниц.
+For each issue, the description, parent, epic and linked issues (up to two levels up) are read as context for the AI; no hours are assigned to them. "Context-only" projects are configured in the Jira settings. With Confluence connected, pages referenced by the issue or its epic are read as well.
 
-### Вкладка «Списание»
+### Meetings
 
-Готовые значения для копирования: по каждой задаче и дню — часы (`2h 30m` или `2.5`) и описание для Tempo, с отметками
-«внесено»; по каждой неделе — текст для второй системы (его можно переписать ИИ).
+Meeting time is not subtracted from the working day. Meeting subjects are passed to the AI as context; a meeting whose subject contains an issue key adds a little weight to that issue. Meetings are listed under each day on the Hours tab and included in the per-day CSV, Markdown and copied text.
 
-В отчёте можно править часы по задачам, жать «Выровнять до нормы», отмечать день «Выходной / отпуск»,
-копировать день или неделю, а также скачать CSV (по задачам — для Jira, по дням — для второй системы) и Markdown.
+### Submit tab
 
-## Звонки и встречи
+Values ready to copy: hours (`2h 30m` or `2.5`) and a description per issue and day for Tempo, with "entered" marks; per week, text for the weekly report (can be rewritten by the AI). Hours can be edited, a day can be marked as a day off or vacation, and data can be exported as CSV and Markdown.
 
-Время звонков остаётся внутри рабочего дня и **не вычитается**. Тема встречи уходит ИИ как контекст
-(по ней он может понять, над чем шёл день); если в теме есть ключ `ABC-123`, встреча немного добавляет вес этой задаче.
-На вкладке «Часы» звонки и встречи показаны отдельной строкой под днём (время и тема), итог по неделе — в её заголовке;
-они же попадают в CSV по дням, Markdown и в «Копировать день». День, в который были только звонки, считается днём
-без данных и заполняется по выбранному режиму.
+## What is sent to the AI
 
-## Что уходит в ИИ
+Commit messages, Jira comments, Confluence page excerpts, Matrix messages and meeting subjects (truncated), plus issue titles — only to the address configured in Settings. Individual sources, or AI analysis as a whole, can be turned off for a run.
 
-Тексты ваших коммитов, комментариев в Jira, страниц Confluence, сообщений Matrix и темы встреч из календаря (обрезаны), названия задач. Только на адрес,
-указанный в настройках. Хотите исключить чат — снимите галочку «Matrix» в отчёте; без ИИ — «Анализ ИИ».
+## Public holidays
 
-## Структура
+Settings → Working time: choose a country (RU, BY, KZ, UA, UZ, US). Holidays and moved days off are not filled, moved working Saturdays are, and pre-holiday days are one hour shorter (optional). Data comes from the public isdayoff.ru service (only dates and the country code are sent). If the service is unavailable, bundled files in `src-tauri/resources/holidays/<country>.json` are used.
 
-- `src-tauri/src` — Rust: `jira.rs`, `gitlog.rs`, `matrix.rs`, `llm.rs`, `secrets.rs`, команды в `lib.rs`.
-- `src/lib` — `pipeline.ts` (сбор → анализ), `allocate.ts` (распределение часов), `prompt.ts`, `report.ts` (недели, итоги, экспорт).
-- `src/components` — `Report.tsx`, `Settings.tsx`.
+## Project layout
 
-## Производственный календарь
+- `src/` — frontend: `api.ts` (all Tauri calls), `types.ts`, `i18n/` (localization), `lib/` (pipeline, sources, analysis, hour planning, reports), `components/`, `styles/`.
+- `src-tauri/src/` — backend: `commands/` (Tauri commands), `sources/` (API clients per service), `settings.rs`, `secrets.rs`, `error.rs`.
 
-В настройках → «Рабочее время» выбирается страна (РФ, BY, KZ, UA, UZ, US). Праздники и перенесённые выходные не заполняются, перенесённые рабочие субботы заполняются, предпраздничные дни короче на 1 час (можно отключить). Данные берутся с публичного сервиса isdayoff.ru (уходят только даты и код страны). Если сервис недоступен, используются встроенные файлы `src-tauri/resources/holidays/<страна>.json` (сейчас РФ и США на 2026–2027; добавить страну или год — правка JSON и строка в `FILES` в `holidays.rs`). Чтобы не учитывать календарь, выберите «Не учитывать».
+See `AGENTS.md` for details and contributor checklists.
 
-## Автообновление
+## Auto-update
 
-Используется штатный updater Tauri. Бесплатно: подпись обновлений — это своя пара ключей, а не платный сертификат Windows; релизы раздаёт GitHub Releases.
+The app uses the Tauri updater. Updates are signed with your own key pair (no paid certificate needed) and distributed via GitHub Releases.
 
-Один раз:
-1. `npm run tauri signer generate -- -w %USERPROFILE%\.tauri\worklog.key` — создаст ключи (пароль можно оставить пустым).
-2. Публичный ключ (содержимое `worklog.key.pub`) вставьте в `src-tauri/tauri.release.conf.json` → `plugins.updater.pubkey`.
-3. В репозитории: Settings → Secrets and variables → Actions → добавьте `TAURI_SIGNING_PRIVATE_KEY` (содержимое файла `worklog.key`) и `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (пустой, если пароля нет).
-4. Файл `build-windows.yml` должен лежать в `.github/workflows/`.
+One-time setup:
+1. `npm run tauri signer generate -- -w %USERPROFILE%\.tauri\worklog.key` — generates the key pair.
+2. Put the public key (`worklog.key.pub`) into `src-tauri/tauri.release.conf.json` → `plugins.updater.pubkey`.
+3. In the repository, Settings → Secrets and variables → Actions: add `TAURI_SIGNING_PRIVATE_KEY` (contents of `worklog.key`) and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (empty if no password).
 
-Каждый релиз:
-1. Поднимите версию в `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` и `package.json` (например, 0.2.0).
-2. `git tag v0.2.0 && git push origin v0.2.0` — Actions соберёт, подпишет и опубликует релиз с `latest.json`.
-3. У всех, у кого стоит версия с обновлятором, при запуске появится баннер «Доступна версия…» → «Обновить».
+Each release:
+1. Bump the version in `package.json`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml`.
+2. `git tag vX.Y.Z && git push origin vX.Y.Z` — the workflow builds, signs and publishes a release with `latest.json`.
+3. Installed copies with the updater show an "update available" banner on launch.
 
-Первую версию с обновлятором нужно поставить вручную. Приватный ключ не коммитьте и не теряйте: без него выпустить обновление для установленных копий нельзя. Адрес обновлений — в `tauri.release.conf.json` (`endpoints`), для приватного репозитория GitHub Releases не подойдёт.
+The first version with the updater has to be installed manually. Keep the private key safe and out of the repository: without it, no updates can be issued for installed copies. The update endpoint is set in `tauri.release.conf.json` (`endpoints`); GitHub Releases of a private repository will not work as an update source.

@@ -12,7 +12,7 @@ export function plural(n: number, forms: PluralForms, locale: Locale = getLocale
   return forms[cat] ?? forms.other;
 }
 
-/** `n` followed by the matching word form: "3 дня", "1 day". */
+/** `n` followed by the matching word form: "3 days", "1 day". */
 export const count = (n: number, forms: PluralForms): string => `${n} ${plural(n, forms)}`;
 
 const WEEKDAYS: Record<Locale, string[]> = {
@@ -38,7 +38,7 @@ export const weekdaysShort = (): string[] => WEEKDAYS[getLocale()];
 export const monthShortName = (m: number): string => MONTHS_SHORT[getLocale()][m];
 export const monthName = (m: number): string => MONTHS[getLocale()][m];
 
-/** "5 ноября" / "November 5" (with the year when asked). */
+/** "November 5" (with the year when asked). */
 export function dayMonth(d: Date, withYear = false): string {
   const y = withYear ? ` ${d.getFullYear()}` : "";
   return getLocale() === "ru" ? `${d.getDate()} ${MONTHS_OF.ru[d.getMonth()]}${y}` : `${MONTHS_OF.en[d.getMonth()]} ${d.getDate()}${withYear ? "," + y : ""}`;

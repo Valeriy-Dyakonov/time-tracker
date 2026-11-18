@@ -117,7 +117,7 @@ export interface LogEntry {
   msg: string;
 }
 
-/** One piece of evidence the day was built from (shown in "Разбор ИИ"). */
+/** One piece of evidence the day was built from (shown in the AI review tab). */
 export interface Evidence {
   ts: number;
   source: Source;
