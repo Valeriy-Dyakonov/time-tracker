@@ -65,6 +65,7 @@ const dashboard: typeof ru = {
   detail: {
     openInJira: "Open in Jira",
     close: "Close",
+    resize: "Drag to resize; double-click for the default width",
     back: "Back",
     loading: "Loading the task…",
     failed: (e: string) => `Could not load the task: ${e}`,

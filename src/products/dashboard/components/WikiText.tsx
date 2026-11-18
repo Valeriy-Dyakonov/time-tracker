@@ -32,6 +32,18 @@ export function WikiText({ text, isKey, onKey }: { text: string; isKey: (k: stri
           case "ol": return <ol key={n}>{b.items.map((it, k) => <li key={k}>{line(it)}</li>)}</ol>;
           case "code": return <pre key={n}><code>{b.v}</code></pre>;
           case "quote": return <blockquote key={n}>{b.lines.map((l, k) => <Fragment key={k}>{k > 0 && <br />}{line(l)}</Fragment>)}</blockquote>;
+          case "table":
+            return (
+              <div key={n} className="wiki-table">
+                <table>
+                  <tbody>
+                    {b.rows.map((r, k) => (
+                      <tr key={k}>{r.map((c, j) => (c.head ? <th key={j}>{line(c.v)}</th> : <td key={j}>{line(c.v)}</td>))}</tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
         }
       })}
     </div>

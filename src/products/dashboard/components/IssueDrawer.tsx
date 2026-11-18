@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { dateShort, useT } from "@/i18n";
 import { api } from "@/shared/api";
+import { useStored } from "@/shared/hooks/useStored";
 import { localDate } from "@/shared/lib/dates";
 import type { DashIssue, DashPerson, DashRelated, IssueDetail } from "@/shared/types";
 import { Button } from "@/shared/ui";
@@ -10,6 +11,28 @@ import { ago } from "./IssueCard";
 import { WikiText } from "./WikiText";
 
 const day = (ms: number | null) => (ms ? dateShort(localDate(new Date(ms))) : "");
+
+const DEFAULT_WIDTH = 780;
+const MIN_WIDTH = 420;
+/** Keep a strip of the board visible to click back to it. */
+const maxWidth = () => Math.max(MIN_WIDTH, window.innerWidth - 80);
+const clampWidth = (w: number) => Math.round(Math.min(maxWidth(), Math.max(MIN_WIDTH, w)));
+
+/** Drag the left edge to resize; the width is remembered, a double click restores the default. */
+function useDrawerWidth(): [number, (e: React.PointerEvent) => void, () => void] {
+  const [width, setWidth] = useStored("worklog.dashboard.drawerWidth", DEFAULT_WIDTH);
+  const start = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const el = e.currentTarget as HTMLElement;
+    el.setPointerCapture(e.pointerId);
+    const move = (ev: PointerEvent) => setWidth(clampWidth(window.innerWidth - ev.clientX));
+    const up = () => { el.removeEventListener("pointermove", move); el.removeEventListener("pointerup", up); document.body.classList.remove("resizing"); };
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", up);
+    document.body.classList.add("resizing");
+  };
+  return [clampWidth(width), start, () => setWidth(DEFAULT_WIDTH)];
+}
 
 /**
  * Side panel to read a task without leaving the app: people, epic, description, links, comments.
@@ -23,6 +46,7 @@ export function IssueDrawer(props: { issueKey: string; context: Map<string, Dash
   const [data, setData] = useState<IssueDetail | null>(null);
   const [error, setError] = useState("");
   const { onClose } = props;
+  const [width, startResize, resetWidth] = useDrawerWidth();
 
   useEffect(() => { setStack([props.issueKey]); }, [props.issueKey]);
   useEffect(() => {
@@ -45,7 +69,8 @@ export function IssueDrawer(props: { issueKey: string; context: Map<string, Dash
 
   return (
     <div className="drawer-wrap" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <aside className="drawer" role="dialog" aria-label={key}>
+      <aside className="drawer" role="dialog" aria-label={key} style={{ width }}>
+        <div className="drawer-resize" role="separator" aria-orientation="vertical" title={d.resize} onPointerDown={startResize} onDoubleClick={resetWidth} />
         <header className="drawer-h">
           {stack.length > 1 && <button className="drawer-icon" title={d.back} aria-label={d.back} onClick={() => setStack((s) => s.slice(0, -1))}>←</button>}
           <span className="drawer-key-h">{data?.issueType && <span className="dash-type">{data.issueType}</span>}<b>{key}</b></span>

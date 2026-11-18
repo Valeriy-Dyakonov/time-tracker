@@ -2,7 +2,7 @@
  * Jira wiki markup (Server/DC descriptions and comments) -> plain blocks for safe rendering:
  * nothing becomes HTML, links are data the UI opens through the backend's http(s)-only command.
  * Covers what people actually write: paragraphs, headings, lists, code/noformat/quote blocks,
- * [text|url] and bare links, *bold*, _italic_, {{mono}}, [~mentions], images, tables as text.
+ * [text|url] and bare links, *bold*, _italic_, {{mono}}, [~mentions], images, tables.
  */
 
 export type Inline =
@@ -17,7 +17,8 @@ export type Block =
   | { t: "h"; level: number; v: Inline[] }
   | { t: "ul" | "ol"; items: Inline[][] }
   | { t: "code"; v: string }
-  | { t: "quote"; lines: Inline[][] };
+  | { t: "quote"; lines: Inline[][] }
+  | { t: "table"; rows: { head: boolean; v: Inline[] }[][] };
 
 const isWeb = (s: string) => /^https?:\/\//i.test(s);
 const KEY = /^[A-Z][A-Z0-9_]+-\d+$/;
@@ -72,7 +73,34 @@ export function parseInline(text: string, isKey: (k: string) => boolean = () => 
 
 /** Formatting wrappers that carry no meaning in plain text. */
 const stripTags = (s: string) => s.replace(/\{(color|panel|anchor)(:[^}]*)?\}/g, "");
-const tableRow = (s: string) => s.replace(/^\|\|?|\|\|?$/g, "").split(/\|\|?/).map((c) => c.trim()).join("  ·  ");
+
+/**
+ * Cells of a table row: `||` opens a header cell, `|` a plain one. A `|` inside [text|url] or {{mono}}
+ * belongs to the cell, not to the table.
+ */
+export function splitRow(line: string): { head: boolean; text: string }[] {
+  const s = line.trim();
+  const cells: { head: boolean; text: string }[] = [];
+  let cur = "", head = false, started = false, depth = 0, mono = false;
+  for (let i = 0; i < s.length; i++) {
+    if (s.startsWith("{{", i)) { mono = true; cur += "{{"; i++; continue; }
+    if (mono && s.startsWith("}}", i)) { mono = false; cur += "}}"; i++; continue; }
+    const c = s[i];
+    if (!mono && c === "[") depth++;
+    if (!mono && c === "]" && depth > 0) depth--;
+    if (c === "|" && depth === 0 && !mono) {
+      if (started) cells.push({ head, text: cur.trim() });
+      started = true;
+      cur = "";
+      head = s[i + 1] === "|";
+      if (head) i++;
+      continue;
+    }
+    cur += c;
+  }
+  if (started && cur.trim()) cells.push({ head, text: cur.trim() });
+  return cells;
+}
 
 export function parseWiki(src: string, isKey?: (k: string) => boolean): Block[] {
   const blocks: Block[] = [];
@@ -128,7 +156,18 @@ export function parseWiki(src: string, isKey?: (k: string) => boolean): Block[] 
       continue;
     }
 
-    para.push(inl(trimmed.startsWith("|") ? tableRow(trimmed) : line));
+    if (trimmed.startsWith("|")) {
+      flush();
+      const rows: { head: boolean; v: Inline[] }[][] = [];
+      for (; n < lines.length && lines[n].trim().startsWith("|"); n++) {
+        rows.push(splitRow(lines[n]).map((c) => ({ head: c.head, v: inl(c.text) })));
+      }
+      n--;
+      blocks.push({ t: "table", rows });
+      continue;
+    }
+
+    para.push(inl(line));
   }
   flush();
   return blocks;

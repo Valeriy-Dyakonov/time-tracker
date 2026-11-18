@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseInline, parseWiki } from "./wiki";
+import { parseInline, parseWiki, splitRow } from "./wiki";
 
 const isKey = (k: string) => k.startsWith("ABC-");
 
@@ -39,15 +39,43 @@ describe("parseInline", () => {
 describe("parseWiki", () => {
   it("splits headings, lists, code, quotes and paragraphs", () => {
     const blocks = parseWiki("h2. Steps\n* one\n* two\n# first\n\n{code:java}\nint x = 1;\n{code}\nbq. quoted\nline a\nline b\n\n||A||B||\n|1|2|");
-    expect(blocks.map((b) => b.t)).toEqual(["h", "ul", "ol", "code", "quote", "p", "p"]);
+    expect(blocks.map((b) => b.t)).toEqual(["h", "ul", "ol", "code", "quote", "p", "table"]);
     expect(blocks[1]).toEqual({ t: "ul", items: [[{ t: "text", v: "one" }], [{ t: "text", v: "two" }]] });
     expect(blocks[3]).toEqual({ t: "code", v: "int x = 1;" });
     expect(blocks[5]).toEqual({ t: "p", lines: [[{ t: "text", v: "line a" }], [{ t: "text", v: "line b" }]] });
-    expect(blocks[6]).toEqual({ t: "p", lines: [[{ t: "text", v: "A  ·  B" }], [{ t: "text", v: "1  ·  2" }]] });
+    expect(blocks[6]).toEqual({ t: "table", rows: [
+      [{ head: true, v: [{ t: "text", v: "A" }] }, { head: true, v: [{ t: "text", v: "B" }] }],
+      [{ head: false, v: [{ t: "text", v: "1" }] }, { head: false, v: [{ t: "text", v: "2" }] }],
+    ] });
   });
 
   it("drops colour wrappers and handles one-line code", () => {
     expect(parseWiki("{code}a=1{code}")).toEqual([{ t: "code", v: "a=1" }]);
     expect(parseWiki("{color:red}warn{color}")).toEqual([{ t: "p", lines: [[{ t: "text", v: "warn" }]] }]);
+  });
+});
+
+describe("tables", () => {
+  it("keeps | inside links and mono text in the cell", () => {
+    expect(splitRow("|[spec|https://wiki/x]|{{a|b}}| plain |")).toEqual([
+      { head: false, text: "[spec|https://wiki/x]" },
+      { head: false, text: "{{a|b}}" },
+      { head: false, text: "plain" },
+    ]);
+  });
+
+  it("reads header cells, mixed rows and empty cells", () => {
+    expect(splitRow("||Name||Value||")).toEqual([{ head: true, text: "Name" }, { head: true, text: "Value" }]);
+    expect(splitRow("||Row|x||")).toEqual([{ head: true, text: "Row" }, { head: false, text: "x" }]);
+    expect(splitRow("|a||c|").map((c) => c.text)).toEqual(["a", "c"]);
+    expect(splitRow("|a| |c|").map((c) => c.text)).toEqual(["a", "", "c"]);
+  });
+
+  it("renders links inside cells", () => {
+    const [t] = parseWiki("||Doc||\n|[spec|https://wiki/x]|");
+    expect(t).toEqual({ t: "table", rows: [
+      [{ head: true, v: [{ t: "text", v: "Doc" }] }],
+      [{ head: false, v: [{ t: "link", href: "https://wiki/x", v: "spec" }] }],
+    ] });
   });
 });
