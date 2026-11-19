@@ -9,6 +9,9 @@ pub const BOARD_TTL: Duration = Duration::from_secs(10 * 60);
 /// Open merge requests change quickly (new comments, approvals): a list is used for this long.
 pub const MR_TTL: Duration = Duration::from_secs(3 * 60);
 
+/// What GitLab said about a task's merge requests is used for this long; "Искать заново" ignores it.
+pub const TASK_MRS_TTL: Duration = Duration::from_secs(15 * 60);
+
 const DAY_MS: i64 = 24 * 60 * 60 * 1000;
 /// Issues not refreshed for this long are dropped; they will be read again if a screen needs them.
 const ISSUE_KEEP_DAYS: i64 = 30;
@@ -58,6 +61,8 @@ pub fn purge(conn: &mut Connection) -> rusqlite::Result<()> {
     let tx = conn.transaction()?;
     tx.execute("DELETE FROM cache_issue WHERE fetched_at < ?1", [now - ISSUE_KEEP_DAYS * DAY_MS])?;
     tx.execute("DELETE FROM cache_mr WHERE fetched_at < ?1", [now - MR_KEEP_DAYS * DAY_MS])?;
+    tx.execute("DELETE FROM cache_task_mr WHERE fetched_at < ?1", [now - SCOPE_KEEP_DAYS * DAY_MS])?;
+    tx.execute("DELETE FROM cache_task_doc WHERE fetched_at < ?1", [now - SCOPE_KEEP_DAYS * DAY_MS])?;
     tx.execute("DELETE FROM cache_task WHERE fetched_at < ?1", [now - SCOPE_KEEP_DAYS * DAY_MS])?;
     tx.execute("DELETE FROM cache_scope WHERE fetched_at < ?1", [now - SCOPE_KEEP_DAYS * DAY_MS])?;
     tx.execute(

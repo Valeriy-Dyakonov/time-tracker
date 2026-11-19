@@ -5,9 +5,21 @@ import type { DashIssue, DashProfile, IssueDetail } from "@/shared/types";
 import { AnalysisPanel, hasAnalysis } from "./AnalysisPanel";
 import { DevPanel } from "./DevPanel";
 import { NotesPanel } from "./NotesPanel";
-import { notesOf, useTaskDev } from "./useTaskDev";
+import { DEV_MAX_AGE_MS, loadDescendants, notesOf, useTaskDev } from "./useTaskDev";
 
 type View = "dev" | "notes" | "ai" | null;
+
+/**
+ * Development of a task with subtasks is mostly in the subtasks, that of an epic in its tasks, and that of a release in
+ * the tasks it is linked to: look at them too.
+ */
+const MAX_UNDER = 15;
+export function underTask(detail: Pick<IssueDetail, "key" | "subtasks" | "linked">, context: Map<string, Pick<DashIssue, "key" | "parent" | "epic">>): string[] {
+  const keys = new Set([...detail.subtasks, ...detail.linked].map((s) => s.key));
+  for (const i of context.values()) if (i.parent === detail.key || i.epic === detail.key) keys.add(i.key);
+  keys.delete(detail.key);
+  return [...keys].sort().slice(0, MAX_UNDER);
+}
 
 /**
  * Buttons under the task title, all read-only: development (merge requests, commits and where the app looked),
@@ -24,13 +36,32 @@ export function TaskTools(props: {
 }) {
   const m = useT().dashboard.tools;
   const key = props.detail.key;
-  const { dev, reload } = useTaskDev(key, props.setup);
+  const [children, setChildren] = useState<string[] | null>(null);
+  const [round, setRound] = useState(0);
+  const { detail, context } = props;
+  useEffect(() => {
+    let live = true;
+    setChildren(null);
+    void loadDescendants(key, underTask(detail, context)).then((c) => live && setChildren(c));
+    return () => { live = false; };
+    // The board's own data is enough to start from; a new task or a repeated search asks again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, round]);
+  const { dev, reload: reloadDev } = useTaskDev(key, props.setup, children);
+  const reload = () => {
+    reloadDev();
+    setRound((n) => n + 1);
+  };
   const [view, setView] = useState<View>(null);
   useEffect(() => { setView(hasAnalysis(key) ? "ai" : null); }, [key]);
 
   const notes = useMemo(() => (dev ? notesOf(dev) : []), [dev]);
   const devCount = dev ? dev.mrs.mrs.length + dev.git.commits.length : 0;
-  const toggle = (v: View) => setView((cur) => (cur === v ? null : v));
+  const toggle = (v: View) => {
+    // Opening a panel on data that has grown old reads it again.
+    if (v !== view && dev?.at && Date.now() - dev.at > DEV_MAX_AGE_MS) reload();
+    setView((cur) => (cur === v ? null : v));
+  };
   const looked = props.setup.git || props.setup.gitlab;
 
   return (

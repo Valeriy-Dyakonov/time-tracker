@@ -100,7 +100,11 @@ export default {
     notesOn: "ищутся в файлах MR и ветках MR в GitLab, а также локально (HEAD и ветки задачи)",
     notesOff: "выключены — не искали.",
     toSettings: "Включить в настройках",
+    group: { services: "По сервисам", list: "Списком" },
+    groupTip: "Сервис — проект GitLab или репозиторий, в котором сделаны изменения",
+    withChildren: (n: number) => `Вместе с подзадачами и связанными задачами: ${n}`,
     reload: "Искать заново",
+    readAt: (t: string) => `найдено в ${t}`,
     reloadTip: "Заново опросить git и GitLab — например, после пуша или нового MR",
   },
   tools: {

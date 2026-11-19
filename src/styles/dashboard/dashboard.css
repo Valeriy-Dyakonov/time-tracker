@@ -317,7 +317,10 @@ body.resizing .drawer { animation: none; }
 .dev-where > summary h5 { margin: 0 !important; }
 .dev-where > ul { margin-top: 6px !important; }
 .tool-panel.dev { position: relative; }
-.dev-reload { position: absolute; top: 10px; right: 12px; }
+.dev-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dev-group { margin-bottom: 10px; }
+.dev-group h6 { display: flex; align-items: center; gap: 6px; margin: 4px 0 6px; font-size: 13px; font-weight: 700; }
+.mr-task { flex: none; padding: 0 6px; border-radius: var(--r-pill); font-size: 11px; font-weight: 600; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
 
 /* Status dropdown in the task header */
 .sel { position: relative; display: inline-block; }

@@ -77,6 +77,14 @@ pub async fn jira_issue_detail(app: tauri::AppHandle, key: String) -> AppResult<
     jira::detail::load(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &key).await
 }
 
+/// Keys of all tasks under a task (subtasks, tasks of an epic, their subtasks...), nearest first.
+#[tauri::command]
+pub async fn jira_descendants(app: tauri::AppHandle, key: String) -> AppResult<Vec<String>> {
+    valid_key(&key)?;
+    let c = Ctx::load(&app)?;
+    jira::children::find(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &key).await
+}
+
 /// The user's own worklogs in the period, to compare with the plan in the "Списание" tab.
 #[tauri::command]
 pub async fn jira_worklogs(app: tauri::AppHandle, start: String, end: String) -> AppResult<Vec<Worklog>> {

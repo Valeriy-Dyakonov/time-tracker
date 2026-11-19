@@ -32,7 +32,13 @@ pub async fn task_git(app: tauri::AppHandle, key: String) -> AppResult<taskgit::
 
 /// Merge requests of the task in GitLab and the notes in their branches; `configured: false` when GitLab is not set up.
 #[tauri::command]
-pub async fn task_mrs(app: tauri::AppHandle, key: String) -> AppResult<gitlab::task::TaskMrs> {
+pub async fn task_mrs(
+    app: tauri::AppHandle,
+    store: tauri::State<'_, crate::store::Store>,
+    key: String,
+    force: Option<bool>,
+) -> AppResult<gitlab::task::TaskMrs> {
+    use crate::store::{self, fresh, task_mrs};
     super::atlassian::valid_key(&key)?;
     let c = Ctx::load(&app)?;
     let s = &c.settings;
@@ -40,12 +46,23 @@ pub async fn task_mrs(app: tauri::AppHandle, key: String) -> AppResult<gitlab::t
         return Ok(gitlab::task::TaskMrs::default());
     };
     let docs = s.ai_docs_enabled.then_some(s.ai_docs_paths.as_slice());
-    // A GitLab failure is shown next to what was found locally, not instead of it.
-    Ok(gitlab::task::find(&c.client, &s.gitlab_url, &pat, &key, docs).await.unwrap_or_else(|e| gitlab::task::TaskMrs {
-        configured: true,
-        error: Some(e),
-        ..Default::default()
-    }))
+    // The notes in branches depend on a setting, so the stored answer belongs to the setting it was read with.
+    let scope = format!("gitlab.task.{key}.{}", if docs.is_some() { "notes" } else { "mrs" });
+    store.with(|conn| fresh::bind_origin(conn, "gitlab", s.gitlab_url.trim()))?;
+    if !force.unwrap_or(false) && store.with(|conn| fresh::is_fresh(conn, &scope, fresh::TASK_MRS_TTL))? {
+        if let Some(stored) = store.with(|conn| task_mrs::load(conn, &scope, &key))? {
+            return Ok(stored);
+        }
+    }
+    // A GitLab failure is shown next to what was found locally, not instead of it, and is not stored.
+    match gitlab::task::find(&c.client, &s.gitlab_url, &pat, &key, docs).await {
+        Ok(found) => {
+            // The answer is in hand; a failed write only means the next open asks GitLab again.
+            let _ = store.with(|conn| task_mrs::save(conn, &scope, &key, &found, store::now_ms()));
+            Ok(found)
+        }
+        Err(e) => Ok(gitlab::task::TaskMrs { configured: true, error: Some(e), ..Default::default() }),
+    }
 }
 
 /// GitLab links of a task (MRs, issues, files, wiki pages) read as context for the AI analysis; empty when

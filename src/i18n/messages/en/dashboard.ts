@@ -102,7 +102,11 @@ const dashboard: typeof ru = {
     notesOn: "searched in MR files and MR branches in GitLab, and locally (HEAD and task branches)",
     notesOff: "off, not searched.",
     toSettings: "Turn on in settings",
+    group: { services: "By service", list: "List" },
+    groupTip: "A service is the GitLab project or repository where the changes were made",
+    withChildren: (n: number) => `Including subtasks and linked tasks: ${n}`,
     reload: "Search again",
+    readAt: (t: string) => `found at ${t}`,
     reloadTip: "Ask git and GitLab again, e.g. after a push or a new MR",
   },
   tools: {

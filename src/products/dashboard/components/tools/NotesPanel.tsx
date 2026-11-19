@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useT } from "@/i18n";
 import { api } from "@/shared/api";
-import { Button } from "@/shared/ui";
+import { useStored } from "@/shared/hooks/useStored";
+import { Button, Segmented } from "@/shared/ui";
 import { noteTitle } from "../../lib/markdown";
 import { WikiText } from "../WikiText";
 import { readNote, type TaskNote } from "./useTaskDev";
@@ -34,6 +35,8 @@ export function NotesPanel({ notes, onReload, isKey, onKey }: {
   const m = useT().dashboard.tools;
   const [texts, setTexts] = useState<Record<string, Text>>({});
   const [open, setOpen] = useState<TaskNote | null>(null);
+  const [group, setGroup] = useStored<"services" | "list">("worklog.dashboard.devGroup", "services");
+  const g = useT().dashboard.dev;
 
   useEffect(() => {
     let live = true;
@@ -49,10 +52,13 @@ export function NotesPanel({ notes, onReload, isKey, onKey }: {
     <div className="tool-panel docs">
       <div className="docs-bar">
         <span className="muted">{notes.length ? m.docsFound(notes.length) : m.docsNone}</span>
+        <Segmented size="small" value={group} onChange={setGroup} title={g.groupTip}
+          options={[{ value: "services", label: g.group.services }, { value: "list", label: g.group.list }]} />
         <Button size="small" onClick={onReload}>↻ {m.docsReload}</Button>
       </div>
       {notes.length === 0 && <p className="muted docs-hint">{m.docsNoneHint}</p>}
-      {notes.map((n) => {
+      {(() => {
+      const row = (n: TaskNote) => {
         const t = texts[n.id];
         const title = typeof t === "string" ? noteTitle(t) : null;
         return (
@@ -70,7 +76,16 @@ export function NotesPanel({ notes, onReload, isKey, onKey }: {
             <RepoLink url={n.url} />
           </button>
         );
-      })}
+      };
+        return group === "list"
+          ? notes.map(row)
+          : [...notes.reduce((m2, n) => m2.set(n.service, [...(m2.get(n.service) ?? []), n]), new Map<string, TaskNote[]>())].map(([name, list]) => (
+              <div key={name} className="dev-group">
+                <h6>{name}<span className="tool-n">{list.length}</span></h6>
+                {list.map(row)}
+              </div>
+            ));
+      })()}
       {open && <NoteWindow note={open} text={texts[open.id]} isKey={isKey} onKey={onKey} onClose={() => setOpen(null)} />}
     </div>
   );

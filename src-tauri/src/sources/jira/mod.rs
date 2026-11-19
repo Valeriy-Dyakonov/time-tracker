@@ -2,6 +2,7 @@
 mod parse;
 pub mod worklog;
 pub mod dashboard;
+pub mod children;
 pub mod detail;
 pub mod transition;
 
