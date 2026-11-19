@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Mr, MrBoard, MrPerson, MrTask, Roster } from "@/shared/types";
-import { buildSections, buildView, factsOf, filterCounts, groupMrs, isStale, needsMyReview, teamUsernames } from "./board";
+import { buildSections, buildView, factsOf, filterCounts, groupMrs, isStale, needsMyReview, reviewPool, teamUsernames } from "./board";
 
 const p = (username: string): MrPerson => ({ username, name: username });
 const mr = (iid: number, author: string, over: Partial<Mr> = {}): Mr => ({
@@ -125,5 +125,45 @@ describe("grouping", () => {
     const day = 86_400_000;
     expect(isStale(mr(1, "a", { updated: 0 }), 15 * day)).toBe(true);
     expect(isStale(mr(1, "a", { updated: 0 }), 13 * day)).toBe(false);
+  });
+});
+
+describe("review pool of a developer", () => {
+  const roster: Roster = {
+    teams: [{ id: 1, parentId: null, name: "Backend" }, { id: 2, parentId: null, name: "Other" }],
+    people: [
+      { id: 1, teamId: 1, name: "Dev", role: "dev", accounts: [{ system: "gitlab", extId: "dev1" }], absences: [] },
+      { id: 2, teamId: 1, name: "Lead", role: "devLead", accounts: [{ system: "gitlab", extId: "lead1" }], absences: [] },
+      { id: 3, teamId: 1, name: "Tester", role: "qa", accounts: [{ system: "gitlab", extId: "qa1" }], absences: [] },
+      { id: 4, teamId: 2, name: "Far", role: "dev", accounts: [{ system: "gitlab", extId: "far1" }], absences: [] },
+    ],
+  };
+  const pool = reviewPool(roster, 1);
+
+  it("takes the team's developers and leads by role", () => {
+    expect([...pool.devs]).toEqual(["dev1"]);
+    expect([...pool.leads]).toEqual(["lead1"]);
+  });
+  it("waits for my review: the team's developers and the lead, but nothing into master", () => {
+    expect(needsMyReview(mr(1, "dev1", { targetBranch: "develop" }), "me", pool)).toBe(true);
+    expect(needsMyReview(mr(2, "lead1", { targetBranch: "release/2.5" }), "me", pool)).toBe(true);
+    expect(needsMyReview(mr(3, "lead1", { targetBranch: "master" }), "me", pool)).toBe(false);
+    expect(needsMyReview(mr(4, "dev1", { targetBranch: "main" }), "me", pool)).toBe(false);
+  });
+  it("not the testers, other teams, drafts, my own or the ones I approved", () => {
+    expect(needsMyReview(mr(1, "qa1"), "me", pool)).toBe(false);
+    expect(needsMyReview(mr(2, "far1"), "me", pool)).toBe(false);
+    expect(needsMyReview(mr(3, "dev1", { draft: true }), "me", pool)).toBe(false);
+    expect(needsMyReview(mr(4, "me"), "me", pool)).toBe(false);
+    expect(needsMyReview(mr(5, "dev1", { approvedBy: [p("me")] }), "me", pool)).toBe(false);
+  });
+  it("an MR that names me still counts, also one into master; without a pool only those count", () => {
+    expect(needsMyReview(mr(1, "lead1", { targetBranch: "master", reviewers: [p("me")] }), "me", pool)).toBe(true);
+    expect(needsMyReview(mr(2, "dev1", { targetBranch: "develop" }), "me")).toBe(false);
+  });
+  it("fills the review section and takes them out of the team's", () => {
+    const b = board([mr(1, "dev1", { targetBranch: "develop" }), mr(2, "lead1", { targetBranch: "master" }), mr(3, "me")]);
+    const s = buildSections(b, ["dev1", "lead1"], "all", pool);
+    expect(s.map((x) => x.mrs.map((m) => m.iid))).toEqual([[1], [3], [2]]);
   });
 });

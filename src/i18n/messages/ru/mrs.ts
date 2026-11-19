@@ -13,10 +13,10 @@ const mrs = {
   noTeam: "В составе нет GitLab-аккаунтов — открыты только ваши MR и те, где вас назначили ревьюером. Привяжите аккаунты в инструменте «Команда».",
   filters: { all: "Все", waiting: "Ждут апрува", threads: "Есть обсуждения", ready: "Готовы к мерджу" } as Record<Filter, string>,
   sections: {
-    review: { title: "Ждут вашего ревью", empty: "Никто не ждёт вашего ревью." },
+    review: { title: "Ждут вашего ревью", empty: "Никто не ждёт вашего ревью.", tip: "Те, где вас назначили ревьюером. В профиле разработчика — ещё MR разработчиков вашей команды и лида, кроме тех, что идут в master (главную ветку). Роли берутся из инструмента «Команда»." },
     mine: { title: "Ваши MR", empty: "У вас нет открытых MR." },
     team: { title: "MR команды", empty: "У команды нет открытых MR, где вы не ревьюер." },
-  } as Record<SectionId, { title: string; empty: string }>,
+  } as Record<SectionId, { title: string; empty: string; tip?: string }>,
   group: "Группировка",
   groups: { none: "Без группировки", release: "По релизам", task: "По задачам" } as Record<GroupBy, string>,
   noRelease: "Без релиза",

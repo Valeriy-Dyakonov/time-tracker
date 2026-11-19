@@ -48,6 +48,10 @@ pub struct Settings {
     pub ai_docs_enabled: bool,
     /// Where those notes live; `{key}` is the task key.
     pub ai_docs_paths: Vec<String>,
+    /// Remind to log the time in the evening (the app must be open).
+    pub remind_enabled: bool,
+    /// Local time of the reminder, "HH:MM".
+    pub remind_time: String,
     pub hours_per_day: f64,
     /// 1 = Monday ... 7 = Sunday
     pub workdays: Vec<u8>,
@@ -82,6 +86,8 @@ impl Default for Settings {
             git_authors: vec![],
             ai_docs_enabled: false,
             ai_docs_paths: vec!["docs/ai/{key}".into(), "ai/{key}".into()],
+            remind_enabled: false,
+            remind_time: "18:00".into(),
             hours_per_day: 8.0,
             workdays: vec![1, 2, 3, 4, 5],
             accept_invalid_certs: false,

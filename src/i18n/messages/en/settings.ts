@@ -212,6 +212,16 @@ const en: typeof ru = {
     add: "Add",
     removeApp: "Remove",
   },
+  reminder: {
+    enable: "Remind me to log time",
+    hint: "On every working day at this time a notification comes if the day is not yet logged in Jira. It works while the app is open (minimized too). Weekends and holidays are skipped.",
+    time: "Reminder time",
+    test: "Test the notification",
+    tested: "Notification sent. If you do not see it, check that notifications are allowed in the system (Do Not Disturb is off).",
+    title: "Log your time",
+    body: "The working day is ending and the time is not logged yet.",
+    failed: (e: string) => `Could not send it: ${e}`,
+  },
   work: {
     title: "Working time",
     hours: "Default hours per day",

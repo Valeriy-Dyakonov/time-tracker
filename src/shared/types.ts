@@ -29,6 +29,10 @@ export interface Settings {
   aiDocsEnabled: boolean;
   /** Where those notes live; `{key}` is the task key. */
   aiDocsPaths: string[];
+  /** Remind to log the time in the evening (the app must be open). */
+  remindEnabled: boolean;
+  /** Local time of the reminder, "HH:MM". */
+  remindTime: string;
   hoursPerDay: number;
   /** Production calendar country (ru, by, kz, ua, uz, us); empty = weekdays only. */
   holidayCountry: string;
@@ -63,6 +67,8 @@ export const defaultSettings: Settings = {
   gitAuthors: [],
   aiDocsEnabled: false,
   aiDocsPaths: ["docs/ai/{key}", "ai/{key}"],
+  remindEnabled: false,
+  remindTime: "18:00",
   hoursPerDay: 8,
   holidayCountry: "ru",
   shortDays: true,

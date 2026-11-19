@@ -11,6 +11,17 @@ const COUNTRIES = ["", "ru", "by", "kz", "ua", "uz", "us"] as const;
 export function WorkSection({ f }: { f: SettingsForm }) {
   const { s, set } = f;
   const m = useT().settings.work;
+  const r = useT().settings.reminder;
+  const [remindMsg, setRemindMsg] = useState("");
+
+  async function testReminder() {
+    try {
+      await api.notify(r.title, r.body);
+      setRemindMsg(r.tested);
+    } catch (e) {
+      setRemindMsg(r.failed(String(e)));
+    }
+  }
   const [hol, setHol] = useState<string | null>(null);
 
   async function loadHolidays() {
@@ -58,6 +69,17 @@ export function WorkSection({ f }: { f: SettingsForm }) {
             </label>
           ))}
         </div>
+      </Field>
+      <Field label={r.enable} hint={r.hint}>
+        <div className="row">
+          <label className="check">
+            <input type="checkbox" checked={s.remindEnabled} onChange={(e) => set("remindEnabled", e.target.checked)} />
+            {r.enable}
+          </label>
+          <input type="time" value={s.remindTime} disabled={!s.remindEnabled} title={r.time} onChange={(e) => set("remindTime", e.target.value || "18:00")} />
+          <Button size="small" onClick={testReminder}>{r.test}</Button>
+        </div>
+        {remindMsg && <p className="hint">{remindMsg}</p>}
       </Field>
       <label className="check">
         <input type="checkbox" checked={s.acceptInvalidCerts} onChange={(e) => set("acceptInvalidCerts", e.target.checked)} />

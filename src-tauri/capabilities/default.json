@@ -12,6 +12,7 @@
     "core:window:allow-close",
     "core:window:allow-show",
     "updater:default",
-    "dialog:allow-save"
+    "dialog:allow-save",
+    "notification:default"
   ]
 }

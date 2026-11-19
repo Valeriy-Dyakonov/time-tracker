@@ -6,6 +6,7 @@ pub mod code;
 pub mod connection;
 pub mod llm;
 pub mod matrix;
+pub mod notify;
 pub mod people;
 pub mod settings;
 

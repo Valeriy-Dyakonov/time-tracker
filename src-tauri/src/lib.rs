@@ -15,7 +15,7 @@ mod util;
 #[cfg(not(feature = "updater"))]
 use tauri_plugin_updater as _;
 
-use commands::{atlassian, calendar, calls, code, connection, llm, matrix, people, settings as config};
+use commands::{atlassian, calendar, calls, code, connection, llm, matrix, notify, people, settings as config};
 
 /// The local cache lives next to the settings but in the machine-local folder (it is not worth roaming).
 fn open_store(app: &tauri::AppHandle) -> Result<store::Store, Box<dyn std::error::Error>> {
@@ -30,7 +30,7 @@ fn open_store(app: &tauri::AppHandle) -> Result<store::Store, Box<dyn std::error
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init());
+    let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init()).plugin(tauri_plugin_notification::init());
     #[cfg(feature = "updater")]
     let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
     builder
@@ -79,6 +79,7 @@ pub fn run() {
             code::scan_git_repos,
             code::task_git,
             code::task_doc,
+            notify::notify,
             code::task_mrs,
             code::gitlab_links,
             code::task_remote_doc,

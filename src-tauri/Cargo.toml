@@ -25,6 +25,7 @@ keyring = "4"
 tauri-plugin-dialog = "2"
 rusqlite = { version = "0.43.0", features = ["bundled"] }
 sysinfo = { version = "0.40.4", default-features = false, features = ["system"] }
+tauri-plugin-notification = "2"
 
 [features]
 # Release builds with auto-update: `tauri build --features updater --config src-tauri/tauri.release.conf.json`.

@@ -26,9 +26,25 @@ const passes = (mr: Mr, f: Filter): boolean => {
   return f === "waiting" ? facts.waiting : f === "threads" ? facts.threads : facts.ready;
 };
 
-/** Which MRs the user is asked to review and has not approved yet. */
-export const needsMyReview = (mr: Mr, me: string): boolean =>
-  !mr.draft && mr.author.username !== me && mr.reviewers.some((r) => r.username === me) && !mr.approvedBy.some((a) => a.username === me);
+/** GitLab usernames whose MRs a developer reviews without being asked: the team's developers and its lead. */
+export interface ReviewPool {
+  devs: Set<string>;
+  leads: Set<string>;
+}
+
+/** The main line: an MR into it is not the developer profile's to review, whoever wrote it. */
+const MAIN_LINE = /^(master|main)$/i;
+
+/**
+ * Which MRs the user is asked to review and has not approved yet: those that name the user as reviewer and,
+ * with a `pool` (developer profile), also those of the team's developers and of the lead, except MRs into master.
+ */
+export const needsMyReview = (mr: Mr, me: string, pool?: ReviewPool | null): boolean => {
+  if (mr.draft || mr.author.username === me || mr.approvedBy.some((a) => a.username === me)) return false;
+  if (mr.reviewers.some((r) => r.username === me)) return true;
+  const who = mr.author.username;
+  return !!pool && !MAIN_LINE.test(mr.targetBranch) && (pool.devs.has(who) || pool.leads.has(who));
+};
 
 export interface Section {
   id: SectionId;
@@ -36,10 +52,10 @@ export interface Section {
 }
 
 /** Splits the board: waiting for my review, my own, and the team's that I am not asked to review. Newest change first. */
-export function buildSections(board: MrBoard, team: string[], filter: Filter): Section[] {
+export function buildSections(board: MrBoard, team: string[], filter: Filter, pool?: ReviewPool | null): Section[] {
   const me = board.me.username;
   const people = new Set(team);
-  const review = board.mrs.filter((m) => needsMyReview(m, me));
+  const review = board.mrs.filter((m) => needsMyReview(m, me, pool));
   const taken = new Set(review);
   const sections: Record<SectionId, Mr[]> = {
     review,
@@ -50,12 +66,12 @@ export function buildSections(board: MrBoard, team: string[], filter: Filter): S
 }
 
 /** How many MRs each filter would show over all sections, for the counters on the chips. */
-export function filterCounts(board: MrBoard, team: string[]): Record<Filter, number> {
-  return Object.fromEntries(FILTERS.map((f) => [f, buildSections(board, team, f).reduce((n, s) => n + s.mrs.length, 0)])) as Record<Filter, number>;
+export function filterCounts(board: MrBoard, team: string[], pool?: ReviewPool | null): Record<Filter, number> {
+  return Object.fromEntries(FILTERS.map((f) => [f, buildSections(board, team, f, pool).reduce((n, s) => n + s.mrs.length, 0)])) as Record<Filter, number>;
 }
 
-/** GitLab usernames of the people in a team and its sub-teams (all people when no team is chosen). */
-export function teamUsernames(roster: Roster, teamId: number | null): string[] {
+/** People of a team and its sub-teams (everyone when no team is chosen). */
+function peopleOf(roster: Roster, teamId: number | null) {
   const inTeam = new Set<number>();
   if (teamId !== null) {
     inTeam.add(teamId);
@@ -64,11 +80,21 @@ export function teamUsernames(roster: Roster, teamId: number | null): string[] {
       for (const t of roster.teams) if (t.parentId !== null && inTeam.has(t.parentId) && !inTeam.has(t.id)) { inTeam.add(t.id); grew = true; }
     }
   }
-  return [...new Set(
-    roster.people
-      .filter((p) => teamId === null || (p.teamId !== null && inTeam.has(p.teamId)))
-      .flatMap((p) => p.accounts.filter((a) => a.system === "gitlab").map((a) => a.extId)),
-  )];
+  return roster.people.filter((p) => teamId === null || (p.teamId !== null && inTeam.has(p.teamId)));
+}
+
+const gitlabOf = (p: Roster["people"][number]) => p.accounts.filter((a) => a.system === "gitlab").map((a) => a.extId);
+
+/** GitLab usernames of the people in a team and its sub-teams (all people when no team is chosen). */
+export function teamUsernames(roster: Roster, teamId: number | null): string[] {
+  return [...new Set(peopleOf(roster, teamId).flatMap(gitlabOf))];
+}
+
+/** Whose MRs a developer reviews: developers of the team, and its leads (not the ones into master). */
+export function reviewPool(roster: Roster, teamId: number | null): ReviewPool {
+  const people = peopleOf(roster, teamId);
+  const names = (roles: string[]) => new Set(people.filter((p) => roles.includes(p.role)).flatMap(gitlabOf));
+  return { devs: names(["dev"]), leads: names(["lead", "devLead"]) };
 }
 
 export type GroupBy = "none" | "release" | "task";
@@ -135,8 +161,8 @@ export function groupMrs(mrs: Mr[], group: GroupBy, tasks: MrTask[]): Bucket[] {
 }
 
 /** The whole board as the screen shows it: sections, in them groups of live MRs, and drafts apart. */
-export function buildView(board: MrBoard, team: string[], filter: Filter, group: GroupBy): SectionView[] {
-  return buildSections(board, team, filter).map((s) => {
+export function buildView(board: MrBoard, team: string[], filter: Filter, group: GroupBy, pool?: ReviewPool | null): SectionView[] {
+  return buildSections(board, team, filter, pool).map((s) => {
     const live = s.mrs.filter((m) => !m.draft);
     const drafts = s.mrs.filter((m) => m.draft).sort(byRecent);
     return { id: s.id, total: s.mrs.length, buckets: groupMrs(live, group, board.tasks), drafts };

@@ -13,7 +13,7 @@ const mrs: typeof ru = {
   noTeam: "The roster has no GitLab accounts - only your MRs and those where you are a reviewer are shown. Attach accounts in the Team tool.",
   filters: { all: "All", waiting: "Need approval", threads: "Have discussions", ready: "Ready to merge" },
   sections: {
-    review: { title: "Waiting for your review", empty: "Nobody is waiting for your review." },
+    review: { tip: "Those that name you as reviewer. With the developer profile also the MRs of your team's developers and of the lead, except those into master (the main branch). Roles come from the Team tool.", title: "Waiting for your review", empty: "Nobody is waiting for your review." },
     mine: { title: "Your MRs", empty: "You have no open MRs." },
     team: { title: "Team MRs", empty: "The team has no open MRs that you do not review." },
   },

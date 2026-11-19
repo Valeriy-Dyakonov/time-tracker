@@ -3,15 +3,15 @@ import { useT } from "@/i18n";
 import { api } from "@/shared/api";
 import { useStored } from "@/shared/hooks/useStored";
 import type { SetupState } from "@/shared/lib/setup";
-import type { MrBoard, Roster } from "@/shared/types";
+import type { DashProfile, MrBoard, Roster } from "@/shared/types";
 import { Button, InfoTip, Segmented } from "@/shared/ui";
-import { buildView, FILTERS, filterCounts, GROUPS, teamUsernames, type Filter, type GroupBy } from "../lib/board";
+import { buildView, FILTERS, filterCounts, GROUPS, reviewPool, teamUsernames, type Filter, type GroupBy } from "../lib/board";
 import { MrSection } from "./MrSection";
 
 const TILE: Record<Filter, string> = { all: "t-all", waiting: "t-wait", threads: "t-threads", ready: "t-ready" };
 
 /** MR board: GitLab merge requests waiting for the user, the user's own and the team's. Read-only. */
-export default function Mrs({ setup, onOpenSettings }: { setup: SetupState; onOpenSettings: () => void }) {
+export default function Mrs({ setup, profile, onOpenSettings }: { setup: SetupState; profile: DashProfile; onOpenSettings: () => void }) {
   const m = useT().mrs;
   const [roster, setRoster] = useState<Roster | null>(null);
   const [teamId, setTeamId] = useStored<number | null>("worklog.mrs.team", null);
@@ -30,6 +30,8 @@ export default function Mrs({ setup, onOpenSettings }: { setup: SetupState; onOp
   const team = roster && teamId !== null && roster.teams.some((t) => t.id === teamId) ? teamId : null;
   const people = useMemo(() => (roster ? teamUsernames(roster, team) : []), [roster, team]);
   const peopleKey = people.join(",");
+  // A developer reviews the team's developers and the lead without being asked; other profiles only what names them.
+  const pool = useMemo(() => (profile === "dev" && roster ? reviewPool(roster, team) : null), [profile, roster, team]);
 
   const load = useCallback((force: boolean) => {
     const mark = ++seq.current;
@@ -44,7 +46,7 @@ export default function Mrs({ setup, onOpenSettings }: { setup: SetupState; onOp
     if (setup.gitlab && roster) load(false);
   }, [setup.gitlab, roster, load]);
 
-  const views = useMemo(() => (board ? buildView(board, people, filter, group) : []), [board, people, filter, group]);
+  const views = useMemo(() => (board ? buildView(board, people, filter, group, pool) : []), [board, people, filter, group, pool]);
   const tasks = useMemo(() => new Map((board?.tasks ?? []).map((t) => [t.key, t])), [board]);
 
   if (!setup.gitlab) {
@@ -56,7 +58,7 @@ export default function Mrs({ setup, onOpenSettings }: { setup: SetupState; onOp
     );
   }
 
-  const counts = board ? filterCounts(board, people) : null;
+  const counts = board ? filterCounts(board, people, pool) : null;
 
   return (
     <section className="mrs">

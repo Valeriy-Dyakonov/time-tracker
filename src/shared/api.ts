@@ -87,6 +87,7 @@ export const api = {
   taskGit: (key: string) => call<TaskGit>("task_git", { key }),
   taskDoc: (repo: string, commit: string, path: string) => call<string>("task_doc", { repo, commit, path }),
   taskMrs: (key: string, force?: boolean) => call<TaskMrs>("task_mrs", { key, force }),
+  notify: (title: string, body: string) => call<void>("notify", { title, body }),
   jiraDescendants: (key: string) => call<string[]>("jira_descendants", { key }),
   taskRemoteDoc: (projectId: number, refName: string, path: string) => call<string>("task_remote_doc", { projectId, refName, path }),
   analysisPages: (key: string, urls: string[]) => call<PageDoc[]>("analysis_pages", { key, urls }),

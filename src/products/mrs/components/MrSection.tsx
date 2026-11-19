@@ -1,3 +1,4 @@
+import { InfoTip } from "@/shared/ui";
 import type { ReactElement } from "react";
 import { useT } from "@/i18n";
 import type { MrTask } from "@/shared/types";
@@ -44,6 +45,7 @@ export function MrSection({ view, group, tasks }: { view: SectionView; group: Gr
         <span className="mrs-ic">{ICON[view.id]}</span>
         {text.title}
         <span className="mrs-count">{view.total}</span>
+        {text.tip && <InfoTip>{text.tip}</InfoTip>}
       </h3>
       {view.total === 0 && <p className="muted mrs-empty-note">{text.empty}</p>}
       {view.buckets.map((b) => (
