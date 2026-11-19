@@ -14,6 +14,11 @@ const home: typeof ru = {
       desc: "Your Jira tasks on one board: in progress, in review, in testing and on the way to release.",
       points: ["Developer, QA and lead profiles", "Tasks grouped under their epics", "Read a task right in the app"],
     },
+    mrs: {
+      name: "MR board",
+      desc: "GitLab merge requests: what waits for your review, what waits for approval - yours and the team's - and where there are comments.",
+      points: ["Waiting for your review, and your own", "The team's MRs from the roster, even when you are not a reviewer", "Approvals, discussions, ready to merge"],
+    },
     team: {
       name: "Team",
       desc: "Who is in which department and team: leads, QA and each person's Jira, GitLab and Matrix accounts.",

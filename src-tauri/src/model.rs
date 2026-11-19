@@ -79,3 +79,13 @@ pub struct PersonHit {
     /// E-mail or similar, to tell namesakes apart.
     pub detail: String,
 }
+
+/// A Jira task an MR is about: its title, status and the releases (fix versions) it goes into.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MrTask {
+    pub key: String,
+    pub summary: String,
+    pub status: String,
+    pub fix_versions: Vec<String>,
+}

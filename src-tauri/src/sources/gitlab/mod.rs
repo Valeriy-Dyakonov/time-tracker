@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use crate::texts::Lang;
 use crate::error::{AppError, AppResult};
 
+pub mod board;
 pub mod links;
 pub mod task;
 

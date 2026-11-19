@@ -4,6 +4,7 @@ import { JiraUrlContext } from "@/shared/components/IssueLink";
 import Report from "@/products/worklog/components/report/Report";
 import Dashboard from "@/products/dashboard/components/Dashboard";
 import { asProfile } from "@/products/dashboard/lib/stages";
+import Mrs from "@/products/mrs/components/Mrs";
 import Team from "@/products/team/components/Team";
 import { ErrorBoundary } from "./ErrorBoundary";
 import Home from "./Home";
@@ -92,6 +93,8 @@ export default function App() {
           <Home jiraReady={setup.jira} onOpen={setView} />
         ) : view === "dashboard" ? (
           <Dashboard setup={setup} profile={asProfile(settings.dashboardProfile)} onOpenSettings={openSettings} />
+        ) : view === "mrs" ? (
+          <Mrs setup={setup} onOpenSettings={openSettings} />
         ) : view === "team" ? (
           <Team />
         ) : (

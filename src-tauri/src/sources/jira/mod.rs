@@ -185,3 +185,46 @@ pub async fn whoami(client: &reqwest::Client, base: &str, pat: &str) -> AppResul
     let me = Jira::new(client, base, pat).myself().await?;
     Ok((me.name, me.display))
 }
+
+/// Title, status and fix versions of the given tasks. A key that does not exist fails the whole JQL, so a
+/// failed batch is retried key by key; keys Jira does not know are simply missing from the answer.
+async fn versions_batch(jira: &Jira<'_>, batch: &[String]) -> AppResult<Value> {
+    jira.get(
+        "/rest/api/2/search",
+        &[("jql", format!("key in ({})", batch.join(","))), ("fields", "summary,status,fixVersions".into()), ("maxResults", "50".into())],
+    )
+    .await
+}
+
+pub async fn task_versions(client: &reqwest::Client, base: &str, pat: &str, keys: &[String]) -> Vec<crate::model::MrTask> {
+    let jira = Jira::new(client, base, pat);
+    let read = |v: &Value| -> Vec<crate::model::MrTask> {
+        v["issues"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|it| crate::model::MrTask {
+                key: it["key"].as_str().unwrap_or("").to_string(),
+                summary: it["fields"]["summary"].as_str().unwrap_or("").to_string(),
+                status: it["fields"]["status"]["name"].as_str().unwrap_or("").to_string(),
+                fix_versions: it["fields"]["fixVersions"].as_array().into_iter().flatten().filter_map(|x| x["name"].as_str().map(String::from)).collect(),
+            })
+            .filter(|t| !t.key.is_empty())
+            .collect()
+    };
+    let mut out = vec![];
+    for chunk in keys.chunks(30) {
+        match versions_batch(&jira, chunk).await {
+            Ok(v) => out.extend(read(&v)),
+            Err(_) if chunk.len() > 1 => {
+                for k in chunk {
+                    if let Ok(v) = versions_batch(&jira, std::slice::from_ref(k)).await {
+                        out.extend(read(&v));
+                    }
+                }
+            }
+            Err(_) => {}
+        }
+    }
+    out
+}

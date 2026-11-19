@@ -10,7 +10,8 @@ import errors from "./en/errors";
 import home from "./en/home";
 import dashboard from "./en/dashboard";
 import team from "./en/team";
+import mrs from "./en/mrs";
 
 import type { ru } from "./ru";
 
-export const en: typeof ru = { common, shell, report, hours, submit, review, settings, analysis, errors, home, dashboard, team };
+export const en: typeof ru = { common, shell, report, hours, submit, review, settings, analysis, errors, home, dashboard, team, mrs };

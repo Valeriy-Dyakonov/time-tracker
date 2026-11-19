@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getLocale, t } from "@/i18n";
 import type { ErrorParams } from "@/i18n/messages/ru/errors";
-import type { DashData, MyAccount, PersonHit, Roster, Evt, GitLabItem, IssueDetail, PageDoc, TaskGit, TaskMrs, IssueInfo, JiraWorklog, Meeting, PageCtx, Settings } from "./types";
+import type { DashData, MrBoard, MyAccount, PersonHit, Roster, Evt, GitLabItem, IssueDetail, PageDoc, TaskGit, TaskMrs, IssueInfo, JiraWorklog, Meeting, PageCtx, Settings } from "./types";
 
 export interface JiraResult {
   me: string;
@@ -75,6 +75,7 @@ export const api = {
   lookupIssues: (keys: string[]) => call<IssueInfo[]>("lookup_issues", { keys }),
   jiraDashboard: (profile: string, historyDays?: number, force?: boolean) => call<DashData>("jira_dashboard", { profile, historyDays, force }),
   clearCache: () => call<void>("clear_cache"),
+  gitlabMrBoard: (team: string[], force?: boolean) => call<MrBoard>("gitlab_mr_board", { team, force }),
   rosterLoad: () => call<Roster>("roster_load"),
   rosterSave: (roster: Roster) => call<void>("roster_save", { roster }),
   searchPeople: (system: string, query: string) => call<PersonHit[]>("search_people", { system, query }),

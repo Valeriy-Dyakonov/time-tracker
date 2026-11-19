@@ -336,3 +336,34 @@ export interface PersonHit { extId: string; name: string; detail: string }
 
 /** The user's own account in a system, known from the connection settings. */
 export interface MyAccount { system: AccountSystem; extId: string; name: string }
+
+/** GitLab merge request board; mirrors `sources/gitlab/board.rs`. */
+export interface MrPerson { username: string; name: string }
+export interface Mr {
+  projectId: number;
+  iid: number;
+  project: string;
+  title: string;
+  url: string;
+  sourceBranch: string;
+  targetBranch: string;
+  /** Jira key found in the title or the branch. */
+  task: string | null;
+  author: MrPerson;
+  draft: boolean;
+  conflicts: boolean;
+  /** No unresolved discussion threads. */
+  discussionsResolved: boolean;
+  mergeStatus: string;
+  comments: number;
+  created: number;
+  updated: number;
+  reviewers: MrPerson[];
+  approvedBy: MrPerson[];
+  /** Approvals still missing; null when GitLab does not say. */
+  approvalsLeft: number | null;
+  detailed: boolean;
+}
+/** The Jira task an MR is about; fixVersions are its releases. */
+export interface MrTask { key: string; summary: string; status: string; fixVersions: string[] }
+export interface MrBoard { me: MrPerson; mrs: Mr[]; cachedAt: number; tasks: MrTask[] }

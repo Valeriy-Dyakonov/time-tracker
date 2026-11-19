@@ -101,3 +101,81 @@ pub async fn fetch_gitlab(app: tauri::AppHandle, start: String, end: String, lan
     let (me, events) = gitlab::fetch(&c.client, &s.gitlab_url, &require(&secrets::GITLAB)?, a, b, &scoped, Lang::parse(lang.as_deref())).await?;
     Ok(GitlabOut { me, events, scoped, fallback })
 }
+
+/// Usernames come from the roster file the user typed; GitLab logins are letters, digits and `._-`.
+fn clean_usernames(list: Vec<String>) -> Vec<String> {
+    let mut out: Vec<String> = list
+        .into_iter()
+        .map(|u| u.trim().to_string())
+        .filter(|u| !u.is_empty() && u.len() <= 100 && u.chars().all(|c| c.is_alphanumeric() || "._-".contains(c)))
+        .collect();
+    out.sort();
+    out.dedup();
+    out.truncate(80);
+    out
+}
+
+/// Open merge requests that wait for the user, the user's own and those of `team` (GitLab usernames).
+/// Served from the local store while fresh; `force` (Refresh) and old lists ask GitLab again, reading
+/// approvals only for MRs that changed.
+#[tauri::command]
+pub async fn gitlab_mr_board(
+    app: tauri::AppHandle,
+    store: tauri::State<'_, crate::store::Store>,
+    team: Vec<String>,
+    force: Option<bool>,
+) -> AppResult<gitlab::board::MrBoard> {
+    use crate::store::{self, fresh, mrs};
+    let c = Ctx::load(&app)?;
+    let s = &c.settings;
+    let team = clean_usernames(team);
+    let pat = require(&secrets::GITLAB)?;
+    if s.gitlab_url.trim().is_empty() {
+        return Err(AppError::new("urlMissing").with("service", "GitLab"));
+    }
+    // The list depends on whose MRs are asked for.
+    let scope = {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        team.hash(&mut h);
+        format!("gitlab.mr.board.{:x}", h.finish())
+    };
+    store.with(|conn| fresh::bind_origin(conn, "gitlab", s.gitlab_url.trim()))?;
+    if !force.unwrap_or(false) && store.with(|conn| fresh::is_fresh(conn, &scope, fresh::MR_TTL))? {
+        if let Some(b) = store.with(|conn| mrs::load_board(conn, &scope))? {
+            let mut b = b;
+            add_tasks(&c, &store, &mut b, false).await;
+            return Ok(b);
+        }
+    }
+    let known = store.with(|conn| mrs::known(conn)).unwrap_or_default();
+    let (me, list) = gitlab::board::load(&c.client, &s.gitlab_url, &pat, &team, &known).await?;
+    let mut board = gitlab::board::MrBoard { me, mrs: list, cached_at: store::now_ms(), tasks: vec![] };
+    // The answer is in hand; a failed write only means the next open asks GitLab again.
+    let _ = store.with(|conn| mrs::save_board(conn, &scope, &board, board.cached_at));
+    add_tasks(&c, &store, &mut board, force.unwrap_or(false)).await;
+    Ok(board)
+}
+
+/// Fills in the Jira tasks the MRs are about (title, status, release). Optional: without Jira, or when it
+/// does not answer, the board simply has no tasks. Tasks are read again when a day old or on Refresh.
+async fn add_tasks(c: &Ctx, store: &crate::store::Store, board: &mut gitlab::board::MrBoard, force: bool) {
+    use crate::store::{self, mrs};
+    const TASK_TTL_MS: i64 = 24 * 60 * 60 * 1000;
+    let mut keys: Vec<String> = board.mrs.iter().filter_map(|m| m.task.clone()).collect();
+    keys.sort();
+    keys.dedup();
+    let Some(pat) = secrets::get(secrets::JIRA.name).filter(|_| !c.settings.jira_url.trim().is_empty()) else { return };
+    if keys.is_empty() {
+        return;
+    }
+    let now = store::now_ms();
+    let stale = if force { keys.clone() } else { store.with(|conn| mrs::stale_tasks(conn, &keys, TASK_TTL_MS, now)).unwrap_or_else(|_| keys.clone()) };
+    if !stale.is_empty() {
+        let asked = tokio::time::timeout(std::time::Duration::from_secs(20), crate::sources::jira::task_versions(&c.client, &c.settings.jira_url, &pat, &stale)).await;
+        if let Ok(found) = asked {
+            let _ = store.with(|conn| mrs::save_tasks(conn, &stale, &found, now));
+        }
+    }
+    board.tasks = store.with(|conn| mrs::load_tasks(conn, &keys)).unwrap_or_default();
+}

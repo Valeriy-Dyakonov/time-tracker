@@ -6,10 +6,15 @@ use std::time::Duration;
 /// How long a loaded list is used as is before the next open asks the API again. "Refresh" ignores it.
 pub const BOARD_TTL: Duration = Duration::from_secs(10 * 60);
 
+/// Open merge requests change quickly (new comments, approvals): a list is used for this long.
+pub const MR_TTL: Duration = Duration::from_secs(3 * 60);
+
 const DAY_MS: i64 = 24 * 60 * 60 * 1000;
 /// Issues not refreshed for this long are dropped; they will be read again if a screen needs them.
 const ISSUE_KEEP_DAYS: i64 = 30;
 const SCOPE_KEEP_DAYS: i64 = 30;
+/// An MR that dropped out of every list (merged, closed) is not refreshed any more.
+const MR_KEEP_DAYS: i64 = 14;
 
 pub fn is_fresh(conn: &Connection, scope: &str, ttl: Duration) -> rusqlite::Result<bool> {
     Ok(fetched_at(conn, scope)?.is_some_and(|at| now_ms() - at < ttl.as_millis() as i64))
@@ -52,10 +57,12 @@ pub fn purge(conn: &mut Connection) -> rusqlite::Result<()> {
     let now = now_ms();
     let tx = conn.transaction()?;
     tx.execute("DELETE FROM cache_issue WHERE fetched_at < ?1", [now - ISSUE_KEEP_DAYS * DAY_MS])?;
+    tx.execute("DELETE FROM cache_mr WHERE fetched_at < ?1", [now - MR_KEEP_DAYS * DAY_MS])?;
+    tx.execute("DELETE FROM cache_task WHERE fetched_at < ?1", [now - SCOPE_KEEP_DAYS * DAY_MS])?;
     tx.execute("DELETE FROM cache_scope WHERE fetched_at < ?1", [now - SCOPE_KEEP_DAYS * DAY_MS])?;
     tx.execute(
         "DELETE FROM cache_user WHERE name NOT IN (SELECT assignee FROM cache_issue WHERE assignee IS NOT NULL) \
-         AND name NOT IN (SELECT user FROM cache_issue_person)",
+         AND name NOT IN (SELECT user FROM cache_issue_person) \n         AND name NOT IN (SELECT author FROM cache_mr) AND name NOT IN (SELECT user FROM cache_mr_person) AND me = 0",
         [],
     )?;
     tx.execute("DELETE FROM cache_project WHERE key NOT IN (SELECT project FROM cache_issue)", [])?;

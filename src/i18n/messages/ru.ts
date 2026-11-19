@@ -10,5 +10,6 @@ import errors from "./ru/errors";
 import home from "./ru/home";
 import dashboard from "./ru/dashboard";
 import team from "./ru/team";
+import mrs from "./ru/mrs";
 
-export const ru = { common, shell, report, hours, submit, review, settings, analysis, errors, home, dashboard, team };
+export const ru = { common, shell, report, hours, submit, review, settings, analysis, errors, home, dashboard, team, mrs };
