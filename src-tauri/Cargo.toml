@@ -23,6 +23,7 @@ tokio = { version = "1", features = ["net", "time", "io-util"] }
 tauri-plugin-updater = "2"
 keyring = "4"
 tauri-plugin-dialog = "2"
+rusqlite = { version = "0.43.0", features = ["bundled"] }
 
 [features]
 # Release builds with auto-update: `tauri build --features updater --config src-tauri/tauri.release.conf.json`.

@@ -3,6 +3,7 @@ use super::Ctx;
 use crate::browser;
 use crate::model::{Event, IssueInfo};
 use crate::secrets::{self, require};
+use crate::store::{self, fresh, issues, Store};
 use crate::sources::{confluence, jira};
 use crate::sources::jira::worklog::{self, Worklog};
 use crate::util::{range_ms, trim_url};
@@ -26,10 +27,31 @@ pub async fn lookup_issues(app: tauri::AppHandle, keys: Vec<String>) -> AppResul
 /// "Work dashboard": open tasks for a profile ("dev", "qa", "lead") with their epics/parents;
 /// with `history_days`, the tasks resolved in that many days instead.
 #[tauri::command]
-pub async fn jira_dashboard(app: tauri::AppHandle, profile: String, history_days: Option<u32>) -> AppResult<jira::dashboard::Dashboard> {
+pub async fn jira_dashboard(
+    app: tauri::AppHandle,
+    store: tauri::State<'_, Store>,
+    profile: String,
+    history_days: Option<u32>,
+    force: Option<bool>,
+) -> AppResult<jira::dashboard::Dashboard> {
     let c = Ctx::load(&app)?;
-    let scope = history_days.map_or(jira::dashboard::Scope::Open, jira::dashboard::Scope::History);
-    jira::dashboard::load(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &profile, scope).await
+    let scope = match history_days {
+        None => format!("jira.board.{profile}"),
+        Some(d) => format!("jira.history.{profile}.{d}"),
+    };
+    // A list loaded a moment ago is served as is; "refresh" (force) and old lists ask Jira again.
+    store.with(|conn| fresh::bind_origin(conn, "jira", c.settings.jira_url.trim()))?;
+    if !force.unwrap_or(false) && store.with(|conn| fresh::is_fresh(conn, &scope, fresh::BOARD_TTL))? {
+        if let Some(d) = store.with(|conn| issues::load_board(conn, &scope))? {
+            return Ok(d);
+        }
+    }
+    let kind = history_days.map_or(jira::dashboard::Scope::Open, jira::dashboard::Scope::History);
+    let mut d = jira::dashboard::load(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &profile, kind).await?;
+    d.cached_at = store::now_ms();
+    // The answer is already in hand; a failed write only means the next open asks Jira again.
+    let _ = store.with(|conn| issues::save_board(conn, &scope, &d, d.cached_at));
+    Ok(d)
 }
 
 /// Opens a link found in a task's description or comments in the system browser. Only http(s):

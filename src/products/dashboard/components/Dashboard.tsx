@@ -17,29 +17,17 @@ import { IssueCard } from "./IssueCard";
 import { IssueDrawer } from "./IssueDrawer";
 import { OpenByKey } from "./OpenByKey";
 
-type Cached = { at: number; data: DashData };
-// v3: tasks carry links; older caches lack them and are not read.
-const cacheKey = (p: Profile) => `worklog.dashboard.v3.${p}`;
-
-function readCache(p: Profile): Cached | null {
-  try {
-    const s = localStorage.getItem(cacheKey(p));
-    if (!s) return null;
-    const c = JSON.parse(s) as Partial<Cached>;
-    return { at: Number(c.at) || 0, data: normalizeData(c.data) };
-  } catch {
-    return null;
-  }
-}
+/** The list as the backend served it: from its local store while fresh, from Jira on refresh or when old. */
+type Loaded = { at: number; data: DashData };
 
 /** "Work dashboard": open tasks for a role on one Jira-like board; closed ones in a history read on demand. Read-only. */
-export default function Dashboard({ setup, profile, onOpenSettings }: { setup: SetupState; profile: Profile; onOpenSettings: () => void }) {
+export default function Dashboard({ setup, profile, onOpenSettings, initial }: { setup: SetupState; profile: Profile; onOpenSettings: () => void; /** Shown until the first answer arrives (the tests render without effects). */ initial?: Partial<DashData> }) {
   const m = useT().dashboard;
   const jiraReady = setup.jira;
   /** Issue types that count as an epic; null = guessed from the type names. */
   const [chosenTypes, setChosenTypes] = useStored<string[] | null>("worklog.dashboard.containerTypes", null);
   const [onlyMine, setOnlyMine] = useStored("worklog.dashboard.onlyMine", false);
-  const [cached, setCached] = useState<Cached | null>(() => readCache(profile));
+  const [cached, setCached] = useState<Loaded | null>(() => (initial ? { at: Number(initial.cachedAt) || Date.now(), data: normalizeData(initial) } : null));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [project, setProject] = useState<string | null>(null);
@@ -48,13 +36,12 @@ export default function Dashboard({ setup, profile, onOpenSettings }: { setup: S
   const [opened, setOpened] = useState<string | null>(null);
   const today = localDate(new Date());
 
-  const load = useCallback(async (p: Profile) => {
+  const load = useCallback(async (p: Profile, force = false) => {
     setLoading(true);
     setError("");
     try {
-      const next = { at: Date.now(), data: normalizeData(await api.jiraDashboard(p)) };
-      setCached(next);
-      try { localStorage.setItem(cacheKey(p), JSON.stringify(next)); } catch { /* storage unavailable */ }
+      const data = normalizeData(await api.jiraDashboard(p, undefined, force));
+      setCached({ at: data.cachedAt || Date.now(), data });
     } catch (e) {
       setError(String(e));
     } finally {
@@ -62,8 +49,13 @@ export default function Dashboard({ setup, profile, onOpenSettings }: { setup: S
     }
   }, []);
 
+  // The old browser-side copies of the board: the app keeps the list in its own store now.
   useEffect(() => {
-    setCached(readCache(profile));
+    try { Object.keys(localStorage).filter((k) => k.startsWith("worklog.dashboard.v3.")).forEach((k) => localStorage.removeItem(k)); } catch { /* storage unavailable */ }
+  }, []);
+
+  useEffect(() => {
+    if (!initial) setCached(null);
     setFocus({ stage: null, flag: null });
     if (jiraReady) void load(profile);
   }, [profile, jiraReady, load]);
@@ -117,7 +109,7 @@ export default function Dashboard({ setup, profile, onOpenSettings }: { setup: S
         <span className="dash-sync muted">
           {loading ? <><i className="spin" />{m.loading}</> : cached && m.updatedAt(new Date(cached.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))}
         </span>
-        <Button size="small" disabled={loading} onClick={() => void load(profile)}>{m.refresh}</Button>
+        <Button size="small" disabled={loading} onClick={() => void load(profile, true)}>{m.refresh}</Button>
       </div>
 
       <div className="dash-stats">

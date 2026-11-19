@@ -182,6 +182,8 @@ export interface DashData {
   /** Epics and parents of the issues: group headers, never tasks. */
   context: DashIssue[];
   projects: string[];
+  /** When Jira was last asked for this list (ms); the app serves it from its local store until it gets old or the user refreshes. */
+  cachedAt: number;
 }
 
 export interface DashRelated {

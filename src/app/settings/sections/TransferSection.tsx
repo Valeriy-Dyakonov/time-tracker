@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useT } from "@/i18n";
+import { api } from "@/shared/api";
 import { Button, download } from "@/shared/ui";
 import { exportSettings, importSettings } from "@/shared/lib/settingsFile";
 import { SectionCard } from "../parts";
@@ -19,6 +20,7 @@ export function TransferSection({ f }: { f: SettingsForm }) {
   }
 
   return (
+    <>
     <SectionCard title={m.title} tip={m.tip}>
       <div className="row">
         <Button onClick={() => download("worklog-tracker-settings.json", exportSettings(f.s), "application/json").then(() => setStatus(""), (e) => setStatus(`✗ ${e?.detail ?? e}`))}>{m.export}</Button>
@@ -26,6 +28,20 @@ export function TransferSection({ f }: { f: SettingsForm }) {
         <input ref={pick} type="file" accept=".json,application/json" hidden
           onChange={(e) => { load(e.target.files?.[0]); e.target.value = ""; }} />
       </div>
+      {status && <p className="hint">{status}</p>}
+    </SectionCard>
+    <CacheCard />
+    </>
+  );
+}
+
+function CacheCard() {
+  const m = useT().settings.transfer.cache;
+  const [status, setStatus] = useState("");
+  const clear = () => api.clearCache().then(() => setStatus(m.done), (e) => setStatus(`✗ ${e?.detail ?? e}`));
+  return (
+    <SectionCard title={m.title} tip={m.tip}>
+      <div className="row"><Button onClick={clear}>{m.clear}</Button></div>
       {status && <p className="hint">{status}</p>}
     </SectionCard>
   );

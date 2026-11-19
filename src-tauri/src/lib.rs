@@ -7,6 +7,7 @@ mod model;
 mod secrets;
 mod settings;
 mod sources;
+mod store;
 mod util;
 
 // The updater plugin must stay a regular dependency: capabilities/default.json grants `updater:default`,
@@ -15,6 +16,16 @@ mod util;
 use tauri_plugin_updater as _;
 
 use commands::{atlassian, calendar, code, connection, llm, matrix, settings as config};
+
+/// The local cache lives next to the settings but in the machine-local folder (it is not worth roaming).
+fn open_store(app: &tauri::AppHandle) -> Result<store::Store, Box<dyn std::error::Error>> {
+    let dir = tauri::Manager::path(app).app_local_data_dir()?;
+    std::fs::create_dir_all(&dir)?;
+    let store = store::Store::open(&dir.join("worklog.db")).map_err(|e| e.detail())?;
+    // Old rows go at every start; a failure here only means the file stays a bit larger.
+    let _ = store.with(store::fresh::purge);
+    Ok(store)
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -25,6 +36,8 @@ pub fn run() {
         .setup(|app| {
             // The window starts hidden so no blank frame shows before the page; the page shows it once the
             // loader is painted. Should the page fail to, show it anyway after a moment.
+            let store = open_store(app.handle())?;
+            tauri::Manager::manage(app, store);
             let handle = app.handle().clone();
             std::thread::spawn(move || {
                 std::thread::sleep(std::time::Duration::from_secs(3));
@@ -39,6 +52,7 @@ pub fn run() {
             config::save_settings,
             config::set_secret,
             config::save_export,
+            config::clear_cache,
             config::secrets_status,
             connection::test_connection,
             atlassian::fetch_jira,

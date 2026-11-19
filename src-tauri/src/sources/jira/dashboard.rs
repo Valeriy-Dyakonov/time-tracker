@@ -76,6 +76,8 @@ pub struct Dashboard {
     pub context: Vec<DashIssue>,
     /// Projects the user takes part in; the scope of the QA and lead views.
     pub projects: Vec<String>,
+    /// When this list was read from Jira (ms since epoch); set by the command, which also serves it from the store.
+    pub cached_at: i64,
 }
 
 pub(super) struct UserField {
@@ -302,7 +304,7 @@ pub async fn load(client: &reqwest::Client, base: &str, pat: &str, profile: &str
             context.extend(found.iter().map(|i| issue(i, &epic, &fields, &me)));
         }
     }
-    Ok(Dashboard { issues, context, projects: projects.into_iter().collect() })
+    Ok(Dashboard { issues, context, projects: projects.into_iter().collect(), cached_at: 0 })
 }
 
 #[cfg(test)]

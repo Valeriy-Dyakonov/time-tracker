@@ -23,6 +23,12 @@ pub fn save_export(path: String, content: String) -> AppResult<()> {
     std::fs::write(&path, content).map_err(AppError::raw)
 }
 
+/// Forgets everything the app kept from Jira and other services; the next open reads it again.
+#[tauri::command]
+pub fn clear_cache(store: tauri::State<'_, crate::store::Store>) -> AppResult<()> {
+    store.with(crate::store::fresh::clear_cache)
+}
+
 /// An empty value removes the secret.
 #[tauri::command]
 pub fn set_secret(name: String, value: String) -> AppResult<()> {

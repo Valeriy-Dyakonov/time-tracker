@@ -53,6 +53,7 @@ One folder per area; no loose files in folder roots. Inside an area imports are 
 - `texts.rs` — the few phrases that must be built in Rust (event descriptions read by the AI, room names, holiday names), per `Lang`; commands that need them take an optional `lang` that `api.ts` fills in.
 - `commands/` — Tauri commands grouped by area; `commands/mod.rs` has `Ctx` (settings + HTTP client). `connection.rs` holds the per-service probe table for "Проверить подключение".
 - `sources/` — API clients and parsers per service (`jira/`, `confluence/`, `matrix/`, `calendar/`, `gitlab.rs`, `gitlog.rs`, `holidays.rs`, `llm.rs`).
+- `store/` — local SQLite cache (`worklog.db` in the machine-local app data folder): data loaded once from Jira/GitLab is served from it until it gets old (`fresh.rs` TTL) or the user presses Refresh. Tables are normalized (no JSON columns), schema in `migrations/NNN_*.sql` (append-only, version in `user_version`); `cache_*` tables are copies of external data (cleared by "Clear cache", old rows purged at start), other tables hold what the user typed. Commands: `bind_origin` -> fresh? read : fetch -> `save_*`; `force` skips the freshness check. Only Rust opens it.
 - `http.rs` — shared JSON GET with auth and error mapping; use it instead of hand-rolled requests.
 - `model.rs` — `Event`, `IssueInfo`, `StatusChange`. `settings.rs` — `Settings` + settings.json I/O. `secrets.rs` — the OS password store via keyring (Windows Credential Manager, macOS Keychain, Linux Secret Service); secret names are constants there.
 

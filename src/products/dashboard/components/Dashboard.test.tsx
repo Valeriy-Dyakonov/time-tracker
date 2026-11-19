@@ -2,7 +2,7 @@ import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import Dashboard from "./Dashboard";
 
-/** Renders the whole dashboard (board, lanes, cards) from a cached result, the way it opens before Jira answers. */
+/** Renders the whole dashboard (board, lanes, cards) from data already in hand, the way it opens before the store answers. */
 const store = new Map<string, string>();
 beforeEach(() => {
   store.clear();
@@ -23,9 +23,8 @@ const task = (key: string, status: string, category: string, extra: object = {})
 });
 
 const render = (data: object) => {
-  store.set("worklog.dashboard.v3.dev", JSON.stringify({ at: Date.now(), data }));
   const setup = { jira: true, llm: true, confluence: false, calendar: false, matrix: false, git: false, gitlab: false };
-  return renderToString(<Dashboard setup={setup} profile="dev" onOpenSettings={() => {}} />);
+  return renderToString(<Dashboard setup={setup} profile="dev" onOpenSettings={() => {}} initial={data} />);
 };
 
 describe("Dashboard render", () => {

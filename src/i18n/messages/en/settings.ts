@@ -227,6 +227,12 @@ const en: typeof ru = {
     tip: "Shared settings: service addresses, AI, working time and so on. The file has no passwords or tokens (they stay in the system's secure store), language or theme, and nothing personal: Matrix and Exchange logins, the repositories folder and list, commit authors, excluded rooms. An import leaves those fields as you have them. Handy for sharing settings with a colleague or moving to another computer.",
     export: "Export settings",
     import: "Import settings",
+    cache: {
+      title: "Data cache",
+      tip: "The app remembers what it got from Jira and does not ask the server again until the data is old (10 minutes) or you press Refresh. Here you can erase everything remembered: it loads again. Settings, passwords and team data are not touched.",
+      clear: "Clear cache",
+      done: "✓ Cache cleared. The data loads again the next time you open it.",
+    },
     bad: "✗ This is not a Worklog Tracker settings file.",
     loaded: (skipped: number) => `✓ Settings loaded${skipped ? ` (fields skipped: ${skipped})` : ""}. Press Save to apply. Enter passwords and tokens again.`,
   },

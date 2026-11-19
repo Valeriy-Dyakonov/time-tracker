@@ -10,7 +10,7 @@ describe("normalizeData", () => {
   });
 
   it("survives garbage", () => {
-    expect(normalizeData(null)).toEqual({ issues: [], context: [], projects: [] });
+    expect(normalizeData(null)).toEqual({ issues: [], context: [], projects: [], cachedAt: 0 });
     expect(normalizeData({ issues: [null, { nokey: 1 }] as never }).issues).toEqual([]);
   });
 });

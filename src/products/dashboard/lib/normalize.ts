@@ -21,5 +21,6 @@ export function normalizeData(d: Partial<DashData> | null | undefined): DashData
     issues: list(d?.issues).map(normalizeIssue),
     context: list(d?.context).map(normalizeIssue),
     projects: Array.isArray(d?.projects) ? d!.projects : [],
+    cachedAt: Number(d?.cachedAt) || 0,
   };
 }
