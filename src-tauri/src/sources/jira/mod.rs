@@ -159,3 +159,29 @@ pub async fn lookup(client: &reqwest::Client, base: &str, pat: &str, keys: &[Str
     }
     Ok(out)
 }
+
+/// Active users whose login, name or e-mail starts with / contains `query`.
+pub async fn find_users(client: &reqwest::Client, base: &str, pat: &str, query: &str) -> AppResult<Vec<crate::model::PersonHit>> {
+    let v = Jira::new(client, base, pat)
+        .get("/rest/api/2/user/search", &[("username", query.to_string()), ("maxResults", "10".into())])
+        .await?;
+    Ok(v.as_array()
+        .into_iter()
+        .flatten()
+        .filter(|u| u["active"].as_bool().unwrap_or(true))
+        .filter_map(|u| {
+            let ext_id = u["name"].as_str()?.to_string();
+            Some(crate::model::PersonHit {
+                name: u["displayName"].as_str().unwrap_or(&ext_id).to_string(),
+                detail: u["emailAddress"].as_str().unwrap_or("").to_string(),
+                ext_id,
+            })
+        })
+        .collect())
+}
+
+/// Login and display name of the token owner.
+pub async fn whoami(client: &reqwest::Client, base: &str, pat: &str) -> AppResult<(String, String)> {
+    let me = Jira::new(client, base, pat).myself().await?;
+    Ok((me.name, me.display))
+}

@@ -219,3 +219,28 @@ mod tests {
         assert!(!Scope(&["x/y".into()]).allows("a/b"));
     }
 }
+
+/// Active users matching `query` (name, username or e-mail).
+pub async fn find_users(client: &reqwest::Client, base: &str, pat: &str, query: &str) -> AppResult<Vec<crate::model::PersonHit>> {
+    let v = GitLab::new(client, base, pat)
+        .get("/users", &[("search", query.to_string()), ("active", "true".into()), ("per_page", "10".into())])
+        .await?;
+    Ok(v.as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|u| {
+            let ext_id = u["username"].as_str()?.to_string();
+            Some(crate::model::PersonHit {
+                name: u["name"].as_str().unwrap_or(&ext_id).to_string(),
+                detail: u["public_email"].as_str().unwrap_or("").to_string(),
+                ext_id,
+            })
+        })
+        .collect())
+}
+
+/// Username and name of the token owner.
+pub async fn whoami(client: &reqwest::Client, base: &str, pat: &str) -> AppResult<(String, String)> {
+    let v = GitLab::new(client, base, pat).get("/user", &[]).await?;
+    Ok((v["username"].as_str().unwrap_or("").to_string(), v["name"].as_str().unwrap_or("").to_string()))
+}

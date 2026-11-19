@@ -318,3 +318,21 @@ export interface Analysis {
   log: LogEntry[];
   createdAt: number;
 }
+
+/** Team roster (typed by the user, kept in the local database); mirrors `store/roster.rs`. */
+export type RosterRole = "lead" | "dev" | "qa" | "devLead" | "qaLead" | "other";
+export type AccountSystem = "jira" | "gitlab" | "matrix";
+export interface RosterTeam { id: number; parentId: number | null; name: string }
+export interface RosterAccount { system: AccountSystem; extId: string }
+export type AbsenceKind = "vacation" | "sick" | "other";
+/** Dates are YYYY-MM-DD, both inclusive. */
+export interface RosterAbsence { kind: AbsenceKind; from: string; to: string }
+export interface RosterPerson { id: number; teamId: number | null; name: string; role: RosterRole; accounts: RosterAccount[]; absences: RosterAbsence[] }
+export interface Roster { teams: RosterTeam[]; people: RosterPerson[] }
+
+/** A person found by name in Jira, GitLab or Matrix. */
+export interface PersonHit { extId: string; name: string; detail: string }
+
+
+/** The user's own account in a system, known from the connection settings. */
+export interface MyAccount { system: AccountSystem; extId: string; name: string }

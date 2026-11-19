@@ -5,6 +5,7 @@
 //! user typed and are never purged. Migrations are the numbered files in `migrations/`, applied in order.
 pub mod fresh;
 pub mod issues;
+pub mod roster;
 
 use crate::error::{AppError, AppResult};
 use rusqlite::Connection;
@@ -12,7 +13,7 @@ use std::path::Path;
 use std::sync::Mutex;
 
 /// Appended to, never edited: the applied count is kept in `PRAGMA user_version`.
-const MIGRATIONS: &[&str] = &[include_str!("../../migrations/001_init.sql")];
+const MIGRATIONS: &[&str] = &[include_str!("../../migrations/001_init.sql"), include_str!("../../migrations/002_roster.sql"), include_str!("../../migrations/003_absence.sql")];
 
 pub struct Store {
     conn: Mutex<Connection>,

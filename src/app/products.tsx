@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 /** Tools of the app shown as tiles on the start screen. Add a product here, its texts in `home.products`, and its screen in App. */
-export type ProductId = "worklog" | "dashboard";
+export type ProductId = "worklog" | "dashboard" | "team";
 
 export interface Product {
   id: ProductId;
@@ -20,5 +20,10 @@ export const PRODUCTS: Product[] = [
     id: "dashboard",
     needsJira: true,
     icon: <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></svg>,
+  },
+  {
+    id: "team",
+    needsJira: false,
+    icon: <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5" /><circle cx="5" cy="19" r="2.5" /><circle cx="19" cy="19" r="2.5" /><path d="M12 7.5v4M12 11.5H5v5M12 11.5h7v5" /></svg>,
   },
 ];

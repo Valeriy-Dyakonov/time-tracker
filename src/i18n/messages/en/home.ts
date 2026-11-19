@@ -14,6 +14,11 @@ const home: typeof ru = {
       desc: "Your Jira tasks on one board: in progress, in review, in testing and on the way to release.",
       points: ["Developer, QA and lead profiles", "Tasks grouped under their epics", "Read a task right in the app"],
     },
+    team: {
+      name: "Team",
+      desc: "Who is in which department and team: leads, QA and each person's Jira, GitLab and Matrix accounts.",
+      points: ["Hierarchy: department, team, sub-team", "Roles: lead, developer, QA", "Accounts are attached to a person"],
+    },
   },
   needsJira: "Needs Jira: set up the connection",
   open: "Open",

@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getLocale, t } from "@/i18n";
 import type { ErrorParams } from "@/i18n/messages/ru/errors";
-import type { DashData, Evt, GitLabItem, IssueDetail, PageDoc, TaskGit, TaskMrs, IssueInfo, JiraWorklog, Meeting, PageCtx, Settings } from "./types";
+import type { DashData, MyAccount, PersonHit, Roster, Evt, GitLabItem, IssueDetail, PageDoc, TaskGit, TaskMrs, IssueInfo, JiraWorklog, Meeting, PageCtx, Settings } from "./types";
 
 export interface JiraResult {
   me: string;
@@ -75,6 +75,10 @@ export const api = {
   lookupIssues: (keys: string[]) => call<IssueInfo[]>("lookup_issues", { keys }),
   jiraDashboard: (profile: string, historyDays?: number, force?: boolean) => call<DashData>("jira_dashboard", { profile, historyDays, force }),
   clearCache: () => call<void>("clear_cache"),
+  rosterLoad: () => call<Roster>("roster_load"),
+  rosterSave: (roster: Roster) => call<void>("roster_save", { roster }),
+  searchPeople: (system: string, query: string) => call<PersonHit[]>("search_people", { system, query }),
+  myAccounts: () => call<MyAccount[]>("my_accounts"),
   saveExport: (path: string, content: string) => call<void>("save_export", { path, content }),
   openLink: (url: string) => call<void>("open_link", { url }),
   taskGit: (key: string) => call<TaskGit>("task_git", { key }),

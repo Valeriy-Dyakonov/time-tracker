@@ -15,7 +15,7 @@ mod util;
 #[cfg(not(feature = "updater"))]
 use tauri_plugin_updater as _;
 
-use commands::{atlassian, calendar, code, connection, llm, matrix, settings as config};
+use commands::{atlassian, calendar, code, connection, llm, matrix, people, settings as config};
 
 /// The local cache lives next to the settings but in the machine-local folder (it is not worth roaming).
 fn open_store(app: &tauri::AppHandle) -> Result<store::Store, Box<dyn std::error::Error>> {
@@ -53,6 +53,8 @@ pub fn run() {
             config::set_secret,
             config::save_export,
             config::clear_cache,
+            config::roster_load,
+            config::roster_save,
             config::secrets_status,
             connection::test_connection,
             atlassian::fetch_jira,
@@ -82,6 +84,8 @@ pub fn run() {
             matrix::list_matrix_rooms,
             matrix::matrix_login_sso,
             matrix::matrix_login_password,
+            people::search_people,
+            people::my_accounts,
             llm::llm_chat
         ])
         .run(tauri::generate_context!())

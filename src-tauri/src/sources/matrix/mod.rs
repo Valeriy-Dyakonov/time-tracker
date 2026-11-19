@@ -158,3 +158,19 @@ pub async fn fetch(
     // One broken room (no access, rate limit) must not kill the whole report.
     Ok(results.into_iter().filter_map(Result::ok).flatten().collect())
 }
+
+/// Users from the server's user directory (those who share a room with the account, or are public).
+pub async fn find_users(client: &reqwest::Client, base: &str, token: &str, query: &str) -> AppResult<Vec<crate::model::PersonHit>> {
+    let mx = Matrix::new(client, base, token, Lang::default());
+    let body = serde_json::json!({ "search_term": query, "limit": 10 });
+    let v = mx.api.send(reqwest::Method::POST, &format!("{}/_matrix/client/v3/user_directory/search", mx.base), &[], Some(&body)).await?;
+    Ok(v["results"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|u| {
+            let ext_id = u["user_id"].as_str()?.to_string();
+            Some(crate::model::PersonHit { name: u["display_name"].as_str().unwrap_or(&ext_id).to_string(), detail: ext_id.clone(), ext_id })
+        })
+        .collect())
+}

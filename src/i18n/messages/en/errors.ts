@@ -22,6 +22,8 @@ const codes: Record<string, Msg> = {
     `The system password store did not store "${p.secret}" (${p.length} chars). Make sure the app runs under your own user account.`,
   tokenMissing: (p) => `${secretLabel(p.secret)}: no token in settings`,
   unknownSecret: (p) => `Unknown secret: ${p.secret}`,
+  searchTimeout: (p) => `${p.service}: no answer in 12 s - check the address and the network (VPN)`,
+  rosterInvalid: () => "The roster was not saved: invalid data",
   taskDocInvalid: (p) => `This file cannot be read: ${p.path}`,
   openLinkInvalid: (p) => `This link cannot be opened: ${p.url}`,
   worklogBadTime: (p) => `Cannot book this time: ${p.seconds} s`,

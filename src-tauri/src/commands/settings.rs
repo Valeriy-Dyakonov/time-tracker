@@ -29,6 +29,18 @@ pub fn clear_cache(store: tauri::State<'_, crate::store::Store>) -> AppResult<()
     store.with(crate::store::fresh::clear_cache)
 }
 
+/// The team roster as the user arranged it.
+#[tauri::command]
+pub fn roster_load(store: tauri::State<'_, crate::store::Store>) -> AppResult<crate::store::roster::Roster> {
+    store.with(|c| crate::store::roster::load(c))
+}
+
+/// Replaces the whole roster; invalid data is rejected and nothing changes.
+#[tauri::command]
+pub fn roster_save(store: tauri::State<'_, crate::store::Store>, roster: crate::store::roster::Roster) -> AppResult<()> {
+    store.with(|c| Ok(crate::store::roster::save(c, &roster)))?
+}
+
 /// An empty value removes the secret.
 #[tauri::command]
 pub fn set_secret(name: String, value: String) -> AppResult<()> {

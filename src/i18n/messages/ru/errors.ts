@@ -21,6 +21,8 @@ const codes: Record<string, Msg> = {
     `Системное хранилище паролей не сохранило значение «${p.secret}» (длина ${p.length} симв.). Проверьте, что приложение запущено под вашим пользователем.`,
   tokenMissing: (p) => `${secretLabel(p.secret)}: токен не задан в настройках`,
   unknownSecret: (p) => `Неизвестный секрет: ${p.secret}`,
+  searchTimeout: (p) => `${p.service}: нет ответа за 12 с — проверьте адрес и сеть (VPN)`,
+  rosterInvalid: () => "Состав команды не сохранён: некорректные данные",
   taskDocInvalid: (p) => `Этот файл нельзя прочитать: ${p.path}`,
   openLinkInvalid: (p) => `Эту ссылку нельзя открыть: ${p.url}`,
   worklogBadTime: (p) => `Нельзя списать такое время: ${p.seconds} с`,

@@ -68,3 +68,14 @@ pub struct IssueInfo {
     #[serde(default)]
     pub assigned_to_me: bool,
 }
+
+/// A person found by name in Jira, GitLab or Matrix, to attach to a roster entry.
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PersonHit {
+    /// Login / user id in that system (what the roster stores).
+    pub ext_id: String,
+    pub name: String,
+    /// E-mail or similar, to tell namesakes apart.
+    pub detail: String,
+}
