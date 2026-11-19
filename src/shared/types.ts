@@ -15,6 +15,10 @@ export interface Settings {
   calendarOnlyCalls: boolean;
   /** Task that gets the time of calls not tied to any task; empty = such calls get no hours. */
   callsTaskKey: string;
+  /** Note calls on this computer (Windows). */
+  trackCalls: boolean;
+  /** Programs counted as calls, by a part of their name. */
+  callApps: string[];
   matrixHomeserver: string;
   matrixUserId: string;
   matrixExcludeRooms: string[];
@@ -49,6 +53,8 @@ export const defaultSettings: Settings = {
   exchangeUser: "",
   calendarOnlyCalls: false,
   callsTaskKey: "",
+  trackCalls: false,
+  callApps: ["zoom", "teams", "telegram", "slack", "discord", "chrome", "msedge", "firefox", "browser"],
   matrixHomeserver: "",
   matrixUserId: "",
   matrixExcludeRooms: [],
@@ -75,6 +81,20 @@ export interface Meeting {
   location: string;
   isCall: boolean;
   tentative: boolean;
+  /** Set for a call noted on this computer (not from the calendar): the id the user can mark as not work by. */
+  localId?: number;
+}
+
+/** A call noted on this computer: a tracked program held the microphone. */
+export interface LocalCall {
+  id: number;
+  app: string;
+  title: string;
+  /** Epoch ms. */
+  started: number;
+  ended: number;
+  /** The user said it was not work. */
+  hidden: boolean;
 }
 
 export interface Evt {

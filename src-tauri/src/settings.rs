@@ -31,6 +31,10 @@ pub struct Settings {
     pub calendar_only_calls: bool,
     /// Task that gets the time of calls not tied to any task (dailies, hand-overs); empty = such calls get no hours.
     pub calls_task_key: String,
+    /// Note calls on this computer (a program holding the microphone); off until the user turns it on.
+    pub track_calls: bool,
+    /// Programs counted as calls, by a part of their name (zoom, teams, telegram...).
+    pub call_apps: Vec<String>,
     pub matrix_homeserver: String,
     pub matrix_user_id: String,
     /// Room IDs that are never read; all other joined rooms are analysed.
@@ -68,6 +72,8 @@ impl Default for Settings {
             exchange_user: String::new(),
             calendar_only_calls: false,
             calls_task_key: String::new(),
+            track_calls: false,
+            call_apps: crate::sources::calls::default_apps(),
             matrix_homeserver: String::new(),
             matrix_user_id: String::new(),
             matrix_exclude_rooms: vec![],

@@ -76,6 +76,15 @@ export default {
       eventContext: (range: string, minutes: number, isCall: boolean, organizer: string) =>
         `${range}, ${minutes} мин${isCall ? " · звонок" : ""}${organizer ? " · организатор " + organizer : ""}`,
     },
+    calls: {
+      name: "Звонки на ПК",
+      step: "звонки на этом компьютере",
+      skipped: "Звонки на ПК: пропущены (запись выключена в настройках).",
+      reading: "Звонки на ПК: читаю записанные звонки за период…",
+      done: (n: number, total: string, skipped: number) =>
+        `Звонки на ПК: ${n}, всего ${total}${skipped ? `; ещё ${skipped} уже есть в календаре` : ""}. Звонки, отмеченные как нерабочие, пропущены.`,
+      untitled: (app: string) => `Звонок (${app})`,
+    },
     matrix: {
       name: "Matrix",
       step: "чаты Matrix: рабочие сообщения",

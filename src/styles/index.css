@@ -10,6 +10,7 @@
 @import "./worklog/hours.css";
 @import "./worklog/submit.css";
 @import "./worklog/review.css";
+@import "./worklog/calls.css";
 @import "./dashboard/dashboard.css";
 @import "./team/team.css";
 @import "./mrs/mrs.css";

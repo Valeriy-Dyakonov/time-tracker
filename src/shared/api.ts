@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getLocale, t } from "@/i18n";
 import type { ErrorParams } from "@/i18n/messages/ru/errors";
-import type { DashData, MrBoard, MyAccount, PersonHit, Roster, Evt, GitLabItem, IssueDetail, PageDoc, TaskGit, TaskMrs, IssueInfo, JiraWorklog, Meeting, PageCtx, Settings } from "./types";
+import type { LocalCall, DashData, MrBoard, MyAccount, PersonHit, Roster, Evt, GitLabItem, IssueDetail, PageDoc, TaskGit, TaskMrs, IssueInfo, JiraWorklog, Meeting, PageCtx, Settings } from "./types";
 
 export interface JiraResult {
   me: string;
@@ -78,6 +78,8 @@ export const api = {
   gitlabMrBoard: (team: string[], force?: boolean) => call<MrBoard>("gitlab_mr_board", { team, force }),
   rosterLoad: () => call<Roster>("roster_load"),
   rosterSave: (roster: Roster) => call<void>("roster_save", { roster }),
+  callsList: (from: number, to: number, withHidden = false) => call<LocalCall[]>("calls_list", { from, to, withHidden }),
+  callsSetHidden: (id: number, hidden: boolean) => call<void>("calls_set_hidden", { id, hidden }),
   searchPeople: (system: string, query: string) => call<PersonHit[]>("search_people", { system, query }),
   myAccounts: () => call<MyAccount[]>("my_accounts"),
   saveExport: (path: string, content: string) => call<void>("save_export", { path, content }),

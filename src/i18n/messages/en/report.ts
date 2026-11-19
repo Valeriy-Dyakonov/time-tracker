@@ -1,12 +1,46 @@
 import type ru from "../ru/report";
 
 const en: typeof ru = {
-  tabs: {
-    weeks: { label: "Hours", hint: "Hours by day and task: review and adjust" },
+  flowLabel: "Workflow",
+  moreLabel: "Details",
+  steps: {
+    calls: { label: "Calls", hint: "Check the calls of the period and remove the ones that were not work" },
+    analysis: { label: "Analysis", hint: "Collect the events of the period and split the hours" },
     submit: { label: "Logging", hint: "Enter the hours into Tempo and the weekly time system, step by step" },
+  },
+  stale: {
+    badge: "outdated",
+    title: "The result does not match the choice",
+    period: (p: string) => `The last analysis was for ${p}, but something else is chosen above. Run the analysis again so the hours belong to the chosen period.`,
+    calls: "You changed calls after the analysis. Run it again so the hours take them into account.",
+    go: "To analysis",
+  },
+  resultFor: (p: string) => `Analysis result for ${p}`,
+  next: {
+    analysis: { text: "Calls checked? Next the app collects the events of the period and works out the hours.", button: "Next: analysis →" },
+    submit: { text: "Hours ready? Next they can be entered into Tempo and your time system.", button: "Next: logging →" },
+  },
+  noResult: "No analysis yet. Run it first on the “Analysis” step.",
+  toAnalysis: "To analysis",
+  tabs: {
     ai: { label: "AI review", hint: "Period summary and how each day was calculated: events, shares, meetings" },
     log: { label: "Log", hint: "What the app did during the analysis: requests, errors, warnings" },
     export: { label: "Export", hint: "Download CSV and Markdown" },
+  },
+  calls: {
+    off: "Call tracking is off. Turn it on in the settings and the app starts noting calls.",
+    openSettings: "Open settings",
+    empty: "No calls noted for the chosen period. The app notes calls only while it is open and tracking is on; calls shorter than a minute are not shown.",
+    intro: (p: string) => `Calls for ${p} noted on this computer. If a call was not work, switch it off: it will not go into the hours at the next analysis.`,
+    summary: (work: string, skipped: number) => `Work: ${work}${skipped ? ` · not work: ${skipped}` : ""}`,
+    loadFailed: (e: string) => `Could not load the calls: ${e}`,
+    work: "Work call",
+    notWork: "Not work: leave out",
+    range: (a: string, b: string) => `${a}–${b}`,
+    workTotal: (t: string) => `work: ${t}`,
+    untitledCall: (app: string) => `Call (${app})`,
+    untitled: "untitled",
+    skip: "Skip: to analysis",
   },
   filters: {
     period: "Period",
@@ -32,6 +66,7 @@ const en: typeof ru = {
       useGitlab: "Merge requests you opened, approved or commented on",
       useConfluence: "Pages and comments you created or edited",
       useCalendar: "Meetings and calls from Exchange: time and subject",
+      useCalls: "Calls noted on this computer (a call program holds the microphone)",
       useMatrix: "Your messages in work chats",
       useAi: "The company AI decides which tasks you worked on; without it a heuristic based on task keys is used",
     },

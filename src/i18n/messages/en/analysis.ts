@@ -76,6 +76,15 @@ const en: typeof ru = {
       eventContext: (range: string, minutes: number, isCall: boolean, organizer: string) =>
         `${range}, ${minutes} min${isCall ? " · call" : ""}${organizer ? " · organizer " + organizer : ""}`,
     },
+    calls: {
+      name: "Calls on PC",
+      step: "calls on this computer",
+      skipped: "Calls on PC: skipped (turned off in settings).",
+      reading: "Calls on PC: reading the noted calls of the period…",
+      done: (n: number, total: string, skipped: number) =>
+        `Calls on PC: ${n}, ${total} in total${skipped ? `; ${skipped} more are already in the calendar` : ""}. Calls marked as not work are skipped.`,
+      untitled: (app: string) => `Call (${app})`,
+    },
     matrix: {
       name: "Matrix",
       step: "Matrix chats: work messages",

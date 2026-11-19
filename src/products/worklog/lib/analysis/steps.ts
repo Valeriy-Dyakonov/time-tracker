@@ -1,4 +1,5 @@
 import { calendarSource } from "../sources/calendar";
+import { callsSource } from "../sources/calls";
 import { confluenceSource } from "../sources/confluence";
 import { gitSource } from "../sources/git";
 import { gitlabSource } from "../sources/gitlab";
@@ -42,5 +43,6 @@ export const COLLECT_STEPS: Step[] = [
   { get title() { return msg().steps.context; }, run: (ctx) => ctx.enrich.loadContext(ctx) },
   sourceStep(confluenceSource),
   sourceStep(calendarSource),
+  sourceStep(callsSource),
   sourceStep(matrixSource),
 ];

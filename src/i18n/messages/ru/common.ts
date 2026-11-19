@@ -30,6 +30,7 @@ export default {
     matrix: "Matrix",
     confluence: "Confluence",
     calendar: "Календарь",
+    calls: "Звонки на ПК",
     ai: "Анализ ИИ",
   },
 };

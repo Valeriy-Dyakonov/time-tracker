@@ -11,6 +11,7 @@ export interface RunOptions {
   useMatrix: boolean;
   useConfluence: boolean;
   useCalendar: boolean;
+  useCalls: boolean;
   useAi: boolean;
   fillMode: FillMode;
 }

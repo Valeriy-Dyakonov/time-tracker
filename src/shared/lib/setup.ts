@@ -8,6 +8,8 @@ export interface SetupState {
   matrix: boolean;
   git: boolean;
   gitlab: boolean;
+  /** Calls noted on this computer. */
+  calls: boolean;
 }
 
 /** Which integrations are filled in. `stored` = which tokens exist in the OS keychain. */
@@ -20,5 +22,6 @@ export function setupState(s: Settings, stored: Record<string, boolean>): SetupS
     matrix: !!s.matrixHomeserver.trim() && !!s.matrixUserId.trim() && !!stored.matrix_token,
     git: s.gitRepos.length > 0,
     gitlab: !!s.gitlabUrl.trim() && !!stored.gitlab_pat,
+    calls: s.trackCalls,
   };
 }

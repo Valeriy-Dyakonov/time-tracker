@@ -15,7 +15,7 @@ mod util;
 #[cfg(not(feature = "updater"))]
 use tauri_plugin_updater as _;
 
-use commands::{atlassian, calendar, code, connection, llm, matrix, people, settings as config};
+use commands::{atlassian, calendar, calls, code, connection, llm, matrix, people, settings as config};
 
 /// The local cache lives next to the settings but in the machine-local folder (it is not worth roaming).
 fn open_store(app: &tauri::AppHandle) -> Result<store::Store, Box<dyn std::error::Error>> {
@@ -24,6 +24,7 @@ fn open_store(app: &tauri::AppHandle) -> Result<store::Store, Box<dyn std::error
     let store = store::Store::open(&dir.join("worklog.db")).map_err(|e| e.detail())?;
     // Old rows go at every start; a failure here only means the file stays a bit larger.
     let _ = store.with(store::fresh::purge);
+    let _ = store.with(|c| store::calls::purge(c, store::now_ms()));
     Ok(store)
 }
 
@@ -38,6 +39,7 @@ pub fn run() {
             // loader is painted. Should the page fail to, show it anyway after a moment.
             let store = open_store(app.handle())?;
             tauri::Manager::manage(app, store);
+            calls::spawn_tracker(app.handle().clone());
             let handle = app.handle().clone();
             std::thread::spawn(move || {
                 std::thread::sleep(std::time::Duration::from_secs(3));
@@ -85,6 +87,8 @@ pub fn run() {
             matrix::list_matrix_rooms,
             matrix::matrix_login_sso,
             matrix::matrix_login_password,
+            calls::calls_list,
+            calls::calls_set_hidden,
             people::search_people,
             people::my_accounts,
             llm::llm_chat

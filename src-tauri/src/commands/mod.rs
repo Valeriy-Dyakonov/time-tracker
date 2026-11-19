@@ -1,6 +1,7 @@
 //! Tauri commands, grouped by area. Names, arguments and returned JSON are the frontend contract (src/api.ts).
 pub mod atlassian;
 pub mod calendar;
+pub mod calls;
 pub mod code;
 pub mod connection;
 pub mod llm;

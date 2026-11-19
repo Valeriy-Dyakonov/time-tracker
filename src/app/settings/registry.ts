@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import type { SetupState } from "@/shared/lib/setup";
 import type { Settings } from "@/shared/types";
 import { CalendarSection } from "./sections/CalendarSection";
+import { CallsSection } from "./sections/CallsSection";
 import { ConfluenceSection } from "./sections/ConfluenceSection";
 import { GitlabSection } from "./sections/GitlabSection";
 import { GitSection } from "./sections/GitSection";
@@ -39,6 +40,7 @@ export const SECTIONS: SettingsSection[] = [
   { id: "matrix", status: (r, s) => optional(r.matrix, () => (s.matrixExcludeRooms.length ? st().matrixExcluded(s.matrixExcludeRooms.length) : st().matrixAll)), Component: MatrixSection },
   { id: "confluence", status: (r) => optional(r.confluence, () => st().confluenceOn), Component: ConfluenceSection },
   { id: "calendar", status: (r, s) => optional(r.calendar, () => (s.calendarOnlyCalls ? st().calendarCalls : st().calendarAll)), Component: CalendarSection },
+  { id: "calls", status: (r, s) => optional(r.calls, () => `${st().callsOn} · ${s.callApps.length}`), Component: CallsSection },
   { id: "work", status: (_, s) => ({ ok: true, sub: st().work(hours(s.hoursPerDay), s.workdays.length) }), Component: WorkSection },
   { id: "transfer", status: () => ({ ok: true, sub: t().settings.transfer.sub }), Component: TransferSection },
   { id: "appearance", status: () => ({ ok: true, sub: themeText(readTheme()).label }), Component: AppearanceSection },

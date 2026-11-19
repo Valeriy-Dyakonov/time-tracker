@@ -30,6 +30,7 @@ const en: typeof ru = {
     matrix: "Matrix",
     confluence: "Confluence",
     calendar: "Calendar",
+    calls: "Calls on PC",
     ai: "AI analysis",
   },
 };

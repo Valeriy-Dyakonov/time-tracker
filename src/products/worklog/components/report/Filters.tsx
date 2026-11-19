@@ -20,15 +20,8 @@ const activePreset = (start: string, end: string) =>
 
 const FILLS: FillMode[] = ["neighbors", "period", "none"];
 
-export function Filters(props: {
-  value: FilterValues;
-  onChange: (v: FilterValues) => void;
-  setup: SetupState;
-  busy: boolean;
-  error: string;
-  onRun: () => void;
-  onOpenSettings: () => void;
-}) {
+/** Period, daily norm and how empty days are filled: one bar above every step, so all of them work on the same data. */
+export function PeriodBar(props: { value: FilterValues; onChange: (v: FilterValues) => void }) {
   const all = useT();
   const t = all.report.filters;
   const presetLabel = { "0": t.thisMonth, "-1": t.lastMonth };
@@ -65,10 +58,28 @@ export function Filters(props: {
               options={FILLS.map((value) => ({ value, label: t.fill[value].label, title: t.fill[value].hint }))} />
           </div>
         </div>
-        <div className="fg run-wrap">
-          <RunButton busy={props.busy} ready={props.setup.jira} onRun={props.onRun} />
-        </div>
       </div>
+    </Card>
+  );
+}
+
+/** Step 2: what to read the events from, and the button that runs the analysis. */
+export function RunPanel(props: {
+  value: FilterValues;
+  onChange: (v: FilterValues) => void;
+  setup: SetupState;
+  busy: boolean;
+  error: string;
+  onRun: () => void;
+  onOpenSettings: () => void;
+}) {
+  const all = useT();
+  const t = all.report.filters;
+  const v = props.value;
+  const patch = (p: Partial<FilterValues>) => props.onChange({ ...v, ...p });
+
+  return (
+    <Card className="filters">
       <div className="f-src">
         <span className="f-label">{t.sources}
           <InfoTip>{t.sourcesTip}</InfoTip>
@@ -90,6 +101,7 @@ export function Filters(props: {
             );
           })}
         </div>
+        <RunButton busy={props.busy} ready={props.setup.jira} onRun={props.onRun} />
       </div>
       {props.error && <div className="error">{props.error}</div>}
     </Card>

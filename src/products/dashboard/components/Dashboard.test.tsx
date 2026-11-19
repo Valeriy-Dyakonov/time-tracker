@@ -23,7 +23,7 @@ const task = (key: string, status: string, category: string, extra: object = {})
 });
 
 const render = (data: object) => {
-  const setup = { jira: true, llm: true, confluence: false, calendar: false, matrix: false, git: false, gitlab: false };
+  const setup = { jira: true, llm: true, confluence: false, calendar: false, matrix: false, git: false, gitlab: false, calls: false };
   return renderToString(<Dashboard setup={setup} profile="dev" onOpenSettings={() => {}} initial={data} />);
 };
 

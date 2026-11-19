@@ -70,7 +70,7 @@ label.check:hover { color: var(--accent); }
 .src i { width: 6px; height: 6px; border-radius: 50%; background: var(--src, var(--muted)); }
 .src b { color: var(--text); font-weight: 600; }
 .s-git { --src: var(--src-git); } .s-gitlab { --src: var(--src-gitlab); } .s-jira { --src: var(--src-jira); }
-.s-matrix { --src: var(--src-matrix); } .s-calendar { --src: var(--src-calendar); } .s-confluence { --src: var(--src-confluence); }
+.s-matrix { --src: var(--src-matrix); } .s-calendar { --src: var(--src-calendar); } .s-confluence { --src: var(--src-confluence); } .s-calls { --src: var(--src-calls); }
 
 /* Task link */
 a.ilink { color: var(--accent); text-decoration: none; font-weight: 600; white-space: nowrap; }

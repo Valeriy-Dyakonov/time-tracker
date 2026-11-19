@@ -1,12 +1,12 @@
 import type { SetupState } from "@/shared/lib/setup";
 import type { Source } from "@/shared/types";
 
-export type SourceFlag = "useGit" | "useGitlab" | "useConfluence" | "useCalendar" | "useMatrix" | "useAi";
+export type SourceFlag = "useGit" | "useGitlab" | "useConfluence" | "useCalendar" | "useMatrix" | "useCalls" | "useAi";
 
 export interface AnalysisSource {
   id: SourceFlag;
   /** Key of the label in `common.sources`. */
-  label: Source | "ai";
+  label: Source | "ai" | "calls";
   /** Which settings section must be filled in before the source can be used. */
   setup: keyof SetupState;
 }
@@ -17,6 +17,7 @@ export const ANALYSIS_SOURCES: AnalysisSource[] = [
   { id: "useGitlab", label: "gitlab", setup: "gitlab" },
   { id: "useConfluence", label: "confluence", setup: "confluence" },
   { id: "useCalendar", label: "calendar", setup: "calendar" },
+  { id: "useCalls", label: "calls", setup: "calls" },
   { id: "useMatrix", label: "matrix", setup: "matrix" },
   { id: "useAi", label: "ai", setup: "llm" },
 ];
