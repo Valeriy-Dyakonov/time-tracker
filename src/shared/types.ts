@@ -13,6 +13,8 @@ export interface Settings {
   exchangeUrl: string;
   exchangeUser: string;
   calendarOnlyCalls: boolean;
+  /** Task that gets the time of calls not tied to any task; empty = such calls get no hours. */
+  callsTaskKey: string;
   matrixHomeserver: string;
   matrixUserId: string;
   matrixExcludeRooms: string[];
@@ -46,6 +48,7 @@ export const defaultSettings: Settings = {
   exchangeUrl: "",
   exchangeUser: "",
   calendarOnlyCalls: false,
+  callsTaskKey: "",
   matrixHomeserver: "",
   matrixUserId: "",
   matrixExcludeRooms: [],

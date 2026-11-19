@@ -75,7 +75,10 @@ export function useSettingsForm(initial: Settings, onSaved: (s: Settings) => voi
     onSaved(next);
   }
 
-  return { s, set, tok, setTok, stored, msg, say, dirty, ready, persist, save, test, removeToken, refresh, adopt };
+  /** Puts imported settings into the draft; they are saved by the usual Save button. */
+  const replace = (next: Settings) => setS(next);
+
+  return { s, set, replace, tok, setTok, stored, msg, say, dirty, ready, persist, save, test, removeToken, refresh, adopt };
 }
 
 export type SettingsForm = ReturnType<typeof useSettingsForm>;

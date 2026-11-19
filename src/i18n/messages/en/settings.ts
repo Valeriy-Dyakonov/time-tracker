@@ -10,6 +10,7 @@ const en: typeof ru = {
     confluence: "Confluence",
     calendar: "Mail and calendar",
     work: "Working time",
+    transfer: "Export and import",
     appearance: "Appearance",
   },
   status: {
@@ -55,6 +56,8 @@ const en: typeof ru = {
     contextHint: "Project keys separated by commas, e.g. ABC, XYZ. Their events (commits, chat, calls) still serve as hints for the AI, but no hours are booked on those tasks. Useful for other teams' projects and tasks you can't log time on.",
     profile: "Work Dashboard profile",
     profileHint: "Your role: it decides whose tasks the dashboard shows and which statuses come first.",
+    callsTask: "Task for calls without a task",
+    callsTaskHint: "A key like PROJ-1234. Dailies and talks about future tasks don't belong to the finished tasks, so their time is logged here. If the chat mentions a task around a call (e.g. a sync with QA), the call goes to that task. Empty: such calls get no hours.",
     helpTitle: "Where to get a Jira token",
     helpSteps: [
       "Open Jira in the browser and sign in with your account.",
@@ -217,6 +220,15 @@ const en: typeof ru = {
   language: {
     title: "Language",
     tip: "Language of the interface, reports and AI texts. Applied immediately. A report built earlier keeps its language — run the analysis again.",
+  },
+  transfer: {
+    title: "Export and import settings",
+    sub: "to a file and back",
+    tip: "Shared settings: service addresses, AI, working time and so on. The file has no passwords or tokens (they stay in the system's secure store), language or theme, and nothing personal: Matrix and Exchange logins, the repositories folder and list, commit authors, excluded rooms. An import leaves those fields as you have them. Handy for sharing settings with a colleague or moving to another computer.",
+    export: "Export settings",
+    import: "Import settings",
+    bad: "✗ This is not a Worklog Tracker settings file.",
+    loaded: (skipped: number) => `✓ Settings loaded${skipped ? ` (fields skipped: ${skipped})` : ""}. Press Save to apply. Enter passwords and tokens again.`,
   },
   appearance: {
     title: "Appearance",

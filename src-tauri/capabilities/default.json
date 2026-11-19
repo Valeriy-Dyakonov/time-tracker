@@ -11,6 +11,7 @@
     "core:window:allow-toggle-maximize",
     "core:window:allow-close",
     "core:window:allow-show",
-    "updater:default"
+    "updater:default",
+    "dialog:allow-save"
   ]
 }

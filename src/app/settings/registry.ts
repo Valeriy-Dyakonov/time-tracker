@@ -9,6 +9,7 @@ import { JiraSection } from "./sections/JiraSection";
 import { LlmSection } from "./sections/LlmSection";
 import { MatrixSection } from "./sections/MatrixSection";
 import { WorkSection } from "./sections/WorkSection";
+import { TransferSection } from "./sections/TransferSection";
 import { AppearanceSection } from "./sections/AppearanceSection";
 import { readTheme, themeText } from "@/shared/theme";
 import { hours, t } from "@/i18n";
@@ -39,5 +40,6 @@ export const SECTIONS: SettingsSection[] = [
   { id: "confluence", status: (r) => optional(r.confluence, () => st().confluenceOn), Component: ConfluenceSection },
   { id: "calendar", status: (r, s) => optional(r.calendar, () => (s.calendarOnlyCalls ? st().calendarCalls : st().calendarAll)), Component: CalendarSection },
   { id: "work", status: (_, s) => ({ ok: true, sub: st().work(hours(s.hoursPerDay), s.workdays.length) }), Component: WorkSection },
+  { id: "transfer", status: () => ({ ok: true, sub: t().settings.transfer.sub }), Component: TransferSection },
   { id: "appearance", status: () => ({ ok: true, sub: themeText(readTheme()).label }), Component: AppearanceSection },
 ];

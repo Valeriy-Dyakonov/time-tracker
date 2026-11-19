@@ -20,6 +20,9 @@ export function JiraSection({ f }: { f: SettingsForm }) {
       <Field label={m.context} hint={m.contextHint}>
         <input value={ctxText} placeholder="ABC, XYZ" onChange={(e) => { setCtxText(e.target.value); f.set("contextProjects", parseKeys(e.target.value)); }} />
       </Field>
+      <Field label={m.callsTask} hint={m.callsTaskHint}>
+        <input value={f.s.callsTaskKey} placeholder="PROJ-1234" onChange={(e) => f.set("callsTaskKey", e.target.value.toUpperCase())} />
+      </Field>
       <Field label={m.profile} hint={m.profileHint} tip={all.dashboard.profileTip}>
         <Segmented size="small" value={asProfile(f.s.dashboardProfile)} onChange={(p) => f.set("dashboardProfile", p)}
           options={PROFILES.map((p) => ({ value: p, label: all.dashboard.profiles[p] }))} />

@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
+import { isTauri } from "@tauri-apps/api/core";
+import { save } from "@tauri-apps/plugin-dialog";
 import { useT } from "@/i18n";
+import { api } from "@/shared/api";
 
 export function Field(props: { label: string; hint?: string; tip?: ReactNode; children: ReactNode }) {
   return (
@@ -39,7 +42,16 @@ export function Title(props: { children: ReactNode; tip?: ReactNode; wide?: bool
   return <H className="titled">{props.children}{props.tip && <InfoTip wide={props.wide}>{props.tip}</InfoTip>}</H>;
 }
 
-export function download(name: string, content: string, mime = "text/plain") {
+/** Saves a text file: the system "Save as" dialog in the app, a browser download as a fallback. */
+export async function download(name: string, content: string, mime = "text/plain"): Promise<void> {
+  try {
+    const ext = name.split(".").pop() ?? "";
+    const path = await save({ defaultPath: name, filters: [{ name: ext.toUpperCase(), extensions: [ext] }] });
+    if (path) await api.saveExport(path, content);
+    return;
+  } catch (e) {
+    if (isTauri()) throw e;
+  }
   const url = URL.createObjectURL(new Blob([content], { type: `${mime};charset=utf-8` }));
   const a = document.createElement("a");
   a.href = url;

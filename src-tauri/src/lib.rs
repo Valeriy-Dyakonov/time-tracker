@@ -18,7 +18,7 @@ use commands::{atlassian, calendar, code, connection, llm, matrix, settings as c
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder = tauri::Builder::default();
+    let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init());
     #[cfg(feature = "updater")]
     let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
     builder
@@ -38,6 +38,7 @@ pub fn run() {
             config::load_settings,
             config::save_settings,
             config::set_secret,
+            config::save_export,
             config::secrets_status,
             connection::test_connection,
             atlassian::fetch_jira,

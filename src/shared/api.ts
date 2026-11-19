@@ -74,6 +74,7 @@ export const api = {
   fetchJira: (start: string, end: string) => call<JiraResult>("fetch_jira", { start, end, ...lang() }),
   lookupIssues: (keys: string[]) => call<IssueInfo[]>("lookup_issues", { keys }),
   jiraDashboard: (profile: string, historyDays?: number) => call<DashData>("jira_dashboard", { profile, historyDays }),
+  saveExport: (path: string, content: string) => call<void>("save_export", { path, content }),
   openLink: (url: string) => call<void>("open_link", { url }),
   taskGit: (key: string) => call<TaskGit>("task_git", { key }),
   taskDoc: (repo: string, commit: string, path: string) => call<string>("task_doc", { repo, commit, path }),

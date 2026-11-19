@@ -105,6 +105,15 @@ const en: typeof ru = {
     dropped: (list: string) => `Skipped keys Jira did not return (no such task or no access): ${list}. That is fine — they are not counted.`,
   },
 
+  calls: {
+    badKey: (raw: string) => `Calls without a task: “${raw}” is not a task key (expected PROJ-1234), call time is not distributed.`,
+    notFound: (key: string) => `Calls without a task: ${key} was not found in Jira or is not accessible, call time is not distributed.`,
+    enabled: (key: string) => `Calls without a task are logged to ${key}; a call with a task mentioned in the chat around it goes to that task.`,
+    day: (label: string, spent: string) => `${label}: call time per task (minutes): ${spent}.`,
+    note: (titles: string) => `Calls: ${titles}`,
+    reasoning: (spent: string) => `Call time is counted separately (minutes per task: ${spent}).`,
+  },
+
   days: {
     onlyCalls: (n: number) => `calls only: ${n}`,
     noEvents: "no events",
