@@ -1,8 +1,9 @@
+import type { ReactElement } from "react";
 import { useT } from "@/i18n";
 
 export type View = "weeks" | "submit" | "ai" | "log" | "export";
 
-const TABS: { id: View; icon: JSX.Element }[] = [
+const TABS: { id: View; icon: ReactElement }[] = [
   { id: "weeks", icon: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></> },
   { id: "submit", icon: <><path d="M5 12l4 4L19 6" /></> },
   { id: "ai", icon: <><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" /></> },
