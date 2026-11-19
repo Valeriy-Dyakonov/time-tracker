@@ -53,3 +53,12 @@
 .app-chip button { border: 0; background: none; padding: 0 4px; font: inherit; color: var(--muted); cursor: pointer; }
 .app-chip button:hover { color: var(--bad); }
 .app-tag { font-size: 11px; line-height: 1; padding: 2px 6px; border-radius: var(--r-xs); color: var(--muted); background: color-mix(in srgb, var(--muted) 14%, transparent); }
+
+/* Side menu groups */
+.sidegroup { display: flex; flex-direction: column; gap: 2px; }
+.sidehead { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; border-radius: var(--r-md); }
+.sidehead:hover { color: var(--text); background: var(--card); }
+.sidechev { transition: transform .15s; }
+.sidechev.open { transform: rotate(90deg); }
+.sideitem.sub { margin-left: 10px; }
+.mark.small { width: 16px; height: 16px; font-size: 10px; }

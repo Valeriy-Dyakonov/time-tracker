@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getLocale, t } from "@/i18n";
 import type { ErrorParams } from "@/i18n/messages/ru/errors";
-import type { LocalCall, DashData, MrBoard, MyAccount, PersonHit, Roster, Evt, GitLabItem, IssueDetail, PageDoc, TaskGit, TaskMrs, IssueInfo, JiraWorklog, Meeting, PageCtx, Settings } from "./types";
+import type { LocalCall, DashData, MrBoard, MyAccount, PersonHit, Roster, Evt, GitLabItem, IssueDetail, JiraTransition, PageDoc, TaskGit, TaskMrs, IssueInfo, JiraWorklog, Meeting, PageCtx, Settings } from "./types";
 
 export interface JiraResult {
   me: string;
@@ -91,6 +91,8 @@ export const api = {
   analysisPages: (key: string, urls: string[]) => call<PageDoc[]>("analysis_pages", { key, urls }),
   gitlabLinks: (urls: string[]) => call<GitLabItem[]>("gitlab_links", { urls }),
   jiraIssueDetail: (key: string) => call<IssueDetail>("jira_issue_detail", { key }),
+  jiraTransitions: (key: string) => call<JiraTransition[]>("jira_transitions", { key }),
+  jiraTransition: (key: string, id: string, fields: { id: string; values: string[] }[]) => call<void>("jira_transition", { key, id, fields }),
   jiraWorklogs: (start: string, end: string) => call<JiraWorklog[]>("jira_worklogs", { start, end }),
   jiraAddWorklog: (key: string, date: string, seconds: number, comment: string) =>
     call<JiraWorklog>("jira_add_worklog", { key, date, seconds, comment }),

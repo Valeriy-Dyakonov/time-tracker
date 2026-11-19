@@ -146,7 +146,7 @@ export default function Dashboard({ setup, profile, onOpenSettings, initial }: {
 
       <History profile={profile} filter={scope} onOpen={setOpened} />
 
-      {opened && <IssueDrawer issueKey={opened} context={context} projects={projectSet} setup={setup} profile={profile} onClose={() => setOpened(null)} onSettings={() => { setOpened(null); onOpenSettings(); }} />}
+      {opened && <IssueDrawer issueKey={opened} context={context} projects={projectSet} setup={setup} profile={profile} onClose={() => setOpened(null)} onSettings={() => { setOpened(null); onOpenSettings(); }} onChanged={() => void load(profile, true)} />}
     </div>
   );
 }

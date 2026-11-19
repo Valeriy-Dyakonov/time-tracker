@@ -175,6 +175,7 @@ const dashboard: typeof ru = {
     },
   },
   detail: {
+    status: "Status",
     openInJira: "Open in Jira",
     close: "Close",
     resize: "Drag to resize; double-click for the default width",
@@ -197,6 +198,21 @@ const dashboard: typeof ru = {
     noComments: "No comments.",
     subtasks: "Subtasks",
     links: "Links",
+    move: {
+      button: "Change status",
+      title: "Move the task to the next stage of its Jira workflow",
+      loading: "Loading available transitions…",
+      none: "No transitions are available to you right now.",
+      failed: (e: string) => `Could not get the transitions: ${e}`,
+      to: (name: string) => `→ ${name}`,
+      onlyJira: "Jira only",
+      onlyJiraTip: "Jira asks for fields for this transition that the app cannot fill. Do it in Jira.",
+      confirm: (key: string, from: string, to: string) => `Move to “${to}”?`,
+      pick: "Choose a value",
+      apply: "Move",
+      cancel: "Cancel",
+      done: (to: string) => `Status: ${to}`,
+    },
   },
 };
 

@@ -1,8 +1,9 @@
-//! Jira Server / Data Center, REST API v2, Personal Access Token. Read-only.
+//! Jira Server / Data Center, REST API v2, Personal Access Token. Read-only, except the user's worklogs and task transitions (explicit actions).
 mod parse;
 pub mod worklog;
 pub mod dashboard;
 pub mod detail;
+pub mod transition;
 
 use crate::http::{Auth, JsonApi};
 use crate::model::{Event, IssueInfo};

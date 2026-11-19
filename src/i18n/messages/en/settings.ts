@@ -14,6 +14,11 @@ const en: typeof ru = {
     calls: "Calls",
     appearance: "Appearance",
   },
+  groups: {
+    connections: "Connections",
+    work: "Work",
+    app: "App",
+  },
   status: {
     jiraOn: "connected",
     confluenceOn: "connected",

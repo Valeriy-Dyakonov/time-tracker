@@ -8,6 +8,7 @@ import { Button, keyColor } from "@/shared/ui";
 import { priorityLevel } from "../lib/priority";
 import type { SetupState } from "@/shared/lib/setup";
 import { stageOf } from "../lib/stages";
+import { StatusMove } from "./StatusMove";
 import { TaskTools } from "./tools/TaskTools";
 import { Avatar } from "./Avatar";
 import { ago } from "./IssueCard";
@@ -49,6 +50,8 @@ export function IssueDrawer(props: {
   profile: DashProfile;
   onClose: () => void;
   onSettings?: () => void;
+  /** The task changed in Jira (its status): the board should be read again. */
+  onChanged?: () => void;
 }) {
   const m = useT().dashboard;
   const d = m.detail;
@@ -56,7 +59,8 @@ export function IssueDrawer(props: {
   const key = stack[stack.length - 1];
   const [data, setData] = useState<IssueDetail | null>(null);
   const [error, setError] = useState("");
-  const { onClose } = props;
+  const [version, setVersion] = useState(0);
+  const { onClose, onChanged } = props;
   const [width, startResize, resetWidth] = useDrawerWidth();
 
   useEffect(() => { setStack([props.issueKey]); }, [props.issueKey]);
@@ -66,7 +70,7 @@ export function IssueDrawer(props: {
     setError("");
     api.jiraIssueDetail(key).then((x) => live && setData(x)).catch((e) => live && setError(String(e)));
     return () => { live = false; };
-  }, [key]);
+  }, [key, version]);
   useEffect(() => {
     const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", esc);
@@ -85,7 +89,6 @@ export function IssueDrawer(props: {
         <header className="drawer-h">
           {stack.length > 1 && <button className="drawer-icon" title={d.back} aria-label={d.back} onClick={() => setStack((s) => s.slice(0, -1))}>←</button>}
           <span className="drawer-key-h">{data?.issueType && <span className="dash-type">{data.issueType}</span>}<b>{key}</b></span>
-          {data && <span className={`dash-stage s-${stage}`}>{data.status}</span>}
           <span className="spacer" />
           <Button size="small" onClick={() => void api.openIssue(key)}>{d.openInJira} ↗</Button>
           <button className="drawer-icon" aria-label={d.close} title={d.close} onClick={onClose}>×</button>
@@ -118,6 +121,12 @@ export function IssueDrawer(props: {
                 <Person label={m.assignee} p={data.assignee} m={m} />
                 {data.people.map((p) => <Person key={p.field + p.person.name} label={p.field} p={p.person} m={m} />)}
                 <Person label={m.reporter} p={data.reporter} m={m} />
+                <div className="person">
+                  <span className="person-text">
+                    <small>{d.status}</small>
+                    <StatusMove issueKey={key} status={data.status} stage={String(stage)} onMoved={() => { setVersion((v) => v + 1); onChanged?.(); }} />
+                  </span>
+                </div>
                 <div className="drawer-dates">
                   {data.due && <span>{d.due}: <b>{dateShort(data.due)}</b></span>}
                   <span>{d.created}: <b>{day(data.created)}</b></span>

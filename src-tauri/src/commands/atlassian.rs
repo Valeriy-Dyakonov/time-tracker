@@ -101,6 +101,23 @@ pub async fn jira_update_worklog(app: tauri::AppHandle, key: String, id: String,
     worklog::update(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &key, &id, seconds, &comment).await
 }
 
+/// Where the task can go next in its workflow (read-only).
+#[tauri::command]
+pub async fn jira_transitions(app: tauri::AppHandle, key: String) -> AppResult<Vec<jira::transition::Transition>> {
+    valid_key(&key)?;
+    let c = Ctx::load(&app)?;
+    jira::transition::list(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &key).await
+}
+
+/// Moves the task along its workflow; an explicit, confirmed action of the user in the task view.
+#[tauri::command]
+pub async fn jira_transition(app: tauri::AppHandle, key: String, id: String, fields: Vec<jira::transition::Picked>) -> AppResult<()> {
+    valid_key(&key)?;
+    valid_id(&id)?;
+    let c = Ctx::load(&app)?;
+    jira::transition::perform(&c.client, &c.settings.jira_url, &require(&secrets::JIRA)?, &key, &id, &fields).await
+}
+
 #[tauri::command]
 pub async fn jira_delete_worklog(app: tauri::AppHandle, key: String, id: String) -> AppResult<()> {
     valid_key(&key)?;

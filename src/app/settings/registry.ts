@@ -20,8 +20,11 @@ type SectionId = keyof ReturnType<typeof t>["settings"]["nav"];
 
 export interface SectionStatus { ok: boolean; sub: string; required?: boolean }
 
+export type GroupId = keyof ReturnType<typeof t>["settings"]["groups"];
+
 export interface SettingsSection {
   id: SectionId;
+  group: GroupId;
   status: (ready: SetupState, s: Settings) => SectionStatus;
   Component: ComponentType<{ f: SettingsForm }>;
 }
@@ -33,15 +36,18 @@ export const sectionLabel = (id: SectionId): string => t().settings.nav[id];
 
 /** Side navigation and content of the settings page, in display order. */
 export const SECTIONS: SettingsSection[] = [
-  { id: "jira", status: (r) => ({ ok: r.jira, sub: r.jira ? st().jiraOn : t().common.required, required: true }), Component: JiraSection },
-  { id: "llm", status: (r, s) => ({ ok: r.llm, sub: r.llm ? s.llmModel : t().common.recommended }), Component: LlmSection },
-  { id: "git", status: (r, s) => optional(r.git, () => st().repos(s.gitRepos.length)), Component: GitSection },
-  { id: "gitlab", status: (r, s) => optional(r.gitlab, () => (s.gitlabLocalOnly ? st().gitlabLocal : st().gitlabAll)), Component: GitlabSection },
-  { id: "matrix", status: (r, s) => optional(r.matrix, () => (s.matrixExcludeRooms.length ? st().matrixExcluded(s.matrixExcludeRooms.length) : st().matrixAll)), Component: MatrixSection },
-  { id: "confluence", status: (r) => optional(r.confluence, () => st().confluenceOn), Component: ConfluenceSection },
-  { id: "calendar", status: (r, s) => optional(r.calendar, () => (s.calendarOnlyCalls ? st().calendarCalls : st().calendarAll)), Component: CalendarSection },
-  { id: "calls", status: (r, s) => optional(r.calls, () => `${st().callsOn} · ${s.callApps.length}`), Component: CallsSection },
-  { id: "work", status: (_, s) => ({ ok: true, sub: st().work(hours(s.hoursPerDay), s.workdays.length) }), Component: WorkSection },
-  { id: "transfer", status: () => ({ ok: true, sub: t().settings.transfer.sub }), Component: TransferSection },
-  { id: "appearance", status: () => ({ ok: true, sub: themeText(readTheme()).label }), Component: AppearanceSection },
+  { id: "jira", group: "connections", status: (r) => ({ ok: r.jira, sub: r.jira ? st().jiraOn : t().common.required, required: true }), Component: JiraSection },
+  { id: "llm", group: "connections", status: (r, s) => ({ ok: r.llm, sub: r.llm ? s.llmModel : t().common.recommended }), Component: LlmSection },
+  { id: "git", group: "connections", status: (r, s) => optional(r.git, () => st().repos(s.gitRepos.length)), Component: GitSection },
+  { id: "gitlab", group: "connections", status: (r, s) => optional(r.gitlab, () => (s.gitlabLocalOnly ? st().gitlabLocal : st().gitlabAll)), Component: GitlabSection },
+  { id: "matrix", group: "connections", status: (r, s) => optional(r.matrix, () => (s.matrixExcludeRooms.length ? st().matrixExcluded(s.matrixExcludeRooms.length) : st().matrixAll)), Component: MatrixSection },
+  { id: "confluence", group: "connections", status: (r) => optional(r.confluence, () => st().confluenceOn), Component: ConfluenceSection },
+  { id: "calendar", group: "connections", status: (r, s) => optional(r.calendar, () => (s.calendarOnlyCalls ? st().calendarCalls : st().calendarAll)), Component: CalendarSection },
+  { id: "calls", group: "work", status: (r, s) => optional(r.calls, () => `${st().callsOn} · ${s.callApps.length}`), Component: CallsSection },
+  { id: "work", group: "work", status: (_, s) => ({ ok: true, sub: st().work(hours(s.hoursPerDay), s.workdays.length) }), Component: WorkSection },
+  { id: "transfer", group: "app", status: () => ({ ok: true, sub: t().settings.transfer.sub }), Component: TransferSection },
+  { id: "appearance", group: "app", status: () => ({ ok: true, sub: themeText(readTheme()).label }), Component: AppearanceSection },
 ];
+
+/** Groups of the side menu in display order; each holds its sections in the order of `SECTIONS`. */
+export const GROUPS: GroupId[] = ["connections", "work", "app"];

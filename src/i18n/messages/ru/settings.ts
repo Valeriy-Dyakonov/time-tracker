@@ -12,6 +12,11 @@ export default {
     calls: "Звонки",
     appearance: "Оформление",
   },
+  groups: {
+    connections: "Подключения",
+    work: "Работа",
+    app: "Приложение",
+  },
   status: {
     jiraOn: "подключена",
     confluenceOn: "подключён",

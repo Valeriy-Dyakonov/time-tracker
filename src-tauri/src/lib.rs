@@ -69,6 +69,8 @@ pub fn run() {
             atlassian::jira_add_worklog,
             atlassian::jira_update_worklog,
             atlassian::jira_delete_worklog,
+            atlassian::jira_transitions,
+            atlassian::jira_transition,
             atlassian::fetch_confluence,
             atlassian::fetch_issue_pages,
             atlassian::analysis_pages,

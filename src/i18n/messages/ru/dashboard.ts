@@ -173,6 +173,7 @@ export default {
     },
   },
   detail: {
+    status: "Статус",
     openInJira: "Открыть в Jira",
     close: "Закрыть",
     resize: "Потяните, чтобы изменить ширину; двойной клик — обычная ширина",
@@ -195,5 +196,20 @@ export default {
     noComments: "Комментариев нет.",
     subtasks: "Подзадачи",
     links: "Связи",
+    move: {
+      button: "Сменить статус",
+      title: "Перевести задачу на следующий этап по workflow Jira",
+      loading: "Загружаю доступные переходы…",
+      none: "Для вас сейчас нет доступных переходов.",
+      failed: (e: string) => `Не удалось получить переходы: ${e}`,
+      to: (name: string) => `→ ${name}`,
+      onlyJira: "только в Jira",
+      onlyJiraTip: "Для этого перехода Jira просит поля, которые приложение заполнить не может. Выполните его в Jira.",
+      confirm: (key: string, from: string, to: string) => `Перевести в «${to}»?`,
+      pick: "Выберите значение",
+      apply: "Перевести",
+      cancel: "Отмена",
+      done: (to: string) => `Статус: ${to}`,
+    },
   },
 };

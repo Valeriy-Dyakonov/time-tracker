@@ -206,6 +206,18 @@ export interface DashData {
   cachedAt: number;
 }
 
+export interface JiraTransition {
+  id: string;
+  name: string;
+  /** Status the task gets. */
+  to: string;
+  category: string;
+  /** Required fields the user picks from Jira's own values (e.g. resolution). */
+  fields: { id: string; name: string; multiple: boolean; options: { id: string; name: string }[] }[];
+  /** The screen asks for something only Jira can take. */
+  needsJira: boolean;
+}
+
 export interface DashRelated {
   key: string;
   summary: string;
