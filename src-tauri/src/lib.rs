@@ -85,6 +85,7 @@ pub fn run() {
             code::task_remote_doc,
             code::fetch_gitlab,
             code::gitlab_mr_board,
+            code::gitlab_mr_detail,
             calendar::fetch_calendar,
             calendar::fetch_holidays,
             matrix::fetch_matrix,

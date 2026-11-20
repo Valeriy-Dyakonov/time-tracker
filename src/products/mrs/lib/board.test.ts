@@ -5,7 +5,7 @@ import { buildSections, buildView, factsOf, filterCounts, groupMrs, isStale, nee
 const p = (username: string): MrPerson => ({ username, name: username });
 const mr = (iid: number, author: string, over: Partial<Mr> = {}): Mr => ({
   projectId: 1, iid, project: "g/p", title: `t${iid}`, url: "", sourceBranch: "b", targetBranch: "main", task: null, author: p(author), draft: false, conflicts: false,
-  discussionsResolved: true, mergeStatus: "not_approved", comments: 0, created: 0, updated: iid, reviewers: [], approvedBy: [], approvalsLeft: 1, detailed: true, ...over,
+  discussionsResolved: true, mergeStatus: "not_approved", comments: 0, created: 0, updated: iid, reviewers: [], approvedBy: [], approvalsLeft: 1, detailed: true, pipeline: null, ...over,
 });
 const board = (mrs: Mr[], tasks: MrTask[] = []): MrBoard => ({ me: p("me"), mrs, cachedAt: 0, tasks });
 const task = (key: string, ...fixVersions: string[]): MrTask => ({ key, summary: `s ${key}`, status: "In Progress", fixVersions });

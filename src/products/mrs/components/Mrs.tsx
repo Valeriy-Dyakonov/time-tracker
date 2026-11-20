@@ -83,16 +83,18 @@ export default function Mrs({ setup, profile, onOpenSettings }: { setup: SetupSt
           <span>{m.group}<InfoTip>{m.releaseTip}</InfoTip></span>
           <Segmented size="small" value={group} onChange={setGroup} options={GROUPS.map((g) => ({ value: g, label: m.groups[g] }))} />
         </div>
-        <span className="mrs-sync muted">
-          {loading ? <><i className="spin" />{m.loading}</> : board && m.updatedAt(new Date(board.cachedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))}
-        </span>
-        <Button size="small" disabled={loading} onClick={() => load(true)}>{m.refresh}</Button>
+        <div className="mrs-sync-box">
+          <span className="mrs-sync muted">
+            {loading ? <><i className="spin" />{m.loading}</> : board && m.updatedAt(new Date(board.cachedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))}
+          </span>
+          <Button size="small" disabled={loading} onClick={() => load(true)}>{m.refresh}</Button>
+        </div>
       </div>
 
       {roster && people.length === 0 && <p className="muted mrs-note">{m.noTeam}</p>}
       {error && <div className="error">{error}</div>}
 
-      {views.map((v) => <MrSection key={v.id} view={v} group={group} tasks={tasks} />)}
+      {views.map((v) => <MrSection key={v.id} view={v} group={group} tasks={tasks} aiReady={setup.llm} share={v.id === "mine" ? { roster, myGitlab: board?.me.username ?? "" } : undefined} />)}
     </section>
   );
 }

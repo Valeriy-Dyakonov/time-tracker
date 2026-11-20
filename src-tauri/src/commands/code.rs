@@ -119,6 +119,16 @@ pub async fn fetch_gitlab(app: tauri::AppHandle, start: String, end: String, lan
     Ok(GitlabOut { me, events, scoped, fallback })
 }
 
+/// The pipeline (with the failed jobs and the log lines that explain them) and the unresolved review threads of one MR.
+#[tauri::command]
+pub async fn gitlab_mr_detail(app: tauri::AppHandle, project_id: i64, iid: i64) -> AppResult<gitlab::mr_detail::MrDetail> {
+    let c = Ctx::load(&app)?;
+    if c.settings.gitlab_url.trim().is_empty() {
+        return Err(AppError::new("urlMissing").with("service", "GitLab"));
+    }
+    gitlab::mr_detail::read(&c.client, &c.settings.gitlab_url, &require(&secrets::GITLAB)?, project_id, iid).await
+}
+
 /// Usernames come from the roster file the user typed; GitLab logins are letters, digits and `._-`.
 fn clean_usernames(list: Vec<String>) -> Vec<String> {
     let mut out: Vec<String> = list

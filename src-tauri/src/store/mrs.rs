@@ -41,13 +41,13 @@ fn save_mr(tx: &Transaction, m: &Mr, at: i64) -> rusqlite::Result<()> {
         save_user(tx, p, false)?;
     }
     tx.execute(
-        "INSERT INTO cache_mr(project_id, iid, project, title, web_url, source_branch, author, draft, conflicts, resolved, merge_status, comments, created, updated, approvals_left, detail_at, fetched_at, target_branch, task) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19) \
+        "INSERT INTO cache_mr(project_id, iid, project, title, web_url, source_branch, author, draft, conflicts, resolved, merge_status, comments, created, updated, approvals_left, detail_at, fetched_at, target_branch, task, pipeline) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20) \
          ON CONFLICT(project_id, iid) DO UPDATE SET project = ?3, title = ?4, web_url = ?5, source_branch = ?6, author = ?7, draft = ?8, conflicts = ?9, \
-         resolved = ?10, merge_status = ?11, comments = ?12, created = ?13, updated = ?14, approvals_left = ?15, detail_at = ?16, fetched_at = ?17, target_branch = ?18, task = ?19",
+         resolved = ?10, merge_status = ?11, comments = ?12, created = ?13, updated = ?14, approvals_left = ?15, detail_at = ?16, fetched_at = ?17, target_branch = ?18, task = ?19, pipeline = ?20",
         params![
             m.project_id, m.iid, m.project, m.title, m.url, m.source_branch, m.author.username, m.draft, m.conflicts, m.discussions_resolved,
-            m.merge_status, m.comments, m.created, m.updated, m.approvals_left, m.detailed.then_some(at), at, m.target_branch, m.task
+            m.merge_status, m.comments, m.created, m.updated, m.approvals_left, m.detailed.then_some(at), at, m.target_branch, m.task, m.pipeline
         ],
     )?;
     tx.execute("DELETE FROM cache_mr_person WHERE project_id = ?1 AND iid = ?2", params![m.project_id, m.iid])?;
@@ -105,7 +105,7 @@ pub fn load_board(conn: &Connection, scope: &str) -> rusqlite::Result<Option<MrB
 
     let mut st = conn.prepare(
         "SELECT m.project_id, m.iid, m.project, m.title, m.web_url, m.source_branch, m.author, COALESCE(u.display, m.author), m.draft, m.conflicts, m.resolved, \
-         m.merge_status, m.comments, m.created, m.updated, m.approvals_left, m.detail_at IS NOT NULL, m.target_branch, m.task FROM cache_member c \
+         m.merge_status, m.comments, m.created, m.updated, m.approvals_left, m.detail_at IS NOT NULL, m.target_branch, m.task, m.pipeline FROM cache_member c \
          JOIN cache_mr m ON c.ref = m.project_id || ':' || m.iid \
          LEFT JOIN cache_user u ON u.system = ?2 AND u.name = m.author WHERE c.scope = ?1 ORDER BY m.updated DESC",
     )?;
@@ -131,6 +131,7 @@ pub fn load_board(conn: &Connection, scope: &str) -> rusqlite::Result<Option<MrB
                 detailed: r.get(16)?,
                 target_branch: r.get(17)?,
                 task: r.get(18)?,
+                pipeline: r.get(19)?,
                 reviewers: vec![],
                 approved_by: vec![],
             })
@@ -222,6 +223,7 @@ mod tests {
             approved_by: vec![person("ok")],
             approvals_left: Some(1),
             detailed: true,
+            pipeline: Some("failed".into()),
         }
     }
     fn board(mrs: Vec<Mr>) -> MrBoard {

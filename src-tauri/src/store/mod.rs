@@ -16,7 +16,7 @@ use std::path::Path;
 use std::sync::Mutex;
 
 /// Appended to, never edited: the applied count is kept in `PRAGMA user_version`.
-const MIGRATIONS: &[&str] = &[include_str!("../../migrations/001_init.sql"), include_str!("../../migrations/002_roster.sql"), include_str!("../../migrations/003_absence.sql"), include_str!("../../migrations/004_mr.sql"), include_str!("../../migrations/005_mr_tasks.sql"), include_str!("../../migrations/006_calls.sql"), include_str!("../../migrations/007_task_mr.sql")];
+const MIGRATIONS: &[&str] = &[include_str!("../../migrations/001_init.sql"), include_str!("../../migrations/002_roster.sql"), include_str!("../../migrations/003_absence.sql"), include_str!("../../migrations/004_mr.sql"), include_str!("../../migrations/005_mr_tasks.sql"), include_str!("../../migrations/006_calls.sql"), include_str!("../../migrations/007_task_mr.sql"), include_str!("../../migrations/008_mr_pipeline.sql")];
 
 pub struct Store {
     conn: Mutex<Connection>,

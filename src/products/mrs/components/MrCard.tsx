@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { dateShort } from "@/i18n/format";
 import { useT } from "@/i18n";
 import { api } from "@/shared/api";
 import type { Mr, MrTask } from "@/shared/types";
 import { initials } from "@/products/team/lib/roster";
 import { factsOf, isStale } from "../lib/board";
+import { MrDetail } from "./MrDetail";
+import { PipelineBadge } from "./PipelineBadge";
 
 const hhmm = (d: Date) => d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -19,8 +22,9 @@ function when(ms: number, m: ReturnType<typeof useT>["mrs"]): string {
 }
 
 /** One merge request: title, author, what it waits for and who reviews it. `task` is shown when the list is not grouped by it. */
-export function MrCard({ mr, task, compact }: { mr: Mr; task?: MrTask; compact?: boolean }) {
+export function MrCard({ mr, task, compact, aiReady }: { mr: Mr; task?: MrTask; compact?: boolean; aiReady: boolean }) {
   const m = useT().mrs;
+  const [open, setOpen] = useState(false);
   const f = factsOf(mr);
   const stale = isStale(mr, Date.now());
   const approved = new Set(mr.approvedBy.map((a) => a.username));
@@ -33,6 +37,11 @@ export function MrCard({ mr, task, compact }: { mr: Mr; task?: MrTask; compact?:
         <div className="mr-head">
           <button type="button" className="mr-title" title={`${mr.title}\n${m.open}`} onClick={() => void api.openLink(mr.url).catch(() => {})}>{mr.title}</button>
           {mr.draft && <span className="mr-tag">{m.draft}</span>}
+          {mr.pipeline && <PipelineBadge status={mr.pipeline} />}
+          <button type="button" className={`mr-more ${open ? "open" : ""}`} aria-expanded={open} onClick={() => setOpen(!open)}>
+            {m.detail.toggle}
+            <svg viewBox="0 0 12 12" aria-hidden><path d="M2.5 4.5 6 8l3.5-3.5" /></svg>
+          </button>
         </div>
         <div className="mr-meta">
           <span className="mr-author"><span className="mr-ava">{initials(mr.author.name)}</span>{mr.author.name}</span>
@@ -51,6 +60,7 @@ export function MrCard({ mr, task, compact }: { mr: Mr; task?: MrTask; compact?:
             {task && <span className="mr-tag task" title={task.summary}><b>{task.key}</b> {task.summary}</span>}
           </div>
         )}
+        {open && <MrDetail mr={mr} aiReady={aiReady} />}
       </div>
       {!compact && (
         <div className="mr-people" aria-label={m.reviewers}>

@@ -401,7 +401,15 @@ export interface Mr {
   /** Approvals still missing; null when GitLab does not say. */
   approvalsLeft: number | null;
   detailed: boolean;
+  /** Status of the latest pipeline (`success`, `failed`, `running`...); null = none or not read. */
+  pipeline: string | null;
 }
+
+/** One MR opened up (`gitlab_mr_detail`); mirrors `sources/gitlab/mr_detail.rs`. */
+export interface MrFailedJob { id: number; name: string; stage: string; reason: string; url: string; lines: string[] }
+export interface MrPipeline { status: string; url: string; failedStage: string | null; jobs: MrFailedJob[] }
+export interface MrThread { noteId: number; author: string; body: string; file: string | null; line: number | null; replies: number }
+export interface MrDetail { pipeline: MrPipeline | null; threads: MrThread[]; resolved: number }
 /** The Jira task an MR is about; fixVersions are its releases. */
 export interface MrTask { key: string; summary: string; status: string; fixVersions: string[] }
 export interface MrBoard { me: MrPerson; mrs: Mr[]; cachedAt: number; tasks: MrTask[] }

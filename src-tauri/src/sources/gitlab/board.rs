@@ -12,6 +12,8 @@ use std::collections::HashMap;
 const MAX_PAGES: usize = 3;
 const MAX_MRS: usize = 300;
 const PARALLEL: usize = 6;
+/// Pipelines are one call per MR: only the most recently changed ones are read.
+const MAX_PIPELINES: usize = 150;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct MrPerson {
@@ -47,6 +49,8 @@ pub struct Mr {
     pub approvals_left: Option<i64>,
     /// Approvals were read for this version of the MR.
     pub detailed: bool,
+    /// Status of the latest pipeline (`success`, `failed`, `running`...); `None` when there is none or it was not read.
+    pub pipeline: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -136,7 +140,13 @@ pub fn parse_mr(v: &Value) -> Option<Mr> {
         approved_by: vec![],
         approvals_left: None,
         detailed: false,
+        pipeline: None,
     })
+}
+
+/// The status of the newest pipeline in a `.../pipelines` answer (newest first).
+pub fn latest_pipeline(v: &Value) -> Option<String> {
+    v.as_array()?.first().map(|p| text(&p["status"])).filter(|s| !s.is_empty())
 }
 
 /// `GET .../approvals`: who approved and how many approvals are still needed.
@@ -185,6 +195,13 @@ async fn with_approvals(gl: &GitLab<'_>, mut m: Mr, known: &HashMap<MrKey, Known
     m
 }
 
+/// A pipeline ends without the MR changing, so its status is read on every load, for the most recently changed MRs.
+async fn with_pipeline(gl: &GitLab<'_>, mut m: Mr) -> Mr {
+    let path = format!("/projects/{}/merge_requests/{}/pipelines", m.project_id, m.iid);
+    m.pipeline = gl.get(&path, &[("per_page", "1".into())]).await.ok().as_ref().and_then(latest_pipeline);
+    m
+}
+
 pub async fn load(client: &reqwest::Client, base: &str, pat: &str, team: &[String], known: &HashMap<MrKey, Known>) -> AppResult<(MrPerson, Vec<Mr>)> {
     let gl = GitLab::new(client, base, pat);
     let me = person(&gl.get("/user", &[]).await?).unwrap_or(MrPerson { username: String::new(), name: String::new() });
@@ -200,6 +217,9 @@ pub async fn load(client: &reqwest::Client, base: &str, pat: &str, team: &[Strin
     // Approvals: reused while the MR is unchanged, read for new and changed ones.
     let mut mrs: Vec<Mr> = stream::iter(mrs).map(|m| with_approvals(&gl, m, known)).buffer_unordered(PARALLEL).collect().await;
     mrs.sort_by(|a, b| b.updated.cmp(&a.updated));
+    let rest = mrs.split_off(mrs.len().min(MAX_PIPELINES));
+    let mut mrs: Vec<Mr> = stream::iter(mrs).map(|m| with_pipeline(&gl, m)).buffered(PARALLEL).collect().await;
+    mrs.extend(rest);
     Ok((me, mrs))
 }
 
@@ -238,6 +258,13 @@ mod tests {
         assert_eq!(task_key("Add UTF-8 support", "main"), None);
         assert_eq!(task_key("lower-case 12", "x"), None);
         assert_eq!(task_key("[AB2-7] x", "").as_deref(), Some("AB2-7"));
+    }
+
+    #[test]
+    fn the_newest_pipeline_gives_the_status() {
+        assert_eq!(latest_pipeline(&json!([{ "id": 9, "status": "failed" }, { "id": 8, "status": "success" }])).as_deref(), Some("failed"));
+        assert_eq!(latest_pipeline(&json!([])), None);
+        assert_eq!(latest_pipeline(&json!({ "message": "404" })), None);
     }
 
     #[test]

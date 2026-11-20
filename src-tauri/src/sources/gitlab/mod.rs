@@ -12,6 +12,7 @@ use crate::error::{AppError, AppResult};
 
 pub mod board;
 pub mod links;
+pub mod mr_detail;
 pub mod task;
 
 const DAY_MS: i64 = 86_400_000;
