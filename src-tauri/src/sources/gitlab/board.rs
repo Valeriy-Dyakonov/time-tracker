@@ -144,9 +144,36 @@ pub fn parse_mr(v: &Value) -> Option<Mr> {
     })
 }
 
-/// The status of the newest pipeline in a `.../pipelines` answer (newest first).
+/// The status of the newest pipeline (highest id) in a `.../pipelines` answer.
 pub fn latest_pipeline(v: &Value) -> Option<String> {
-    v.as_array()?.first().map(|p| text(&p["status"])).filter(|s| !s.is_empty())
+    v.as_array()?.iter().max_by_key(|p| p["id"].as_i64().unwrap_or(0)).map(|p| text(&p["status"])).filter(|s| !s.is_empty())
+}
+
+/// A pipeline that can still change.
+pub fn pipeline_open(status: &str) -> bool {
+    matches!(status, "running" | "pending" | "created" | "preparing" | "scheduled" | "waiting_for_resource" | "canceling")
+}
+
+/// Re-reads the pipelines that were still going when the board was stored; a failed read keeps the old status.
+pub async fn refresh_open_pipelines(client: &reqwest::Client, base: &str, pat: &str, mrs: &mut Vec<Mr>) -> bool {
+    let gl = GitLab::new(client, base, pat);
+    let open: Vec<usize> = (0..mrs.len()).filter(|&i| mrs[i].pipeline.as_deref().is_some_and(pipeline_open)).collect();
+    let fresh: Vec<(usize, Option<String>)> = stream::iter(open)
+        .map(|i| {
+            let (gl, path) = (&gl, format!("/projects/{}/merge_requests/{}/pipelines", mrs[i].project_id, mrs[i].iid));
+            async move { (i, gl.get(&path, &[("per_page", "20".into())]).await.ok().as_ref().and_then(latest_pipeline)) }
+        })
+        .buffer_unordered(PARALLEL)
+        .collect()
+        .await;
+    let mut changed = false;
+    for (i, status) in fresh {
+        if status.is_some() && status != mrs[i].pipeline {
+            mrs[i].pipeline = status;
+            changed = true;
+        }
+    }
+    changed
 }
 
 /// `GET .../approvals`: who approved and how many approvals are still needed.
@@ -198,7 +225,7 @@ async fn with_approvals(gl: &GitLab<'_>, mut m: Mr, known: &HashMap<MrKey, Known
 /// A pipeline ends without the MR changing, so its status is read on every load, for the most recently changed MRs.
 async fn with_pipeline(gl: &GitLab<'_>, mut m: Mr) -> Mr {
     let path = format!("/projects/{}/merge_requests/{}/pipelines", m.project_id, m.iid);
-    m.pipeline = gl.get(&path, &[("per_page", "1".into())]).await.ok().as_ref().and_then(latest_pipeline);
+    m.pipeline = gl.get(&path, &[("per_page", "20".into())]).await.ok().as_ref().and_then(latest_pipeline);
     m
 }
 
@@ -263,6 +290,8 @@ mod tests {
     #[test]
     fn the_newest_pipeline_gives_the_status() {
         assert_eq!(latest_pipeline(&json!([{ "id": 9, "status": "failed" }, { "id": 8, "status": "success" }])).as_deref(), Some("failed"));
+        assert_eq!(latest_pipeline(&json!([{ "id": 8, "status": "running" }, { "id": 9, "status": "success" }])).as_deref(), Some("success"));
+        assert!(pipeline_open("running") && !pipeline_open("success"));
         assert_eq!(latest_pipeline(&json!([])), None);
         assert_eq!(latest_pipeline(&json!({ "message": "404" })), None);
     }

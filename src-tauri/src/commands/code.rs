@@ -171,6 +171,11 @@ pub async fn gitlab_mr_board(
     if !force.unwrap_or(false) && store.with(|conn| fresh::is_fresh(conn, &scope, fresh::MR_TTL))? {
         if let Some(b) = store.with(|conn| mrs::load_board(conn, &scope))? {
             let mut b = b;
+            // A pipeline ends without the MR changing: the ones still going are asked again.
+            if gitlab::board::refresh_open_pipelines(&c.client, &s.gitlab_url, &pat, &mut b.mrs).await {
+                // Keep the old stamp so the list does not look fresher than it is.
+                let _ = store.with(|conn| mrs::save_board(conn, &scope, &b, b.cached_at));
+            }
             add_tasks(&c, &store, &mut b, false).await;
             return Ok(b);
         }
