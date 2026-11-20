@@ -28,6 +28,7 @@
 .mrs-ic { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; color: var(--on-accent); background: linear-gradient(135deg, var(--c), color-mix(in srgb, var(--c) 55%, var(--grad-to))); }
 .mrs-ic svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .mrs-count { padding: 0 9px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--c) 16%, var(--card)); color: var(--c); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mrs-green { padding: 0 9px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--good) 16%, var(--card)); color: var(--good); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .mrs-empty-note { margin: 0 0 0 14px; font-size: 13px; }
 
 /* Groups (release / task) */

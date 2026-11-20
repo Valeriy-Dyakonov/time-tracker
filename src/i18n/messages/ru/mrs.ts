@@ -23,6 +23,7 @@ const mrs = {
   noTask: "Без задачи",
   releaseTip: "Релиз — fix version задачи в Jira. Если её нет, берётся ветка назначения вида release/…",
   drafts: "Черновики",
+  greenOf: (n: number, total: number) => `${n} из ${total} с зелёным пайплайном`,
   stale: "Давно без изменений",
   staleTip: "Больше двух недель никто не трогал этот MR",
   branchTip: "Ветка → ветка назначения",

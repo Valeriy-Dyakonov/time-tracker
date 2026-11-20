@@ -38,6 +38,7 @@ export function MrSection({ view, group, tasks, share, aiReady }: { view: Sectio
   const m = useT().mrs;
   const [sharing, setSharing] = useState(false);
   const all = view.buckets.flatMap((b) => b.mrs).concat(view.drafts);
+  const green = all.filter((mr) => mr.pipeline === "success").length;
   const text = m.sections[view.id];
   const rest = group === "release" ? m.noRelease : m.noTask;
   const taskOf = (key: string | null) => (key ? tasks.get(key) : undefined);
@@ -48,6 +49,7 @@ export function MrSection({ view, group, tasks, share, aiReady }: { view: Sectio
         <span className="mrs-ic">{ICON[view.id]}</span>
         {text.title}
         <span className="mrs-count">{view.total}</span>
+        {view.id !== "review" && all.length > 0 && <span className="mrs-green" title={m.greenOf(green, all.length)}>{green}/{all.length}</span>}
         {text.tip && <InfoTip>{text.tip}</InfoTip>}
         {share && all.length > 0 && <Button className="mrs-share" size="small" onClick={() => setSharing(true)}>{m.share.open}</Button>}
       </h3>

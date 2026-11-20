@@ -23,6 +23,7 @@ const mrs: typeof ru = {
   noTask: "No task",
   releaseTip: "The release is the task's fix version in Jira. Without one, a release/... target branch is used.",
   drafts: "Drafts",
+  greenOf: (n: number, total: number) => `${n} of ${total} with a green pipeline`,
   stale: "Untouched for a while",
   staleTip: "Nobody touched this MR for more than two weeks",
   branchTip: "Source branch -> target branch",
