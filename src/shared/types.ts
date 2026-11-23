@@ -273,6 +273,26 @@ export interface TaskMrs {
   error: unknown;
 }
 
+/** A tag found by `api.gitlabTagSearch`; `branches` are the ones that contain the tagged commit, default first. */
+export interface TagHit {
+  name: string;
+  /** ms; 0 when unknown. */
+  created: number;
+  sha: string;
+  message: string;
+  branches: string[];
+  url: string;
+}
+
+export interface ServiceTags {
+  project: string;
+  url: string;
+  /** Newest first. */
+  tags: TagHit[];
+  /** A backend error ({ code, params }) when this project could not be read. */
+  error: unknown;
+}
+
 /** A worklog of the user in Jira (Tempo on Server/DC keeps its worklogs there). */
 export interface JiraWorklog {
   id: string;

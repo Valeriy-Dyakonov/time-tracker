@@ -129,6 +129,25 @@ pub async fn gitlab_mr_detail(app: tauri::AppHandle, project_id: i64, iid: i64) 
     gitlab::mr_detail::read(&c.client, &c.settings.gitlab_url, &require(&secrets::GITLAB)?, project_id, iid).await
 }
 
+/// GitLab projects of the selected local repositories: the services tags are searched in. Empty when no
+/// repository points to this GitLab.
+#[tauri::command]
+pub async fn gitlab_tag_projects(app: tauri::AppHandle) -> AppResult<Vec<String>> {
+    let s = crate::settings::load(&app)?;
+    if s.gitlab_url.trim().is_empty() {
+        return Err(AppError::new("urlMissing").with("service", "GitLab"));
+    }
+    tauri::async_runtime::spawn_blocking(move || gitlog::remote_paths(&s.git_repos, &s.gitlab_url)).await.map_err(AppError::raw)
+}
+
+/// The latest tags whose name contains `query` in one project; the UI asks project by project to show results as they come.
+#[tauri::command]
+pub async fn gitlab_tag_service(app: tauri::AppHandle, project: String, query: String) -> AppResult<gitlab::tags::ServiceTags> {
+    let c = Ctx::load(&app)?;
+    let query: String = query.trim().chars().take(100).collect();
+    Ok(gitlab::tags::service(&c.client, &c.settings.gitlab_url, &require(&secrets::GITLAB)?, &project, &query).await)
+}
+
 /// Usernames come from the roster file the user typed; GitLab logins are letters, digits and `._-`.
 fn clean_usernames(list: Vec<String>) -> Vec<String> {
     let mut out: Vec<String> = list

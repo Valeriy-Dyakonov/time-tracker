@@ -7,6 +7,7 @@ import { useReminder } from "./useReminder";
 import { asProfile } from "@/products/dashboard/lib/stages";
 import Mrs from "@/products/mrs/components/Mrs";
 import Team from "@/products/team/components/Team";
+import Tags from "@/products/tags/components/Tags";
 import { ErrorBoundary } from "./ErrorBoundary";
 import Home from "./Home";
 import type { ProductId } from "./products";
@@ -99,6 +100,8 @@ export default function App() {
           <Dashboard setup={setup} profile={asProfile(settings.dashboardProfile)} onOpenSettings={openSettings} />
         ) : view === "mrs" ? (
           <Mrs setup={setup} profile={asProfile(settings.dashboardProfile)} onOpenSettings={openSettings} />
+        ) : view === "tags" ? (
+          <Tags setup={setup} onOpenSettings={openSettings} />
         ) : view === "team" ? (
           <Team />
         ) : (

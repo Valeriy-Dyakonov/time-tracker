@@ -86,6 +86,8 @@ pub fn run() {
             code::fetch_gitlab,
             code::gitlab_mr_board,
             code::gitlab_mr_detail,
+            code::gitlab_tag_projects,
+            code::gitlab_tag_service,
             calendar::fetch_calendar,
             calendar::fetch_holidays,
             matrix::fetch_matrix,

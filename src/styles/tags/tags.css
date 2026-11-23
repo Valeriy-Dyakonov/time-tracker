@@ -1,0 +1,24 @@
+/* Tag search */
+.tags { display: flex; flex-direction: column; gap: 14px; max-width: 1040px; margin: 0 auto; }
+.tags-search { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+.tags-search input { flex: 1; min-width: 0; }
+.tags-summary { margin: 0; font-size: 13px; }
+
+.tags-service { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.tags-service h3 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 15px; }
+.tags-service h3 a { color: var(--text); }
+.tags-service h3 a:hover { color: var(--accent); }
+.tags-count { padding: 0 9px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--accent) 16%, var(--card)); color: var(--accent); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tags-service ul { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+
+.tag { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; padding-left: 12px; border-left: 3px solid var(--line); font-size: 13.5px; }
+.tag.latest { border-left-color: var(--good); }
+.tag-name { font-weight: 650; color: var(--text); }
+.tag-name:hover { color: var(--accent); }
+.tag-latest { padding: 0 8px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--good) 16%, var(--card)); color: var(--good); font-size: 11.5px; font-weight: 700; }
+.tag-date { font-variant-numeric: tabular-nums; }
+.tag-branches { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.tag-branches code { padding: 0 7px; border-radius: 8px; background: color-mix(in srgb, var(--stage-review) 12%, var(--card)); font-size: 12px; }
+.tag-msg { flex-basis: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; }
+.tags-summary { display: flex; align-items: center; gap: 8px; }
+.tag .copyicon { position: static; transform: none; width: 24px; height: 24px; }

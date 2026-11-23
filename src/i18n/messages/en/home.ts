@@ -19,6 +19,11 @@ const home: typeof ru = {
       desc: "GitLab merge requests: what waits for your review, what waits for approval - yours and the team's - and where there are comments.",
       points: ["Waiting for your review, and your own", "The team's MRs from the roster, even when you are not a reviewer", "Approvals, discussions, ready to merge"],
     },
+    tags: {
+      name: "Tags",
+      desc: "Search tags by part of the name across all services at once: the latest matches, their date and branches.",
+      points: ["Services are the selected local repositories", "Latest tags by creation date", "Branches that contain the tagged commit"],
+    },
     team: {
       name: "Team",
       desc: "Who is in which department and team: leads, QA and each person's Jira, GitLab and Matrix accounts.",

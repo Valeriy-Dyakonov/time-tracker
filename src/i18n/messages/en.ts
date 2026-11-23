@@ -11,7 +11,8 @@ import home from "./en/home";
 import dashboard from "./en/dashboard";
 import team from "./en/team";
 import mrs from "./en/mrs";
+import tags from "./en/tags";
 
 import type { ru } from "./ru";
 
-export const en: typeof ru = { common, shell, report, hours, submit, review, settings, analysis, errors, home, dashboard, team, mrs };
+export const en: typeof ru = { common, shell, report, hours, submit, review, settings, analysis, errors, home, dashboard, team, mrs, tags };
