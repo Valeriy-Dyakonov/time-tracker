@@ -82,7 +82,7 @@ const en: typeof ru = {
       skipped: "Calls on PC: skipped (turned off in settings).",
       reading: "Calls on PC: reading the noted calls of the period…",
       done: (n: number, total: string, skipped: number) =>
-        `Calls on PC: ${n}, ${total} in total${skipped ? `; ${skipped} more are already in the calendar` : ""}. Calls marked as not work are skipped.`,
+        `Calls on PC: ${n}, ${total} in total${skipped ? `; ${skipped} more add nothing to the calendar` : ""}. Calls marked as not work are skipped.`,
       untitled: (app: string) => `Call (${app})`,
     },
     matrix: {
@@ -117,7 +117,7 @@ const en: typeof ru = {
   calls: {
     badKey: (raw: string) => `Calls without a task: “${raw}” is not a task key (expected PROJ-1234), call time is not distributed.`,
     notFound: (key: string) => `Calls without a task: ${key} was not found in Jira or is not accessible, call time is not distributed.`,
-    enabled: (key: string) => `Calls without a task are logged to ${key}; a call with a task mentioned in the chat around it goes to that task.`,
+    enabled: (key: string) => `Calls without a task are logged to ${key}; a call with the key of your task in its title goes to that task.`,
     day: (label: string, spent: string) => `${label}: call time per task (minutes): ${spent}.`,
     note: (titles: string) => `Calls: ${titles}`,
     reasoning: (spent: string) => `Call time is counted separately (minutes per task: ${spent}).`,

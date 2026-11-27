@@ -70,7 +70,7 @@ export async function runAnalysis(settings: Settings, o: RunOptions, h: RunHandl
 
   const r = await analyseDays(ctx, todo, h.onDays);
   for (const [d, ws] of tempo) r.activity[d] = tempoActivity(ws);
-  const planned = buildPlan(dates, r.activity, ctx.issues, o.hoursPerDay, o.fillMode, r.meetingsByDay, ctx.targets)
+  const planned = buildPlan(dates, r.activity, ctx.issues, o.hoursPerDay, o.fillMode, r.meetingsByDay, ctx.targets, r.calls)
     .map((d) => (tempo.has(d.date) ? tempoDay(d, tempo.get(d.date)!, ctx) : d));
   reportGaps(ctx, planned, r.board);
   const days = await polishNotes(ctx, planned);

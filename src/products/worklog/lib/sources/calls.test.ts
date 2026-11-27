@@ -19,6 +19,21 @@ describe("toMeetings", () => {
     expect(toMeetings([call({ hidden: true })], [], untitled).meetings).toEqual([]);
   });
 
+  it("adds only the time the calendar call does not cover", () => {
+    const { meetings } = toMeetings([call({ started: t0 - 2 * min, ended: t0 + 50 * min })], [cal({})], untitled);
+    expect(meetings).toMatchObject([{ ts: t0 + 30 * min, endTs: t0 + 50 * min, minutes: 20 }]);
+  });
+
+  it("keeps the whole call next to a tentative calendar call, which is not counted", () => {
+    expect(toMeetings([call({})], [cal({ tentative: true })], untitled).meetings).toMatchObject([{ minutes: 30 }]);
+  });
+
+  it("does not count two programs holding the microphone at once twice", () => {
+    const { meetings, duplicates } = toMeetings([call({}), call({ id: 2, app: "chrome", ended: t0 + 20 * min })], [], untitled);
+    expect(meetings).toHaveLength(1);
+    expect(duplicates).toBe(1);
+  });
+
   it("leaves out a call that is already a calendar call, but not a calendar event that is no call", () => {
     expect(toMeetings([call({})], [cal({})], untitled)).toMatchObject({ meetings: [], duplicates: 1 });
     expect(toMeetings([call({})], [cal({ isCall: false })], untitled).meetings).toHaveLength(1);

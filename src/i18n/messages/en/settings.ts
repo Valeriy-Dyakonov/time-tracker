@@ -64,7 +64,7 @@ const en: typeof ru = {
     profile: "Work Dashboard profile",
     profileHint: "Your role: it decides whose tasks the dashboard shows and which statuses come first.",
     callsTask: "Task for calls without a task",
-    callsTaskHint: "A key like PROJ-1234. Dailies and talks about future tasks don't belong to the finished tasks, so their time is logged here. If the chat mentions a task around a call (e.g. a sync with QA), the call goes to that task. Empty: such calls get no hours.",
+    callsTaskHint: "A key like PROJ-1234. Dailies and talks about future tasks don't belong to the finished tasks, so their time is logged here. A call with the key of your task in its title goes to that task. Times come from the calendar; calls noted by the microphone add what the calendar lacks. Empty: such calls get no hours.",
     helpTitle: "Where to get a Jira token",
     helpSteps: [
       "Open Jira in the browser and sign in with your account.",

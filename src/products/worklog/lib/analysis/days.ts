@@ -2,7 +2,7 @@ import { api } from "@/shared/api";
 import type { DayProgress, Evt, Meeting } from "@/shared/types";
 import { eachDate, isoWeekday } from "@/shared/lib/dates";
 import { groupByDay, localDay } from "../events/days";
-import { callsKey, callTime, mixCalls } from "../plan/calls";
+import { callsKey, callTime, mixCalls, type CallTime } from "../plan/calls";
 import { distribute } from "../plan/distribute";
 import type { DayActivity } from "../plan/types";
 import { dayAllocator } from "./dayAllocators";
@@ -37,6 +37,8 @@ export class ProgressBoard {
 export interface DaysResult {
   activity: Record<string, DayActivity>;
   meetingsByDay: Record<string, Meeting[]>;
+  /** Time of each day's calls per task; empty when call time is not booked. */
+  calls: Record<string, CallTime>;
   board: ProgressBoard;
   aiDays: number;
   withEvents: number;
@@ -67,19 +69,6 @@ async function loadCallsTask(ctx: RunContext): Promise<string | null> {
   return key;
 }
 
-/** Adds the time of the day's calls to the day's split and notes which calls it was. */
-function withCalls(ctx: RunContext, act: DayActivity, date: string, meetings: Meeting[], events: Evt[], fallback: string, label: string): DayActivity {
-  const calls = callTime(meetings, events, fallback, ctx.isCtx);
-  const weights = mixCalls(act.weights, calls.minutes, normFor(ctx, date));
-  if (weights === act.weights) return act;
-  const m = msg().calls;
-  const notes = { ...act.notes };
-  for (const [key, titles] of Object.entries(calls.titles)) notes[key] = [...(notes[key] ?? []), m.note([...new Set(titles)].join(", "))];
-  const spent = Object.entries(calls.minutes).map(([k, min]) => `${k} ${min}`).join(", ");
-  ctx.log("info", m.day(label, spent));
-  return { ...act, weights, notes, reasoning: `${act.reasoning} ${m.reasoning(spent)}`.trim() };
-}
-
 /** Matches events to working days by time and splits each day with events between tasks. */
 export async function analyseDays(ctx: RunContext, dates: string[], onDays: (d: DayProgress[]) => void): Promise<DaysResult> {
   const byDay = groupByDay(ctx.events);
@@ -97,6 +86,17 @@ export async function analyseDays(ctx: RunContext, dates: string[], onDays: (d: 
   ctx.log("info", msg().days.withEvents(withEvents.length, dates.length));
 
   const callsTo = await loadCallsTask(ctx);
+  const calls: Record<string, CallTime> = {};
+  if (callsTo) {
+    const canTake = (key: string) => !!ctx.issues[key] && !ctx.isCtx(key);
+    for (const date of dates) {
+      const day = callTime(meetingsByDay[date] ?? [], callsTo, canTake);
+      const spent = Object.entries(day.minutes).map(([k, min]) => `${k} ${min}`).join(", ");
+      if (!spent) continue;
+      calls[date] = day;
+      ctx.log("info", msg().calls.day(dayLabel(date), spent));
+    }
+  }
   const allocator = dayAllocator(ctx);
   const activity: Record<string, DayActivity> = {};
   let aiDays = 0;
@@ -109,11 +109,11 @@ export async function analyseDays(ctx: RunContext, dates: string[], onDays: (d: 
 
     const r = await allocator.allocate({ date, label, events, byDay });
     if (r.usedAi) aiDays += 1;
-    if (callsTo) r.act = withCalls(ctx, r.act, date, meetingsByDay[date] ?? [], events, callsTo, label);
     activity[date] = r.act;
-    const hrs = distribute(r.act.weights, normFor(ctx, date));
+    const norm = normFor(ctx, date);
+    const hrs = distribute(mixCalls(r.act.weights, calls[date]?.minutes ?? {}, norm), norm);
     board.patch(date, { status: r.status, note: r.note, tasks: Object.entries(hrs).map(([key, hours]) => ({ key, hours })) });
   });
 
-  return { activity, meetingsByDay, board, aiDays, withEvents: withEvents.length };
+  return { activity, meetingsByDay, calls, board, aiDays, withEvents: withEvents.length };
 }

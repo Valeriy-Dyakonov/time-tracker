@@ -55,7 +55,7 @@ fn looks_like_call(s: &str) -> bool {
     let s = s.to_lowercase();
     [
         "teams", "zoom", "телемост", "telemost", "skype", "webex", "jitsi", "google meet", "meet.google",
-        "bigbluebutton", "созвон", "звонок", "call", "толк", "talk",
+        "bigbluebutton", "созвон", "звонок", "call", "толк", "talk", "daily", "дейли", "дэйли", "стендап", "standup", "stand-up",
     ]
     .iter()
     .any(|k| s.contains(k))

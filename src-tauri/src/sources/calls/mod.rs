@@ -47,6 +47,10 @@ pub fn call_title(label: &str, titles: &[String]) -> String {
         for t in titles {
             for prefix in ["Zoom Конференция", "Zoom Meeting", "Zoom Webinar", "Zoom Вебинар"] {
                 if let Some(rest) = t.strip_prefix(prefix) {
+                    // The free plan appends the time limit (`, 40 мин`), which is not part of a name.
+                    if rest.trim_start().starts_with(',') {
+                        return String::new();
+                    }
                     return rest.trim_matches(|c: char| c == '-' || c == '–' || c.is_whitespace()).to_string();
                 }
             }
@@ -101,6 +105,7 @@ mod tests {
         let w = titles(&["Zoom Workplace", "Zoom Конференция - БЛЛК - ekk"]);
         assert_eq!(call_title("zoom", &w), "БЛЛК - ekk");
         assert_eq!(call_title("zoom", &titles(&["Zoom Workplace"])), "");
+        assert_eq!(call_title("zoom", &titles(&["Zoom Конференция, 40 мин"])), "");
     }
 
     #[test]
